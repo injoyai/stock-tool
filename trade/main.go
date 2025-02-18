@@ -1,8 +1,8 @@
 package main
 
 import (
+	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"github.com/injoyai/conv/cfg/v2"
 	"github.com/injoyai/conv/codec"
@@ -11,6 +11,8 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/lorca"
 	"github.com/injoyai/stock-tool/trade/api"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -21,50 +23,87 @@ func main() {
 
 	lorca.Run(&lorca.Config{
 		Width:  800,
-		Height: 680,
+		Height: 660,
 		Index:  index,
 	}, func(app lorca.APP) error {
 
 		//小后门
-		if time.Date(2025, 3, 1, 0, 0, 0, 0, time.Local).Before(time.Now()) {
+		if time.Date(2025, 3, 10, 0, 0, 0, 0, time.Local).Before(time.Now()) {
 			app.Eval(`log('试用结束!!!')`)
 			return nil
 		}
 
 		configPath := "./config/config.json"
+		codePath := "./股票列表.txt"
 		oss.NewNotExist(configPath, g.Map{
-			"clients": 1,
-			"disks":   10,
-			"dir":     "./",
-			"codes":   []string{"sz000001"},
+			"clients":  1,
+			"disks":    10,
+			"dir":      "./data/",
+			"codes":    []string{"sz000001"},
+			"userText": false,
 		})
+		oss.NewNotExist(codePath, "")
 		cfg.Init(cfg.WithFile(configPath, codec.Json))
 
 		dealErr := func(err error) {
 			if err != nil {
+				logs.Err(err)
 				app.Eval(fmt.Sprintf(`log('%s')`, err.Error()))
 				return
 			}
-			app.Eval(`log('成功')`)
+			app.Eval(`log('完成')`)
 		}
 		log := func(s string) { app.Eval(fmt.Sprintf(`log('%s')`, s)) }
+		plan := func(current, total int) {
+			app.Eval(fmt.Sprintf(`updateProgress(%d,%d)`, current, total))
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		getCodes := func() ([]string, error) {
+			if cfg.GetBool("useText") {
+				str, err := oss.ReadString(codePath)
+				if err != nil {
+					return nil, err
+				}
+				return strings.Split(str, "\r\n"), nil
+			}
+			return cfg.GetStrings("codes"), nil
+		}
 
 		//连接服务器
 		c := api.Dial(log)
 		log(fmt.Sprintf(`连接服务器[%s]成功...`, c.GetKey()))
-		c.Codes = cfg.GetStrings("codes")
+		c.GetCodes = getCodes
 		c.Dir = cfg.GetString("dir")
 
 		app.Bind("_download_today", func() {
-			dealErr(c.DownloadTodayAll())
+			dealErr(c.DownloadTodayAll(ctx, log, plan))
 		})
 
+		var refreshLock sync.Mutex
 		app.Bind("_refresh_real", func() {
-			dealErr(errors.New("未实现"))
+			if !refreshLock.TryLock() {
+				log("正在实时刷新数据中...")
+				return
+			}
+			cc := ctx
+			defer func() {
+				refreshLock.Unlock()
+				log("结束实时刷新数据...")
+			}()
+			for {
+				select {
+				case <-cc.Done():
+					return
+				default:
+					log("实时刷新数据...")
+					dealErr(c.DownloadTodayAll(cc, log, plan))
+				}
+				<-time.After(time.Second * 5)
+			}
+
 		})
 
 		app.Bind("_download_history", func(startDate, endDate string) {
-			logs.Debug(startDate, endDate)
 			start, err := time.Parse("2006-01-02", startDate)
 			if err != nil {
 				dealErr(err)
@@ -75,25 +114,31 @@ func main() {
 				dealErr(err)
 				return
 			}
-			dealErr(c.DownloadHistoryAll(start, end, log))
+			dealErr(c.DownloadHistoryAll(ctx, start, end, log, plan))
 		})
 
 		app.Bind("_stop_download", func() {
-			dealErr(errors.New("未实现"))
+			cancel()
+			ctx, cancel = context.WithCancel(context.Background())
+			log("停止成功...")
 		})
 
 		app.Bind("_get_config", func() string {
 			return cfg.GetString("")
 		})
 
-		app.Bind("_save_config", func(clientConnections, diskOperations, savePath string, stockCodes []string) {
-			dealErr(oss.New(configPath, g.Map{
-				"clients": clientConnections,
-				"disks":   diskOperations,
-				"dir":     savePath,
-				"codes":   stockCodes,
-			}))
-			cfg.Init(cfg.WithFile(configPath))
+		app.Bind("_save_config", func(clients, disks, dir string, codes []string, useText bool) {
+			c.Dir = dir
+			m := g.Map{
+				"clients": clients,
+				"disks":   disks,
+				"dir":     dir,
+				"codes":   codes,
+				"useText": useText,
+			}
+			dealErr(oss.New(configPath, m))
+			cfg.Init(cfg.WithAny(m))
+			c.GetCodes = getCodes
 		})
 
 		return nil

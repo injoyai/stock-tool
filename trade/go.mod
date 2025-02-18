@@ -1,10 +1,11 @@
 module github.com/injoyai/stock-tool/trade
 
-go 1.22.10
+go 1.20
 
 require (
 	github.com/injoyai/conv v1.1.11
 	github.com/injoyai/goutil v0.0.0-20250211051713-b9ace3072824
+	github.com/injoyai/logs v1.0.9
 	github.com/injoyai/lorca v0.0.0-20241219020631-030018723d82
 	github.com/injoyai/tdx v0.0.4
 )
@@ -13,7 +14,6 @@ require (
 	github.com/fatih/color v1.14.1 // indirect
 	github.com/injoyai/base v1.0.19 // indirect
 	github.com/injoyai/ios v0.0.6 // indirect
-	github.com/injoyai/logs v1.0.9 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
