@@ -139,34 +139,36 @@
             const today = new Date().toISOString().split('T')[0]; // 获取今天的日期
             document.getElementById('start-date').value = today; // 设置开始日期
             document.getElementById('end-date').value = today; // 设置结束日期
+            _get_config(); // 在加载时获取配置
         };
 
         // 这里可以添加按钮的事件处理逻辑
         document.getElementById('download-today').onclick = function() {
             log('下载当日数据');
-            _download_today()
+            _download_today();
         };
 
         document.getElementById('refresh-realtime').onclick = function() {
             log('实时刷新数据');
-            _refresh_real()
+            _refresh_real();
         };
 
         document.getElementById('download').onclick = function() {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
             log(`开始下载数据，从 ${startDate} 到 ${endDate}`);
-            _download_history(startDate,endDate)
+            _download_history(startDate, endDate);
         };
 
         document.getElementById('stop').onclick = function() {
             log('停止操作');
-            _stop_download()
+            _stop_download();
         };
 
         document.getElementById('config-button').onclick = function() {
             document.getElementById('config-panel').style.display = 'block'; // 显示配置面板
             document.getElementById('overlay').style.display = 'block'; // 显示遮罩层
+            _get_config(); // 获取配置并填充
         };
 
         document.getElementById('close-config').onclick = function() {
@@ -180,24 +182,37 @@
             const savePath = document.getElementById('save-path').value; // 获取保存路径
             const stockCodes = document.getElementById('stock-codes').value.split('\n');
 
-
             // 这里可以将配置保存到本地存储或其他地方
             log(`保存配置: 客户端连接数=${clientConnections}, 操作磁盘数=${diskOperations}, 股票代码=${stockCodes.join(', ')}, 保存路径=${savePath}`);
-            _save_config(clientConnections,diskOperations,savePath,stockCodes)
+            _save_config(clientConnections, diskOperations, savePath, stockCodes);
         };
+
+        function _get_config() {
+            // 假设从某个地方获取配置数据
+            const config = {
+                clientConnections: 5,
+                diskOperations: 3,
+                savePath: '/path/to/save',
+                stockCodes: ['AAPL', 'GOOGL', 'MSFT']
+            };
+
+            // 填充配置数据到输入框
+            document.getElementById('client-connections').value = config.clientConnections;
+            document.getElementById('disk-operations').value = config.diskOperations;
+            document.getElementById('save-path').value = config.savePath;
+            document.getElementById('stock-codes').value = config.stockCodes.join('\n'); // 将数组转换为字符串
+        }
 
         function log(message) {
             const logOutput = document.getElementById('log-output');
             logOutput.textContent += message + '\n'; // 不覆盖日志
         }
 
-        function _download_today(){}
-        function _refresh_real(){}
-        function _download_history(startDate,endDate){}
-        function _stop_download(){}
-        function _get_config(){}
-        function _save_config(clientConnections,diskOperations,savePath,stockCodes){}
-
+        function _download_today() {}
+        function _refresh_real() {}
+        function _download_history(startDate, endDate) {}
+        function _stop_download() {}
+        function _save_config(clientConnections, diskOperations, savePath, stockCodes) {}
     </script>
 </body>
 </html> 
