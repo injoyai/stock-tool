@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分时数据下载</title>
+    <style>
+        body {
+            display: flex;
+            font-family: Arial, sans-serif;
+        }
+        #left-panel {
+            width: 30%;
+            padding: 10px;
+            border-right: 1px solid #ccc;
+        }
+        #right-panel {
+            width: 70%;
+            padding: 10px;
+        }
+        button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input[type="date"],
+        input[type="number"],
+        textarea {
+            margin: 10px 0;
+            padding: 10px;
+            width: calc(100% - 20px); /* 减去左右内边距 */
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background: white; /* 设置背景颜色 */
+        }
+        h3 {
+            margin-bottom: 10px;
+        }
+        #config-panel {
+            position: fixed; /* 固定位置 */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* 居中 */
+            width: 400px; /* 增加宽度 */
+            padding: 20px;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 阴影效果 */
+            z-index: 1000; /* 确保在其他元素之上 */
+            display: none; /* 默认隐藏 */
+        }
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5); /* 半透明背景 */
+            z-index: 999; /* 确保在配置面板下方 */
+            display: none; /* 默认隐藏 */
+        }
+        .config-row {
+            display: flex;
+            flex-direction: row;
+            margin-bottom: 15px; /* 增加间距 */
+            align-items: center; /* 垂直居中对齐 */
+        }
+        .config-row label {
+            margin-right: 10px; /* 标签与输入框之间的间距 */
+            flex: 0 0 150px; /* 固定标签宽度 */
+        }
+        .config-row input {
+            flex: 1; /* 输入框占据剩余空间 */
+        }
+        .button-group {
+            display: flex;
+            justify-content: space-between; /* 按钮之间的间距 */
+        }
+    </style>
+</head>
+<body>
+    <div id="left-panel">
+        <h3>操作</h3>
+        <button id="download-today">下载当日数据</button>
+        <button id="refresh-realtime">实时刷新数据</button>
+        <div style="display: flex; flex-direction: column; margin-bottom: 10px;">
+            <label for="start-date">开始日期:</label>
+            <input type="date" id="start-date" placeholder="选择开始日期" />
+        </div>
+        <div style="display: flex; flex-direction: column; margin-bottom: 10px;">
+            <label for="end-date">结束日期:</label>
+            <input type="date" id="end-date" placeholder="选择结束日期" />
+        </div>
+        <button id="download">下载</button>
+        <button id="stop">停止</button>
+        <button id="config-button">配置</button>
+    </div>
+    <div id="overlay"></div>
+    <div id="config-panel">
+        <h3>配置</h3>
+        <div class="config-row">
+            <label for="client-connections">客户端连接数:</label>
+            <input type="number" id="client-connections" placeholder="输入客户端连接数" />
+        </div>
+        <div class="config-row">
+            <label for="disk-operations">写入磁盘线程:</label>
+            <input type="number" id="disk-operations" placeholder="输入操作磁盘数" />
+        </div>
+        <div class="config-row">
+            <label for="save-path">数据保存路径:</label>
+            <input type="text" id="save-path" placeholder="输入保存路径" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px;" />
+        </div>
+        <div style="display: flex; flex-direction: column; margin-bottom: 10px;">
+            <label for="stock-codes">股票代码:</label>
+            <textarea id="stock-codes" rows="10" placeholder="输入股票代码，每行一个"></textarea>
+        </div>
+        <div class="button-group" style="gap: 10px;">
+            <button id="save-config">保存</button>
+            <button id="close-config">关闭</button>
+        </div>
+    </div>
+    <div id="right-panel">
+        <h3>日志</h3>
+        <pre id="log-output"></pre>
+    </div>
+
+    <script>
+        // 设置默认日期为今天
+        window.onload = function() {
+            const today = new Date().toISOString().split('T')[0]; // 获取今天的日期
+            document.getElementById('start-date').value = today; // 设置开始日期
+            document.getElementById('end-date').value = today; // 设置结束日期
+        };
+
+        // 这里可以添加按钮的事件处理逻辑
+        document.getElementById('download-today').onclick = function() {
+            log('下载当日数据');
+            _download_today()
+        };
+
+        document.getElementById('refresh-realtime').onclick = function() {
+            log('实时刷新数据');
+            _refresh_real()
+        };
+
+        document.getElementById('download').onclick = function() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            log(`开始下载数据，从 ${startDate} 到 ${endDate}`);
+            _download_history(startDate,endDate)
+        };
+
+        document.getElementById('stop').onclick = function() {
+            log('停止操作');
+            _stop_download()
+        };
+
+        document.getElementById('config-button').onclick = function() {
+            document.getElementById('config-panel').style.display = 'block'; // 显示配置面板
+            document.getElementById('overlay').style.display = 'block'; // 显示遮罩层
+        };
+
+        document.getElementById('close-config').onclick = function() {
+            document.getElementById('config-panel').style.display = 'none'; // 关闭配置面板
+            document.getElementById('overlay').style.display = 'none'; // 隐藏遮罩层
+        };
+
+        document.getElementById('save-config').onclick = function() {
+            const clientConnections = document.getElementById('client-connections').value;
+            const diskOperations = document.getElementById('disk-operations').value;
+            const savePath = document.getElementById('save-path').value; // 获取保存路径
+            const stockCodes = document.getElementById('stock-codes').value.split('\n');
+
+
+            // 这里可以将配置保存到本地存储或其他地方
+            log(`保存配置: 客户端连接数=${clientConnections}, 操作磁盘数=${diskOperations}, 股票代码=${stockCodes.join(', ')}, 保存路径=${savePath}`);
+            _save_config(clientConnections,diskOperations,savePath,stockCodes)
+        };
+
+        function log(message) {
+            const logOutput = document.getElementById('log-output');
+            logOutput.textContent += message + '\n'; // 不覆盖日志
+        }
+
+        function _download_today(){}
+        function _refresh_real(){}
+        function _download_history(startDate,endDate){}
+        function _stop_download(){}
+        function _get_config(){}
+        function _save_config(clientConnections,diskOperations,savePath,stockCodes){}
+
+    </script>
+</body>
+</html> 
