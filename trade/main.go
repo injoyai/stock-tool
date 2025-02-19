@@ -23,7 +23,7 @@ func main() {
 
 	lorca.Run(&lorca.Config{
 		Width:  800,
-		Height: 660,
+		Height: 900,
 		Index:  index,
 	}, func(app lorca.APP) error {
 
@@ -35,6 +35,12 @@ func main() {
 			"dir":      "./data/",
 			"codes":    []string{"sz000001"},
 			"userText": false,
+			"interval": 100,
+			"start1":   "09:30",
+			"end1":     "11:30",
+			"start2":   "13:00",
+			"end2":     "15:00",
+			"auto":     false,
 		})
 		oss.NewNotExist(codePath, "")
 		cfg.Init(cfg.WithFile(configPath, codec.Json))
@@ -78,7 +84,7 @@ func main() {
 		})
 
 		var refreshLock sync.Mutex
-		app.Bind("_refresh_real", func() {
+		refresh := func() {
 			if !refreshLock.TryLock() {
 				log("正在实时刷新数据中...")
 				return
@@ -93,13 +99,76 @@ func main() {
 				case <-cc.Done():
 					return
 				default:
+
+					now := time.Now()
+					date := now.Format("2006-01-02 ")
+
+					start1, err := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("start1", "09:30"), time.Local)
+					if err != nil {
+						start1 = now
+					}
+
+					end1, err := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("end1", "11:30"), time.Local)
+					if err != nil {
+						end1 = now
+					}
+
+					start2, err := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("start2", "13:00"), time.Local)
+					if err != nil {
+						start2 = now
+					}
+
+					end2, err := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("end2", "15:00"), time.Local)
+					if err != nil {
+						end2 = now
+					}
+
+					logs.Debug(now)
+					logs.Debug(start1)
+					logs.Debug(end1)
+					logs.Debug(start2)
+					logs.Debug(end2)
+
+					logs.Debug(now.After(end2))
+
+					if now.Before(start1) || now.After(end2) || (now.After(end1) && now.Before(start2)) {
+
+						min := time.Second
+						if sub := start1.Sub(now); sub > min {
+							min = sub
+						}
+
+						if sub := start2.Sub(now); sub < min {
+							min = sub
+						}
+
+						if now.Sub(end2) > 0 {
+							min = time.Hour * 2
+						}
+
+						min /= 2
+						if min < time.Second {
+							min = time.Second
+						}
+
+						log(now.Format("15:04") + ": 未到设置的时间,等待" + min.String())
+
+						<-time.After(min)
+						continue
+					}
+
 					log("实时刷新数据...")
-					dealErr(c.DownloadTodayAll(cc, log, plan))
+					dealErr(c.DownloadTodayAll2(cc, log, plan))
+					<-time.After(time.Duration(cfg.GetInt("interval", 1000)) * time.Millisecond)
 				}
-				<-time.After(time.Second * 5)
+
 			}
 
-		})
+		}
+		app.Bind("_refresh_real", refresh)
+		if cfg.GetBool("auto", false) {
+			go refresh()
+		}
 
 		app.Bind("_download_history", func(startDate, endDate string) {
 			start, err := time.Parse("2006-01-02", startDate)
@@ -125,14 +194,20 @@ func main() {
 			return cfg.GetString("")
 		})
 
-		app.Bind("_save_config", func(clients, disks, dir string, codes []string, useText bool) {
+		app.Bind("_save_config", func(clients, disks, dir string, codes []string, useText, auto bool, interval, startTime1, endTime1, startTime2, endTime2 string) {
 			c.Dir = dir
 			m := g.Map{
-				"clients": clients,
-				"disks":   disks,
-				"dir":     dir,
-				"codes":   codes,
-				"useText": useText,
+				"clients":  clients,
+				"disks":    disks,
+				"dir":      dir,
+				"codes":    codes,
+				"useText":  useText,
+				"interval": interval,
+				"start1":   startTime1,
+				"end1":     endTime1,
+				"start2":   startTime2,
+				"end2":     endTime2,
+				"auto":     auto,
 			}
 			dealErr(oss.New(configPath, m))
 			cfg.Init(cfg.WithAny(m))
