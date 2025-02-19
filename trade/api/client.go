@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/injoyai/base/chans"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
@@ -11,18 +12,31 @@ import (
 	"github.com/injoyai/tdx"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
-func Dial(log func(s string)) *Client {
+func Dial(clients, disks int, log func(s string)) *Client {
+	if clients <= 0 {
+		clients = 1
+	}
+	if disks <= 0 {
+		disks = 1
+	}
+
 	df := tdx.NewHostDial(nil)
 	for {
-		c, err := tdx.DialWith(
-			df,
-			tdx.WithRedial(),
-		)
+
+		p, err := NewPool(func() (*tdx.Client, error) {
+			return tdx.DialWith(df, tdx.WithRedial())
+		}, clients)
 		if err == nil {
-			return &Client{Client: c}
+			cli := &Client{
+				Pool: p,
+				Ch:   make(chan func(), disks),
+			}
+			go cli.Run(disks)
+			return cli
 		}
 		if log != nil {
 			log("连接服务失败: " + err.Error())
@@ -34,10 +48,17 @@ func Dial(log func(s string)) *Client {
 type Client struct {
 	GetCodes func() ([]string, error)
 	Dir      string //保存数据的路径
-	*tdx.Client
+	Pool     *Pool
+	Ch       chan func()
 }
 
 func (this *Client) DownloadTodayAll(ctx context.Context, log func(s string), plan func(cu, to int)) error {
+
+	c, err := this.Pool.Get()
+	if err != nil {
+		return err
+	}
+	defer this.Pool.Put(c)
 
 	codes, err := this.GetCodes()
 	if err != nil {
@@ -56,7 +77,7 @@ func (this *Client) DownloadTodayAll(ctx context.Context, log func(s string), pl
 			return errors.New("手动停止")
 		default:
 		}
-		err := this.DownloadToday(code)
+		err := this.DownloadToday(c, code, log)
 		plan(i+1, total)
 		if err != nil {
 			log(fmt.Sprintf("代码: %s, 失败:%v", code, err))
@@ -66,12 +87,47 @@ func (this *Client) DownloadTodayAll(ctx context.Context, log func(s string), pl
 	return nil
 }
 
-func (this *Client) DownloadToday(code string) (err error) {
+func (this *Client) DownloadTodayAll2(ctx context.Context, log func(s string), plan func(cu, to int)) error {
+
+	codes, err := this.GetCodes()
+	if err != nil {
+		return err
+	}
+
+	if len(codes) == 0 {
+		return errors.New("没有指定股票")
+	}
+
+	total := len(codes)
+	plan(0, total)
+	for i := range codes {
+		select {
+		case <-ctx.Done():
+			return errors.New("手动停止")
+
+		default:
+			code := codes[i]
+			this.Pool.Go(func(c *tdx.Client) {
+				err := this.DownloadToday(c, code, log)
+				plan(i+1, total)
+				if err != nil {
+					log(fmt.Sprintf("代码: %s, 失败:%v", code, err))
+				}
+			})
+
+		}
+
+	}
+	return nil
+}
+
+func (this *Client) DownloadToday(c *tdx.Client, code string, log func(s string)) (err error) {
+
 	code, err = fullCode(code)
 	if err != nil {
 		return err
 	}
-	resp, err := this.GetMinuteTradeAll(code)
+	resp, err := c.GetMinuteTradeAll(code)
 	if err != nil {
 		return err
 	}
@@ -90,7 +146,7 @@ func (this *Client) DownloadToday(code string) (err error) {
 				v.Volume,
 				e,
 				v.Number,
-				getBuySell(v.Status),
+				getBuySell(v.Time, v.Status),
 				fmt.Sprintf("%.2f", float64(v.Volume)/float64(v.Number)),
 				fmt.Sprintf("%.2f", float64(e)/float64(v.Number)),
 				v.Price.Int64() * int64(v.Volume),
@@ -98,19 +154,39 @@ func (this *Client) DownloadToday(code string) (err error) {
 		)
 	}
 
-	buf, err := excel.ToCsv(data)
-	if err != nil {
-		return err
+	this.Ch <- func() {
+		buf, err := excel.ToCsv(data)
+		if err != nil {
+			log(err.Error())
+			return
+		}
+		if time.Now().Hour() < 15 {
+			code += "(不全)"
+		}
+		code = strings.TrimPrefix(code, "sz")
+		code = strings.TrimPrefix(code, "sh")
+		err = oss.New(filepath.Join(this.Dir, time.Now().Format("2006-01-02"), code+".csv"), buf)
+		if err != nil {
+			log(err.Error())
+			return
+		}
 	}
 
-	if time.Now().Hour() < 15 {
-		code += "(不全)"
-	}
+	return nil
 
-	code = strings.TrimPrefix(code, "sz")
-	code = strings.TrimPrefix(code, "sh")
-
-	return oss.New(filepath.Join(this.Dir, time.Now().Format("2006-01-02"), code+".csv"), buf)
+	//buf, err := excel.ToCsv(data)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//if time.Now().Hour() < 15 {
+	//	code += "(不全)"
+	//}
+	//
+	//code = strings.TrimPrefix(code, "sz")
+	//code = strings.TrimPrefix(code, "sh")
+	//
+	//return oss.New(filepath.Join(this.Dir, time.Now().Format("2006-01-02"), code+".csv"), buf)
 }
 
 func (this *Client) DownloadHistoryAll(ctx context.Context, start, end time.Time, log func(s string), plan func(cu, to int)) error {
@@ -126,37 +202,46 @@ func (this *Client) DownloadHistoryAll(ctx context.Context, start, end time.Time
 
 	total := len(codes)
 	plan(0, total)
-	for i, code := range codes {
+	var index uint32
+	for i := range codes {
 		select {
 		case <-ctx.Done():
 			return errors.New("手动停止")
+
 		default:
+
+			code := codes[i]
+			this.Pool.Go(func(c *tdx.Client) {
+				for date := start; date.Unix() <= end.Unix(); date = date.Add(time.Hour * 24) {
+					select {
+					case <-ctx.Done():
+						break
+
+					default:
+						err := this.DownloadHistory(c, date, code, log)
+						if err != nil {
+							log(fmt.Sprintf("日期: %s, 代码: %s, 失败:%v", date.Format("2006/01/02"), code, err))
+							break
+						}
+
+					}
+				}
+				plan(int(atomic.AddUint32(&index, 1)), total)
+			})
 		}
-		for date := start; date.Unix() <= end.Unix(); date = date.Add(time.Hour * 24) {
-			select {
-			case <-ctx.Done():
-				return errors.New("手动停止")
-			default:
-			}
-			err := this.DownloadHistory(date, code)
-			if err != nil {
-				log(fmt.Sprintf("日期: %s, 代码: %s, 失败:%v", date.Format("2006/01/02"), code, err))
-				break
-			}
-		}
-		plan(i+1, total)
+
 	}
 
 	return nil
 }
 
-func (this *Client) DownloadHistory(t time.Time, code string) (err error) {
+func (this *Client) DownloadHistory(c *tdx.Client, t time.Time, code string, log func(s string)) (err error) {
 	defer g.Recover(&err)
 	code, err = fullCode(code)
 	if err != nil {
 		return err
 	}
-	resp, err := this.GetHistoryMinuteTradeAll(t.Format("20060102"), code)
+	resp, err := c.GetHistoryMinuteTradeAll(t.Format("20060102"), code)
 	if err != nil {
 		return err
 	}
@@ -177,24 +262,59 @@ func (this *Client) DownloadHistory(t time.Time, code string) (err error) {
 				e,
 				"",
 				"",
-				getBuySell(v.Status),
+				getBuySell(v.Time, v.Status),
 				v.Price.Int64() * int64(v.Volume),
 			},
 		)
 	}
 
-	buf, err := excel.ToCsv(data)
-	if err != nil {
-		return err
+	this.Ch <- func() {
+		buf, err := excel.ToCsv(data)
+		if err != nil {
+			log(err.Error())
+			return
+		}
+
+		code = strings.TrimPrefix(code, "sz")
+		code = strings.TrimPrefix(code, "sh")
+		err = oss.New(filepath.Join(this.Dir, t.Format("2006-01-02"), code+".csv"), buf)
+		if err != nil {
+			log(err.Error())
+			return
+		}
 	}
 
-	code = strings.TrimPrefix(code, "sz")
-	code = strings.TrimPrefix(code, "sh")
+	return nil
 
-	return oss.New(filepath.Join(this.Dir, t.Format("2006-01-02"), code[2:]+".csv"), buf)
+	//buf, err := excel.ToCsv(data)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//code = strings.TrimPrefix(code, "sz")
+	//code = strings.TrimPrefix(code, "sh")
+	//
+	//return oss.New(filepath.Join(this.Dir, t.Format("2006-01-02"), code+".csv"), buf)
 }
 
-func getBuySell(n int) string {
+func (this *Client) Run(limit int) {
+	c := chans.NewLimit(limit)
+	for {
+		select {
+		case fn := <-this.Ch:
+			c.Add()
+			go func() {
+				defer c.Done()
+				fn()
+			}()
+		}
+	}
+}
+
+func getBuySell(time string, n int) string {
+	if time == "15:00" {
+		return ""
+	}
 	switch n {
 	case 0:
 		return "B"

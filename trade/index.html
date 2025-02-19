@@ -121,6 +121,27 @@
             background-color: #4CAF50;
             border-radius: 5px;
         }
+        #log-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        #clear-log {
+            margin-left: 10px;
+            padding: 2px 4px; /* 进一步缩小按钮的内边距 */
+            font-size: 0.8em; /* 调整字体大小 */
+            background-color: #e0e0e0;
+            color: #333;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            vertical-align: middle; /* 确保按钮与文本垂直居中对齐 */
+            white-space: nowrap; /* 防止按钮内容换行 */
+            max-width: 80px; /* 设置按钮的最大宽度 */
+        }
+        #clear-log:hover {
+            background-color: #d0d0d0;
+        }
     </style>
 </head>
 <body>
@@ -176,7 +197,10 @@
         </div>
     </div>
     <div id="right-panel">
-        <h3>日志</h3>
+        <div id="log-header">
+            <h3 style="margin: 0;">日志</h3>
+            <button id="clear-log">清空</button>
+        </div>
         <pre id="log-output"></pre>
     </div>
 
@@ -250,6 +274,10 @@
             _save_config(clientConnections, diskOperations, savePath, stockCodes, useTextCode);
         };
 
+        // 清空日志的功能
+        document.getElementById('clear-log').onclick = function() {
+            document.getElementById('log-output').textContent = '';
+        };
 
         function log(message) {
             const logOutput = document.getElementById('log-output');

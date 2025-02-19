@@ -27,17 +27,11 @@ func main() {
 		Index:  index,
 	}, func(app lorca.APP) error {
 
-		//小后门
-		if time.Date(2025, 3, 10, 0, 0, 0, 0, time.Local).Before(time.Now()) {
-			app.Eval(`log('试用结束!!!')`)
-			return nil
-		}
-
 		configPath := "./config/config.json"
 		codePath := "./股票列表.txt"
 		oss.NewNotExist(configPath, g.Map{
-			"clients":  1,
-			"disks":    10,
+			"clients":  10,
+			"disks":    100,
 			"dir":      "./data/",
 			"codes":    []string{"sz000001"},
 			"userText": false,
@@ -70,13 +64,17 @@ func main() {
 		}
 
 		//连接服务器
-		c := api.Dial(log)
-		log(fmt.Sprintf(`连接服务器[%s]成功...`, c.GetKey()))
+		c := api.Dial(
+			cfg.GetInt("clients", 10),
+			cfg.GetInt("disks", 100),
+			log,
+		)
+		log(fmt.Sprintf(`连接服务器成功...`))
 		c.GetCodes = getCodes
 		c.Dir = cfg.GetString("dir")
 
 		app.Bind("_download_today", func() {
-			dealErr(c.DownloadTodayAll(ctx, log, plan))
+			dealErr(c.DownloadTodayAll2(ctx, log, plan))
 		})
 
 		var refreshLock sync.Mutex
