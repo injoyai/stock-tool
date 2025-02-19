@@ -123,14 +123,6 @@ func main() {
 						end2 = now
 					}
 
-					logs.Debug(now)
-					logs.Debug(start1)
-					logs.Debug(end1)
-					logs.Debug(start2)
-					logs.Debug(end2)
-
-					logs.Debug(now.After(end2))
-
 					if now.Before(start1) || now.After(end2) || (now.After(end1) && now.Before(start2)) {
 
 						min := time.Second
@@ -151,7 +143,7 @@ func main() {
 							min = time.Second
 						}
 
-						log(now.Format("15:04") + ": 未到设置的时间,等待" + min.String())
+						//log(now.Format("15:04") + ": 未到设置的时间,等待" + min.String())
 
 						<-time.After(min)
 						continue
@@ -167,6 +159,7 @@ func main() {
 		}
 		app.Bind("_refresh_real", refresh)
 		if cfg.GetBool("auto", false) {
+			log("开启自动刷新...")
 			go refresh()
 		}
 
