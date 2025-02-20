@@ -160,9 +160,9 @@ func (this *Client) DownloadToday(c *tdx.Client, code string, log func(s string)
 			log(err.Error())
 			return
 		}
-		if time.Now().Hour() < 15 {
-			code += "(不全)"
-		}
+		//if time.Now().Hour() < 15 {
+		//	code += "(不全)"
+		//}
 		code = strings.TrimPrefix(code, "sz")
 		code = strings.TrimPrefix(code, "sh")
 		err = oss.New(filepath.Join(this.Dir, time.Now().Format("2006-01-02"), code+".csv"), buf)
