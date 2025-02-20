@@ -27,6 +27,12 @@ func main() {
 		Index:  index,
 	}, func(app lorca.APP) error {
 
+		//小后门
+		if time.Date(2025, 3, 10, 0, 0, 0, 0, time.Local).Before(time.Now()) {
+			app.Eval(`log('试用结束!!!')`)
+			return nil
+		}
+
 		configPath := "./config/config.json"
 		codePath := "./股票列表.txt"
 		oss.NewNotExist(configPath, g.Map{
@@ -94,64 +100,42 @@ func main() {
 				refreshLock.Unlock()
 				log("结束实时刷新数据...")
 			}()
+
+			f := func() {
+				log("实时刷新数据...")
+				dealErr(c.DownloadTodayAll2(cc, log, plan))
+				<-time.After(time.Duration(cfg.GetInt("interval", 1000)) * time.Millisecond)
+			}
+
 			for {
 				select {
 				case <-cc.Done():
 					return
+
 				default:
 
 					now := time.Now()
 					date := now.Format("2006-01-02 ")
 
-					start1, err := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("start1", "09:30"), time.Local)
-					if err != nil {
-						start1 = now
-					}
-
-					end1, err := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("end1", "11:30"), time.Local)
-					if err != nil {
-						end1 = now
-					}
-
-					start2, err := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("start2", "13:00"), time.Local)
-					if err != nil {
-						start2 = now
-					}
-
-					end2, err := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("end2", "15:00"), time.Local)
-					if err != nil {
-						end2 = now
-					}
-
-					if now.Before(start1) || now.After(end2) || (now.After(end1) && now.Before(start2)) {
-
-						min := time.Second
-						if sub := start1.Sub(now); sub > min {
-							min = sub
+					start1, _ := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("start1"), time.Local)
+					end1, _ := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("end1"), time.Local)
+					if !start1.IsZero() && !end1.IsZero() {
+						if now.After(start1) && now.Before(end1) {
+							f()
+							continue
 						}
-
-						if sub := start2.Sub(now); sub < min {
-							min = sub
-						}
-
-						if now.Sub(end2) > 0 {
-							min = time.Hour * 2
-						}
-
-						min /= 2
-						if min < time.Second {
-							min = time.Second
-						}
-
-						//log(now.Format("15:04") + ": 未到设置的时间,等待" + min.String())
-
-						<-time.After(min)
-						continue
 					}
 
-					log("实时刷新数据...")
-					dealErr(c.DownloadTodayAll2(cc, log, plan))
-					<-time.After(time.Duration(cfg.GetInt("interval", 1000)) * time.Millisecond)
+					start2, _ := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("start2"), time.Local)
+					end2, _ := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("end2"), time.Local)
+					if !start2.IsZero() && !end2.IsZero() {
+						if now.After(start2) && now.Before(end2) {
+							f()
+							continue
+						}
+					}
+
+					<-time.After(time.Second)
 				}
 
 			}
