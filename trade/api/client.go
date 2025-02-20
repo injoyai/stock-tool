@@ -133,7 +133,7 @@ func (this *Client) DownloadToday(c *tdx.Client, code string, log func(s string)
 	}
 
 	data := [][]any{
-		{"日期", "时间", "价格(分)", "成交量(手)", "成交额", "笔数", "方向", "均量", "均额", "成交额2"},
+		{"日期", "时间", "价格", "成交量", "成交额", "笔数", "方向", "均量", "均额", "成交额2"},
 	}
 	for _, v := range resp.List {
 		//成交额
@@ -247,7 +247,7 @@ func (this *Client) DownloadHistory(c *tdx.Client, t time.Time, code string, log
 	}
 
 	data := [][]any{
-		{"日期", "时间", "价格(分)", "成交量(手)", "成交额", "笔数", "方向", "均量", "均额", "成交额2"},
+		{"日期", "时间", "价格", "成交量", "成交额", "笔数", "方向", "均量", "均额", "成交额2"},
 	}
 	for _, v := range resp.List {
 		//成交额
