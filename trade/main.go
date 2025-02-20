@@ -27,12 +27,6 @@ func main() {
 		Index:  index,
 	}, func(app lorca.APP) error {
 
-		//小后门
-		if time.Date(2025, 3, 10, 0, 0, 0, 0, time.Local).Before(time.Now()) {
-			app.Eval(`log('试用结束!!!')`)
-			return nil
-		}
-
 		configPath := "./config/config.json"
 		codePath := "./股票列表.txt"
 		oss.NewNotExist(configPath, g.Map{
@@ -90,7 +84,7 @@ func main() {
 		})
 
 		var refreshLock sync.Mutex
-		refresh := func() {
+		refresh := func(hand bool) {
 			if !refreshLock.TryLock() {
 				log("正在实时刷新数据中...")
 				return
@@ -114,6 +108,11 @@ func main() {
 
 				default:
 
+					if hand {
+						f()
+						continue
+					}
+
 					now := time.Now()
 					date := now.Format("2006-01-02 ")
 
@@ -135,17 +134,34 @@ func main() {
 						}
 					}
 
-					<-time.After(time.Second)
+					<-time.After(time.Second * 1)
 				}
 
 			}
 
 		}
-		app.Bind("_refresh_real", refresh)
+		stop := func() {
+			cancel()
+			ctx, cancel = context.WithCancel(context.Background())
+			log("停止成功...")
+		}
+
 		if cfg.GetBool("auto", false) {
 			log("开启自动刷新...")
-			go refresh()
+			go refresh(false)
 		}
+
+		app.Bind("_refresh_real", func() {
+			stop()
+			for i := 0; i < 20; i++ {
+				<-time.After(time.Millisecond * 500)
+				if refreshLock.TryLock() {
+					refreshLock.Unlock()
+					break
+				}
+			}
+			refresh(true)
+		})
 
 		app.Bind("_download_history", func(startDate, endDate string) {
 			start, err := time.Parse("2006-01-02", startDate)
@@ -161,11 +177,7 @@ func main() {
 			dealErr(c.DownloadHistoryAll(ctx, start, end, log, plan))
 		})
 
-		app.Bind("_stop_download", func() {
-			cancel()
-			ctx, cancel = context.WithCancel(context.Background())
-			log("停止成功...")
-		})
+		app.Bind("_stop_download", stop)
 
 		app.Bind("_get_config", func() string {
 			return cfg.GetString("")
@@ -189,6 +201,9 @@ func main() {
 			dealErr(oss.New(configPath, m))
 			cfg.Init(cfg.WithAny(m))
 			c.GetCodes = getCodes
+			if auto {
+				refresh(false)
+			}
 		})
 
 		return nil

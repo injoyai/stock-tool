@@ -258,11 +258,11 @@ func (this *Client) DownloadHistory(c *tdx.Client, t time.Time, code string, log
 				strings.ReplaceAll(v.Time, ":", ""),
 				v.Price.Int64(),
 				v.Volume,
-				"",
 				e,
 				"",
-				"",
 				getBuySell(v.Time, v.Status),
+				"",
+				"",
 				v.Price.Int64() * int64(v.Volume),
 			},
 		)
