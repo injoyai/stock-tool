@@ -2,7 +2,10 @@ module pull-daykline
 
 go 1.20
 
-require github.com/injoyai/goutil v0.0.0-20250220075818-1b6cf69bc75c
+require (
+	github.com/injoyai/goutil v0.0.0-20250220075818-1b6cf69bc75c
+	github.com/injoyai/tdx v0.0.5
+)
 
 require (
 	github.com/fatih/color v1.14.1 // indirect
@@ -17,10 +20,11 @@ require (
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/injoyai/base v1.0.19 // indirect
 	github.com/injoyai/conv v1.1.10 // indirect
+	github.com/injoyai/ios v0.0.6 // indirect
 	github.com/injoyai/logs v1.0.9 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
