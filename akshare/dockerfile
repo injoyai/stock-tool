@@ -1,0 +1,17 @@
+# 使用官方 Python 3.11 镜像
+FROM python:3.11-slim
+
+# 设置工作目录
+WORKDIR /home
+
+# 安装必要的依赖 aktools==0.0.89 akshare==1.16.13
+RUN pip install --upgrade pip
+RUN pip install --upgrade aktools
+RUN pip install --upgrade akshare
+
+# 暴露所需的端口
+EXPOSE 8888
+EXPOSE 8080
+
+# 设置容器启动时执行的命令
+CMD ["python3", "-m", "aktools", "--host", "0.0.0.0", "--port", "8080"]
