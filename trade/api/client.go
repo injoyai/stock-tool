@@ -87,7 +87,7 @@ func (this *Client) DownloadTodayAll(ctx context.Context, log func(s string), pl
 	return nil
 }
 
-func (this *Client) DownloadTodayAll2(ctx context.Context, log func(s string), plan func(cu, to int)) error {
+func (this *Client) DownloadTodayAll2(ctx context.Context, log func(s string), plan func(cu, to int), dealErr func(code string, err error)) error {
 
 	codes, err := this.GetCodes()
 	if err != nil {
@@ -112,6 +112,7 @@ func (this *Client) DownloadTodayAll2(ctx context.Context, log func(s string), p
 				plan(i+1, total)
 				if err != nil {
 					log(fmt.Sprintf("代码: %s, 失败:%v", code, err))
+					dealErr(code, err)
 				}
 			})
 

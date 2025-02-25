@@ -80,7 +80,13 @@ func main() {
 		c.Dir = cfg.GetString("dir")
 
 		app.Bind("_download_today", func() {
-			dealErr(c.DownloadTodayAll2(ctx, log, plan))
+			failCodes := []string(nil)
+			dealErr(c.DownloadTodayAll2(ctx, log, plan, func(code string, err error) {
+				failCodes = append(failCodes, code)
+			}))
+			if len(failCodes) > 0 {
+				oss.New("./失败代码.txt", strings.Join(failCodes, "\r\n"))
+			}
 		})
 
 		var refreshLock sync.Mutex
@@ -89,15 +95,21 @@ func main() {
 				log("正在实时刷新数据中...")
 				return
 			}
+			failCodes := []string(nil)
 			cc := ctx
 			defer func() {
 				refreshLock.Unlock()
 				log("结束实时刷新数据...")
+				if len(failCodes) > 0 {
+					oss.New("./失败代码.txt", strings.Join(failCodes, "\r\n"))
+				}
 			}()
 
 			f := func() {
 				log("实时刷新数据...")
-				dealErr(c.DownloadTodayAll2(cc, log, plan))
+				dealErr(c.DownloadTodayAll2(cc, log, plan, func(code string, err error) {
+					failCodes = append(failCodes, code)
+				}))
 				<-time.After(time.Duration(cfg.GetInt("interval", 1000)) * time.Millisecond)
 			}
 
