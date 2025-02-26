@@ -48,6 +48,7 @@ func main() {
 }
 
 type MinuteTrade struct {
+	Date   string
 	Time   string
 	Price  float64
 	Volume int
