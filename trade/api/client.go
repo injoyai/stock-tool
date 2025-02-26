@@ -16,19 +16,26 @@ import (
 	"time"
 )
 
-func Dial(clients, disks int, log func(s string)) *Client {
+func Dial(clients, disks int, timeout time.Duration, log func(s string)) *Client {
 	if clients <= 0 {
 		clients = 1
 	}
 	if disks <= 0 {
 		disks = 1
 	}
+	if timeout <= time.Second {
+		timeout = 2 * time.Second
+	}
 
 	df := tdx.NewHostDial(nil)
 	for {
-
 		p, err := NewPool(func() (*tdx.Client, error) {
-			return tdx.DialWith(df, tdx.WithRedial())
+			c, err := tdx.DialWith(df, tdx.WithRedial())
+			if err != nil {
+				return nil, err
+			}
+			c.Wait.SetTimeout(timeout)
+			return c, nil
 		}, clients)
 		if err == nil {
 			cli := &Client{

@@ -23,7 +23,7 @@ func main() {
 
 	lorca.Run(&lorca.Config{
 		Width:  800,
-		Height: 900,
+		Height: 1000,
 		Index:  index,
 	}, func(app lorca.APP) error {
 
@@ -73,6 +73,7 @@ func main() {
 		c := api.Dial(
 			cfg.GetInt("clients", 10),
 			cfg.GetInt("disks", 100),
+			time.Duration(cfg.GetInt("timeout", 2))*time.Second,
 			log,
 		)
 		log(fmt.Sprintf(`连接服务器成功...`))
@@ -195,12 +196,13 @@ func main() {
 			return cfg.GetString("")
 		})
 
-		app.Bind("_save_config", func(clients, disks, dir string, codes []string, useText, auto bool, interval, startTime1, endTime1, startTime2, endTime2 string) {
+		app.Bind("_save_config", func(clients, disks, dir, timeout string, codes []string, useText, auto bool, interval, startTime1, endTime1, startTime2, endTime2 string) {
 			c.Dir = dir
 			m := g.Map{
 				"clients":  clients,
 				"disks":    disks,
 				"dir":      dir,
+				"timeout":  timeout,
 				"codes":    codes,
 				"useText":  useText,
 				"interval": interval,

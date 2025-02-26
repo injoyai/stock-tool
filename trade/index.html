@@ -191,6 +191,10 @@
             <input type="number" id="disk-operations" placeholder="输入操作磁盘数" />
         </div>
         <div class="config-row">
+            <label for="timeout">超时时间(秒):</label>
+            <input type="number" id="timeout" placeholder="输入超时时间" />
+        </div>
+        <div class="config-row">
             <label for="save-path">数据保存路径:</label>
             <input type="text" id="save-path" placeholder="输入保存路径" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px;" />
         </div>
@@ -295,11 +299,12 @@
                 console.log(config)
                 document.getElementById('client-connections').value = config.clients;
                 document.getElementById('disk-operations').value = config.disks;
+                document.getElementById('timeout').value = config.timeout;
                 document.getElementById('save-path').value = config.dir;
                 document.getElementById('stock-codes').value = config.codes.join('\n');
                 document.getElementById('use-text-code').value = config.useText ? 'true' : 'false';
 
-                document.getElementById('auto-refresh').value = config.auto ? 'true' : 'false'; // 设置自动刷新选择器的值
+                document.getElementById('auto-refresh').value = config.auto ? 'true' : 'false';
                 document.getElementById('interval').value = config.interval;
                 document.getElementById('start-time-1').value = config.start1;
                 document.getElementById('end-time-1').value = config.end1;
@@ -316,6 +321,7 @@
         document.getElementById('save-config').onclick = function() {
             const clientConnections = document.getElementById('client-connections').value;
             const diskOperations = document.getElementById('disk-operations').value;
+            const timeout = document.getElementById('timeout').value;
             const savePath = document.getElementById('save-path').value;
             const stockCodes = document.getElementById('stock-codes').value.split('\n');
             const useTextCode = document.getElementById('use-text-code').value === 'true';
@@ -328,7 +334,7 @@
             const endTime2 = document.getElementById('end-time-2').value;
 
             log(`保存配置成功`);
-            _save_config(clientConnections, diskOperations, savePath, stockCodes, useTextCode, autoRefresh, interval, startTime1, endTime1, startTime2, endTime2);
+            _save_config(clientConnections, diskOperations, savePath, timeout, stockCodes, useTextCode, autoRefresh, interval, startTime1, endTime1, startTime2, endTime2);
         };
 
         // 清空日志的功能
@@ -346,7 +352,7 @@
         function _download_history(startDate, endDate) {}
         function _stop_download() {}
         function _get_config() {}
-        function _save_config(clientConnections, diskOperations, savePath, stockCodes, useTextCode, autoRefresh, interval, startTime1, endTime1, startTime2, endTime2) {}
+        function _save_config(clientConnections, diskOperations, timeout, savePath, stockCodes, useTextCode, autoRefresh, interval, startTime1, endTime1, startTime2, endTime2) {}
 
     </script>
 </body>
