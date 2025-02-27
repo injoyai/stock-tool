@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"github.com/injoyai/base/chans"
-	"github.com/injoyai/conv/cfg"
+	"github.com/injoyai/conv/cfg/v2"
 	inin "github.com/injoyai/goutil/frame/in/v3"
 	"github.com/injoyai/goutil/frame/mux"
 	"github.com/injoyai/logs"
@@ -11,6 +11,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"path/filepath"
 	"pull-minute-trade/plugins"
+	"strings"
 )
 
 var (
@@ -21,31 +22,50 @@ var (
 		Number: cfg.GetInt("number", 1),
 		Dir:    dir,
 	}
-	disks = cfg.GetInt("disks", 1)
-	spec  = cfg.GetString("spec", "0 1 15 * * *")
+	disks   = cfg.GetInt("disks", 1)
+	spec    = cfg.GetString("spec", "0 1 15 * * *")
+	codes   = cfg.GetStrings("codes")
+	startup = cfg.GetBool("startup")
 )
+
+func init() {
+	logs.SetFormatter(logs.TimeFormatter)
+}
 
 func main() {
 
+	logs.Debug(strings.Join(codes, "\n"))
+
+	//1. 连接服务器
 	m, err := tdx.NewManage(config)
 	logs.PanicErr(err)
 
-	queue := chans.NewLimit(1)
-
 	/*
 
 
 
 	 */
 
-	//1. 设置定时
-	cr := cron.New(cron.WithSeconds())
-	cr.AddFunc(spec, func() {
+	//2. 初始化
+	queue := chans.NewLimit(1)
+	f := func() {
 		queue.Add()
 		defer queue.Done()
-		plugins.NewPullTrade(m, database, disks).Run(context.Background())
-	})
+		pull := plugins.NewPullTrade(m, codes, database, disks)
+		err = pull.Run(context.Background())
+		logs.Infof("任务[%s]完成, 错误: %v\n", pull.Name(), err)
+	}
+
+	//3. 设置定时
+	cr := cron.New(cron.WithSeconds())
+	cr.AddFunc(spec, f)
 	cr.Start()
+
+	//4. 启动便执行
+	if startup {
+		logs.Info("马上执行...")
+		go f()
+	}
 
 	/*
 
@@ -53,6 +73,7 @@ func main() {
 
 	 */
 
+	//5. 开启HTTP服务
 	s := mux.New()
 	s.Group("/api", func(g *mux.Grouper) {
 		g.POST("/task", func(r *mux.Request) {
