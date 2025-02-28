@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"github.com/injoyai/base/chans"
+	"github.com/injoyai/conv"
 	"github.com/injoyai/conv/cfg/v2"
 	inin "github.com/injoyai/goutil/frame/in/v3"
 	"github.com/injoyai/goutil/frame/mux"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
+	"log"
 	"path/filepath"
 	"pull-minute-trade/plugins"
 	"strings"
@@ -29,7 +31,8 @@ var (
 )
 
 func init() {
-	logs.SetFormatter(logs.TimeFormatter)
+	logs.DefaultFormatter.SetFlag(log.Ltime | log.Lshortfile)
+	//logs.SetFormatter(logs.TimeFormatter)
 }
 
 func main() {
@@ -53,7 +56,7 @@ func main() {
 		defer queue.Done()
 		pull := plugins.NewPullTrade(m, codes, database, disks)
 		err = pull.Run(context.Background())
-		logs.Infof("任务[%s]完成, 错误: %v\n", pull.Name(), err)
+		logs.Infof("任务[%s]完成, 结果: %v\n", pull.Name(), conv.New(err).String("成功"))
 	}
 
 	//3. 设置定时

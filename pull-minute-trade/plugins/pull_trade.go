@@ -14,7 +14,7 @@ import (
 
 func NewPullTrade(m *tdx.Manage, codes []string, dir string, limit int) *PullTrade {
 	return &PullTrade{
-		Dir:       dir,
+		Dir:       filepath.Join(dir, "trade"),
 		Codes:     codes,
 		chanPull:  make(chan *ModelPull, limit),
 		chanSave:  make(chan *ModelSave, limit),
@@ -95,8 +95,8 @@ func (this *PullTrade) Run(ctx context.Context) error {
 						//如果最后时间不是15:00,说明数据不全,删除这天的数据
 						if _, err := b.Where("Date=?", last.Date).Delete(&db.Trade{}); err != nil {
 							logs.Err(err)
-							continue
 						}
+						continue
 					}
 
 					//3. 从服务器拉取数据
@@ -138,12 +138,14 @@ func (this *PullTrade) Run(ctx context.Context) error {
 func (this *PullTrade) pull(c *tdx.Client, code, lastDate string) ([]*db.Trade, error) {
 	insert := []*db.Trade(nil)
 	t := time.Now()
-	now := time.Now().Format("20060102")
-	logs.Debug(lastDate)
+	now := t.Format("20060102")
+	if lastDate == "" {
+		lastDate = "19901218"
+	}
 	for ; lastDate < t.Format("20060102"); t = t.Add(-time.Hour * 24) {
 		//<-time.After(time.Millisecond * 100)
 
-		//排除非工作日
+		//排除非开市日
 		if !this.m.Workday.Is(t) {
 			continue
 		}
@@ -177,7 +179,7 @@ func (this *PullTrade) pull(c *tdx.Client, code, lastDate string) ([]*db.Trade, 
 			return nil, err
 		}
 		if len(resp.List) == 0 {
-			break
+			continue
 		}
 		before := []*db.Trade(nil)
 		for _, v := range resp.List {
