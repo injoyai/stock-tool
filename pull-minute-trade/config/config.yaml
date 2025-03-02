@@ -1,0 +1,5 @@
+startup: true
+number: 1
+disks: 1
+codes:
+  - sz000001
