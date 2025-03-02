@@ -4,7 +4,7 @@ import (
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
-	"pull-minute-trade/db"
+	"pull-minute-trade/model"
 	"xorm.io/xorm"
 )
 
@@ -19,7 +19,7 @@ func main() {
 
 	b, err := sqlite.NewXorm("./" + code + ".db")
 	logs.PanicErr(err)
-	err = b.Sync2(new(db.Trade))
+	err = b.Sync2(new(model.Trade))
 	logs.PanicErr(err)
 
 	err = b.SessionFunc(func(session *xorm.Session) error {
@@ -31,7 +31,7 @@ func main() {
 			}
 			logs.Debug(resp.Count)
 			for _, vv := range resp.List {
-				if _, err := session.Insert(&db.Trade{
+				if _, err := session.Insert(&model.Trade{
 					Time:   vv.Time,
 					Price:  vv.Price.Int64(),
 					Volume: vv.Volume,
