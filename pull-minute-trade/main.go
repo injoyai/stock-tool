@@ -18,7 +18,7 @@ import (
 
 var (
 	dir      = cfg.GetString("dir", "./data")
-	database = filepath.Join(dir, "database")
+	database = filepath.Join(dir, "database/tdx/")
 	config   = &tdx.ManageConfig{
 		Hosts:  cfg.GetStrings("hosts"),
 		Number: cfg.GetInt("number", 1),
