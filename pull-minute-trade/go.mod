@@ -7,7 +7,7 @@ require (
 	github.com/injoyai/conv v1.1.10
 	github.com/injoyai/goutil v0.0.0-20250220075818-1b6cf69bc75c
 	github.com/injoyai/logs v1.0.9
-	github.com/injoyai/tdx v0.0.5
+	github.com/injoyai/tdx v0.0.6
 	github.com/robfig/cron/v3 v3.0.1
 	xorm.io/xorm v1.3.9
 )

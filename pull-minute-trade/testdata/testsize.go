@@ -4,6 +4,7 @@ import (
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"pull-minute-trade/db"
 	"xorm.io/xorm"
 )
 
@@ -16,12 +17,12 @@ func main() {
 	resp, err := c.GetKlineDayAll(code)
 	logs.PanicErr(err)
 
-	db, err := sqlite.NewXorm("./" + code + ".db")
+	b, err := sqlite.NewXorm("./" + code + ".db")
 	logs.PanicErr(err)
-	err = db.Sync2(new(MinuteTrade))
+	err = b.Sync2(new(db.Trade))
 	logs.PanicErr(err)
 
-	err = db.SessionFunc(func(session *xorm.Session) error {
+	err = b.SessionFunc(func(session *xorm.Session) error {
 		for _, v := range resp.List {
 			logs.Debug(v.Time)
 			resp, err := c.GetHistoryMinuteTradeAll(v.Time.Format("20060102"), code)
@@ -30,9 +31,9 @@ func main() {
 			}
 			logs.Debug(resp.Count)
 			for _, vv := range resp.List {
-				if _, err := session.Insert(&MinuteTrade{
+				if _, err := session.Insert(&db.Trade{
 					Time:   vv.Time,
-					Price:  vv.Price.Float64(),
+					Price:  vv.Price.Int64(),
 					Volume: vv.Volume,
 					Status: vv.Status,
 				}); err != nil {
@@ -45,12 +46,4 @@ func main() {
 	})
 	logs.PanicErr(err)
 
-}
-
-type MinuteTrade struct {
-	Date   string
-	Time   string
-	Price  float64
-	Volume int
-	Status int
 }

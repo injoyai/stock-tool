@@ -3,3 +3,6 @@ number: 1
 disks: 1
 codes:
   - sz000001
+
+database:
+  type: sqlite # mysql, influxdb
