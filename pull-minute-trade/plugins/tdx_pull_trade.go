@@ -7,6 +7,7 @@ import (
 	"github.com/injoyai/tdx"
 	"path/filepath"
 	"pull-minute-trade/db"
+	"pull-minute-trade/model"
 	"sync"
 	"time"
 	"xorm.io/xorm"
@@ -14,7 +15,7 @@ import (
 
 func NewPullTrade(m *tdx.Manage, codes []string, dir string, limit int) *PullTrade {
 	return &PullTrade{
-		Dir:       filepath.Join(dir, "trade"),
+		Dir:       filepath.Join(dir, "tdx/trade"),
 		Codes:     codes,
 		chanPull:  make(chan *ModelPull, limit),
 		chanSave:  make(chan *ModelSave, limit),
@@ -93,14 +94,14 @@ func (this *PullTrade) Run(ctx context.Context) error {
 					}
 					if last.Time != "15:00" {
 						//如果最后时间不是15:00,说明数据不全,删除这天的数据
-						if _, err := b.Where("Date=?", last.Date).Delete(&db.Trade{}); err != nil {
+						if _, err := b.Where("Date=?", last.Date).Delete(&model.Trade{}); err != nil {
 							logs.Err(err)
 						}
 						continue
 					}
 
 					//3. 从服务器拉取数据
-					var insert []*db.Trade
+					var insert []*model.Trade
 					err = this.m.Do(func(c *tdx.Client) error {
 						insert, err = this.pull(c, code, last.Date)
 						return err
@@ -135,8 +136,8 @@ func (this *PullTrade) Run(ctx context.Context) error {
 	return nil
 }
 
-func (this *PullTrade) pull(c *tdx.Client, code, lastDate string) ([]*db.Trade, error) {
-	insert := []*db.Trade(nil)
+func (this *PullTrade) pull(c *tdx.Client, code, lastDate string) ([]*model.Trade, error) {
+	insert := []*model.Trade(nil)
 	t := time.Now()
 	now := t.Format("20060102")
 	if lastDate == "" {
@@ -158,9 +159,9 @@ func (this *PullTrade) pull(c *tdx.Client, code, lastDate string) ([]*db.Trade, 
 			if err != nil {
 				return nil, err
 			}
-			before := []*db.Trade(nil)
+			before := []*model.Trade(nil)
 			for _, v := range resp.List {
-				before = append(before, &db.Trade{
+				before = append(before, &model.Trade{
 					Date:   date,
 					Time:   v.Time,
 					Price:  v.Price.Int64(),
@@ -181,9 +182,9 @@ func (this *PullTrade) pull(c *tdx.Client, code, lastDate string) ([]*db.Trade, 
 		if len(resp.List) == 0 {
 			continue
 		}
-		before := []*db.Trade(nil)
+		before := []*model.Trade(nil)
 		for _, v := range resp.List {
-			before = append(before, &db.Trade{
+			before = append(before, &model.Trade{
 				Date:   date,
 				Time:   v.Time,
 				Price:  v.Price.Int64(),
@@ -347,7 +348,7 @@ func (this *PullTrade) pull(c *tdx.Client, code, lastDate string) ([]*db.Trade, 
 
 type ModelPull struct {
 	Code string
-	*db.Trade
+	*model.Trade
 }
 
 // Updated 返回是否已经更新
@@ -366,5 +367,5 @@ func (this *ModelPull) RangeDate(f func(date string)) {
 
 type ModelSave struct {
 	Code   string
-	Insert []*db.Trade
+	Insert []*model.Trade
 }
