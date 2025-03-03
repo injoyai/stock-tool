@@ -15,7 +15,7 @@ import (
 
 func NewPullTrade(m *tdx.Manage, codes []string, dir string, limit int) *PullTrade {
 	return &PullTrade{
-		Dir:       filepath.Join(dir, "tdx/trade"),
+		Dir:       filepath.Join(dir, "trade"),
 		Codes:     codes,
 		chanPull:  make(chan *ModelPull, limit),
 		chanSave:  make(chan *ModelSave, limit),
@@ -76,6 +76,7 @@ func (this *PullTrade) Run(ctx context.Context) error {
 			go func(code string) {
 				defer wg.Done()
 				logs.Debug("开始更新:", code)
+				logs.Debug(filepath.Join(this.Dir, code+".db"))
 
 				//1. 打开数据库
 				b, err := db.Open(filepath.Join(this.Dir, code+".db"))
@@ -84,6 +85,7 @@ func (this *PullTrade) Run(ctx context.Context) error {
 					return
 				}
 				defer b.Close()
+				b.Sync2(new(model.Trade))
 
 				//2. 从数据库获取数据,并删除不全的最后一天数据
 				for x := 0; x < 3; x++ {
@@ -92,7 +94,7 @@ func (this *PullTrade) Run(ctx context.Context) error {
 						logs.Err(err)
 						continue
 					}
-					if last.Time != "15:00" {
+					if last.Time != "" && last.Time != "15:00" {
 						//如果最后时间不是15:00,说明数据不全,删除这天的数据
 						if _, err := b.Where("Date=?", last.Date).Delete(&model.Trade{}); err != nil {
 							logs.Err(err)
@@ -137,6 +139,8 @@ func (this *PullTrade) Run(ctx context.Context) error {
 }
 
 func (this *PullTrade) pull(c *tdx.Client, code, lastDate string) ([]*model.Trade, error) {
+	//logs.Debug("拉取数据:", code, " ", lastDate)
+
 	insert := []*model.Trade(nil)
 	t := time.Now()
 	now := t.Format("20060102")

@@ -17,16 +17,16 @@ type DayKline struct {
 
 type Kline struct {
 	Date   int64 `json:"date"`   //时间节点 2006-01-02 15:00
-	Open   int64 `json:"open"`   //开盘价
-	High   int64 `json:"high"`   //最高价
-	Low    int64 `json:"low"`    //最低价
-	Close  int64 `json:"close"`  //收盘价
+	Open   Price `json:"open"`   //开盘价
+	High   Price `json:"high"`   //最高价
+	Low    Price `json:"low"`    //最低价
+	Close  Price `json:"close"`  //收盘价
 	Volume int64 `json:"volume"` //成交量
-	Amount int64 `json:"amount"` //成交额
+	Amount Price `json:"amount"` //成交额
 }
 
 // RisePrice 涨跌
-func (this *Kline) RisePrice() int64 {
+func (this *Kline) RisePrice() Price {
 	return this.Close - this.Open
 }
 
@@ -45,7 +45,7 @@ func (this *Kline) String() string {
 		time.Unix(this.Date, 0).Format("2006-01-02 15:04:05"),
 		this.Open, this.High, this.Low, this.Close,
 		this.RisePrice(), this.RiseRate(),
-		protocol.Int64UnitString(this.Volume), protocol.Int64UnitString(this.Amount),
+		protocol.Int64UnitString(this.Volume), protocol.FloatUnitString(this.Amount.Float64()),
 	)
 }
 
@@ -66,6 +66,7 @@ func (this Klines) Kline() *Kline {
 			k.Close = v.Close
 		case len(this) - 1:
 			k.Close = v.Close
+			k.Date = v.Date
 		}
 		if v.High > k.High {
 			k.High = v.High

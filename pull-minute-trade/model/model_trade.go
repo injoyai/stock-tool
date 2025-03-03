@@ -108,14 +108,14 @@ func (this Trades) MinuteKlines() (Klines, error) {
 			return nil, err
 		}
 		k := m[timeStr].Kline(price, t.Unix())
-		price = k.Close
+		price = k.Close.Int64()
 		klines = append(klines, k)
 	}
 
 	return klines, nil
 }
 
-func (this Trades) Kline(last, date int64) *Kline {
+func (this Trades) Kline(last int64, date int64) *Kline {
 
 	open, high, low, _close := last, last, last, last
 	volume := int64(0)
@@ -142,12 +142,12 @@ func (this Trades) Kline(last, date int64) *Kline {
 
 	return &Kline{
 		Date:   date,
-		Open:   open,
-		High:   high,
-		Low:    low,
-		Close:  _close,
+		Open:   Price(open),
+		High:   Price(high),
+		Low:    Price(low),
+		Close:  Price(_close),
 		Volume: volume,
-		Amount: amount,
+		Amount: Price(amount),
 	}
 }
 

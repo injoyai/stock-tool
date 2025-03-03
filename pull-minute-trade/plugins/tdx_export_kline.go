@@ -2,17 +2,35 @@ package plugins
 
 import (
 	"context"
-	"fmt"
+	"github.com/injoyai/base/chans"
+	"github.com/injoyai/goutil/oss"
+	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"path/filepath"
 	"pull-minute-trade/db"
 	"pull-minute-trade/model"
-	"sync"
 	"time"
 )
 
+func NewExportMinuteKline(m *tdx.Manage, codes []string, databaseDir, minute1Dir, minute5Dir string, limit uint) *ExportMinuteKline {
+	return &ExportMinuteKline{
+		Codes:       codes,
+		databaseDir: databaseDir,
+		minute1Dir:  minute1Dir,
+		minute5Dir:  minute5Dir,
+		Limit:       limit,
+		m:           m,
+	}
+}
+
 type ExportMinuteKline struct {
-	m *tdx.Manage
+	Codes       []string
+	databaseDir string
+	minute1Dir  string
+	minute5Dir  string
+	Limit       uint
+	m           *tdx.Manage
 }
 
 func (this *ExportMinuteKline) Name() string {
@@ -22,25 +40,34 @@ func (this *ExportMinuteKline) Name() string {
 func (this *ExportMinuteKline) Run(ctx context.Context) error {
 	date := time.Now().Format("20060102")
 
-	codes, err := this.m.Codes.Code(true)
-	if err != nil {
-		return err
+	codes := this.Codes
+	if len(codes) == 0 {
+		codes = this.m.Codes.GetStocks()
 	}
 
-	wg := &sync.WaitGroup{}
+	//logs.Debug(codes)
+
+	wg := chans.NewWaitLimit(this.Limit)
 
 	for i := range codes {
-		code := codes[i].Code
+		code := codes[i]
 
-		wg.Add(1)
-		go func() {
+		wg.Add()
+		go func(code string) {
 			defer wg.Done()
 
-			b, err := db.Open(fmt.Sprintf("./data/database/tdx/trade/%s.db", code))
+			filename := filepath.Join(this.databaseDir, code+".db")
+			if !oss.Exists(filename) {
+				return
+			}
+
+			logs.Debug("开始导出:", code)
+			b, err := db.Open(filename)
 			if err != nil {
 				logs.Err(err)
 				return
 			}
+			defer b.Close()
 
 			data := model.Trades{}
 			err = b.Where("Date=?", date).Asc("Time").Find(&data)
@@ -48,7 +75,64 @@ func (this *ExportMinuteKline) Run(ctx context.Context) error {
 				logs.Err(err)
 				return
 			}
-		}()
+
+			if len(data) == 0 {
+				logs.Err("没有数据")
+				return
+			}
+
+			//导出1分钟K线
+			minuteKlines, err := data.Minute1Klines()
+			if err != nil {
+				logs.Err(err)
+				return
+			}
+			{
+				ls := [][]any{
+					{"日期", "代码", "名称", "开盘", "最高", "最低", "收盘", "总手", "金额", "涨幅", "涨幅比"},
+				}
+				for _, v := range minuteKlines {
+					ls = append(ls, []any{
+						time.Unix(v.Date, 0).Format(time.DateTime), code, this.m.Codes.GetName(code),
+						v.Open.Float64(), v.High.Float64(), v.Low.Float64(), v.Close.Float64(),
+						v.Volume, v.Amount.Float64(), v.RisePrice().Float64(), v.RiseRate()},
+					)
+				}
+				buf, err := excel.ToCsv(ls)
+				if err != nil {
+					logs.Err(err)
+					return
+				}
+				err = oss.New(filepath.Join(this.minute1Dir, code, date+".csv"), buf)
+				if err != nil {
+					logs.Err(err)
+					return
+				}
+			}
+
+			{ //导出5分钟K线
+				minute5Klines := minuteKlines.Merge(5)
+				ls := [][]any{
+					{"日期", "代码", "名称", "开盘", "最高", "最低", "收盘", "总手", "金额", "涨幅", "涨幅比"},
+				}
+				for _, v := range minute5Klines {
+					ls = append(ls, []any{time.Unix(v.Date, 0).Format(time.DateTime), code, this.m.Codes.GetName(code),
+						v.Open.Float64(), v.High.Float64(), v.Low.Float64(), v.Close.Float64(),
+						v.Volume, v.Amount.Float64(), v.RisePrice().Float64(), v.RiseRate()})
+				}
+				buf, err := excel.ToCsv(ls)
+				if err != nil {
+					logs.Err(err)
+					return
+				}
+				err = oss.New(filepath.Join(this.minute5Dir, code, date+".csv"), buf)
+				if err != nil {
+					logs.Err(err)
+					return
+				}
+			}
+
+		}(code)
 
 	}
 

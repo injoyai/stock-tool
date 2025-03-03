@@ -48,6 +48,7 @@ func (this *PullKline) Run(ctx context.Context) error {
 				return
 			}
 			defer b.Close()
+			b.Sync2(new(model.DayKline))
 
 			//2. 获取最后一条数据
 			last, err := b.GetLastKline()
@@ -100,12 +101,12 @@ func (this *PullKline) pull(c *tdx.Client, code string, lastDate int64) (model.K
 	for _, v := range resp.List {
 		ks = append(ks, &model.Kline{
 			Date:   v.Time.Unix(),
-			Open:   v.Open.Int64(),
-			High:   v.High.Int64(),
-			Low:    v.Low.Int64(),
-			Close:  v.Close.Int64(),
+			Open:   v.Open,
+			High:   v.High,
+			Low:    v.Low,
+			Close:  v.Close,
 			Volume: v.Volume,
-			Amount: v.Amount.Int64(),
+			Amount: v.Amount,
 		})
 	}
 

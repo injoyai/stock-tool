@@ -24,12 +24,12 @@ func (this *Sqlite) GetLastKline() (*model.Kline, error) {
 	return data, err
 }
 
+func (this *Sqlite) Sync2(v ...any) error {
+	return this.Engine.Sync2(v...)
+}
+
 // Open 打开数据库
 func Open(filename string) (*Sqlite, error) {
 	db, err := sqlite.NewXorm(filename)
-	if err == nil {
-		db.Sync2(new(model.Trade))
-		db.Sync2(new(model.DayKline))
-	}
 	return &Sqlite{Engine: db}, err
 }

@@ -3,26 +3,33 @@ package main
 import (
 	"context"
 	"github.com/injoyai/base/chans"
-	"github.com/injoyai/conv"
 	"github.com/injoyai/conv/cfg/v2"
-	inin "github.com/injoyai/goutil/frame/in/v3"
 	"github.com/injoyai/goutil/frame/mux"
+	"github.com/injoyai/goutil/oss/tray"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
 	"log"
 	"path/filepath"
 	"pull-minute-trade/plugins"
-	"strings"
+	"pull-minute-trade/task"
+)
+
+const (
+	Version = "v0.1"
 )
 
 var (
-	dir      = cfg.GetString("dir", "./data")
-	database = filepath.Join(dir, "database")
-	config   = &tdx.ManageConfig{
-		Hosts:  cfg.GetStrings("hosts"),
-		Number: cfg.GetInt("number", 1),
-		Dir:    dir,
+	dir               = cfg.GetString("dir", "./data/database/")
+	minute1KlineDir   = cfg.GetString("dir", "./data/csv/1分钟K线/")
+	minute5KlineDir   = cfg.GetString("dir", "./data/csv/5分钟K线/")
+	dayKlineDir       = cfg.GetString("dir", "./data/csv/日K线/")
+	dayKlineByDateDir = cfg.GetString("dir", "./data/csv/日K线(按日期)/")
+	config            = &tdx.ManageConfig{
+		Hosts:      cfg.GetStrings("hosts"),
+		Number:     cfg.GetInt("number", 1),
+		CodesDir:   dir,
+		WorkdayDir: dir,
 	}
 	disks   = cfg.GetInt("disks", 1)
 	spec    = cfg.GetString("spec", "0 1 15 * * *")
@@ -36,8 +43,30 @@ func init() {
 }
 
 func main() {
+	gui(_init, http)
+}
 
-	logs.Debug(strings.Join(codes, "\n"))
+func gui(op ...tray.Option) {
+	tray.Run(
+		tray.WithLabel("版本: "+Version),
+		tray.WithIco(IcoStock),
+		tray.WithHint("数据拉取工具"),
+
+		tray.WithStartup(),
+		tray.WithSeparator(),
+		tray.WithExit(),
+
+		func(s *tray.Tray) {
+			for _, v := range op {
+				v(s)
+			}
+		},
+	)
+}
+
+func _init(s *tray.Tray) {
+
+	logs.Debug("配置的股票代码:", codes)
 
 	//1. 连接服务器
 	m, err := tdx.NewManage(config)
@@ -54,9 +83,22 @@ func main() {
 	f := func() {
 		queue.Add()
 		defer queue.Done()
-		pull := plugins.NewPullTrade(m, codes, database, disks)
-		err = pull.Run(context.Background())
-		logs.Infof("任务[%s]完成, 结果: %v\n", pull.Name(), conv.New(err).String("成功"))
+
+		ctx := context.Background()
+
+		//pull := plugins.NewPullTrade(m, codes, dir, disks)
+		//task.Run(ctx, pull)
+
+		export := plugins.NewExportMinuteKline(
+			m,
+			codes,
+			filepath.Join(dir, "trade"),
+			minute1KlineDir,
+			minute5KlineDir,
+			uint(disks),
+		)
+		task.Run(ctx, export)
+
 	}
 
 	//3. 设置定时
@@ -70,26 +112,17 @@ func main() {
 		go f()
 	}
 
-	/*
+}
 
-
-
-	 */
-
-	//5. 开启HTTP服务
+func http(_ *tray.Tray) {
 	s := mux.New()
 	s.Group("/api", func(g *mux.Grouper) {
 		g.POST("/task", func(r *mux.Request) {
 
 		})
 		g.POST("/execute", func(r *mux.Request) {
-			if !queue.Try() {
-				inin.Fail("有任务正在执行")
-			}
-			defer queue.Done()
 
 		})
 	})
-	s.SetPort(20001).Run()
-
+	go s.SetPort(20001).Run()
 }

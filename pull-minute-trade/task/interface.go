@@ -9,8 +9,8 @@ import (
 type Tasker interface {
 	Name() string
 	Run(ctx context.Context) error
-	Running() bool
-	RunInfo() string
+	//Running() bool
+	//RunInfo() string
 }
 
 func New() *Manage {
