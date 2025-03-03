@@ -4,5 +4,11 @@ disks: 1
 codes:
   - sz000001
 
+index:
+  - sh000001
+
+
 database:
   type: sqlite # mysql, influxdb
+
+
