@@ -10,10 +10,17 @@ type Sqlite struct {
 	*xorms.Engine
 }
 
-// GetLast 获取最后一条数据
-func (this *Sqlite) GetLast() (*model.Trade, error) {
+// GetLastTrade 获取最后一条分时数据
+func (this *Sqlite) GetLastTrade() (*model.Trade, error) {
 	data := new(model.Trade)
 	_, err := this.Desc("Date", "Time").Get(data)
+	return data, err
+}
+
+// GetLastKline 获取最后一条K线数据
+func (this *Sqlite) GetLastKline() (*model.Kline, error) {
+	data := new(model.Kline)
+	_, err := this.Desc("Date").Get(data)
 	return data, err
 }
 
