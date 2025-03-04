@@ -10,7 +10,6 @@ import (
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
 	"log"
-	"path/filepath"
 	"pull-minute-trade/plugins"
 	"pull-minute-trade/task"
 )
@@ -27,7 +26,7 @@ var (
 	dayKlineByDateDir = cfg.GetString("dir", "./data/csv/日K线(按日期)/")
 	config            = &tdx.ManageConfig{
 		Hosts:      cfg.GetStrings("hosts"),
-		Number:     cfg.GetInt("number", 1),
+		Number:     cfg.GetInt("number", 2),
 		CodesDir:   dir,
 		WorkdayDir: dir,
 	}
@@ -86,18 +85,16 @@ func _init(s *tray.Tray) {
 
 		ctx := context.Background()
 
-		//pull := plugins.NewPullTrade(m, codes, dir, disks)
-		//task.Run(ctx, pull)
+		task.Run(ctx, plugins.NewPullTrade(m, codes, dir, disks))
 
-		export := plugins.NewExportMinuteKline(
-			m,
-			codes,
-			filepath.Join(dir, "trade"),
-			minute1KlineDir,
-			minute5KlineDir,
-			uint(disks),
-		)
-		task.Run(ctx, export)
+		//task.Run(ctx, plugins.NewExportMinuteKline(
+		//	m,
+		//	codes,
+		//	filepath.Join(dir, "trade"),
+		//	minute1KlineDir,
+		//	minute5KlineDir,
+		//	uint(disks),
+		//))
 
 	}
 
