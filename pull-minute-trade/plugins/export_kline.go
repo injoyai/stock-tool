@@ -38,7 +38,8 @@ func (this *ExportMinuteKline) Name() string {
 }
 
 func (this *ExportMinuteKline) Run(ctx context.Context) error {
-	date := time.Now().Format("20060102")
+	now := time.Now()
+	date, _ := model.FromTime(now)
 
 	codes := this.Codes
 	if len(codes) == 0 {
@@ -103,7 +104,7 @@ func (this *ExportMinuteKline) Run(ctx context.Context) error {
 					logs.Err(err)
 					return
 				}
-				err = oss.New(filepath.Join(this.minute1Dir, code, date+".csv"), buf)
+				err = oss.New(filepath.Join(this.minute1Dir, code, now.Format("20060102")+".csv"), buf)
 				if err != nil {
 					logs.Err(err)
 					return
@@ -125,7 +126,7 @@ func (this *ExportMinuteKline) Run(ctx context.Context) error {
 					logs.Err(err)
 					return
 				}
-				err = oss.New(filepath.Join(this.minute5Dir, code, date+".csv"), buf)
+				err = oss.New(filepath.Join(this.minute5Dir, code, now.Format("20060102")+".csv"), buf)
 				if err != nil {
 					logs.Err(err)
 					return

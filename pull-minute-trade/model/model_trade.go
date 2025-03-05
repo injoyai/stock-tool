@@ -52,7 +52,7 @@ func (this Trades) MinuteKlines() (Klines, error) {
 		return nil, errors.New("无效的数据源: 为空")
 	}
 
-	if this[0].Time != 925 { // "09:25" {
+	if this[0].Time != 565 { // "09:25" {
 		return nil, errors.New("无效的数据源: 时间非09:25起始")
 	}
 
@@ -62,21 +62,14 @@ func (this Trades) MinuteKlines() (Klines, error) {
 		if v.Date != date {
 			return nil, errors.New("无效的数据源: 包含多个日期")
 		}
-		if v.Time == 565 { // "09:25" {
+		if v.Time == 565 { // "09:25"
 			//通达信和东方财富,会把9.25的成交量累加到9.30里面
 			v.Time = 570 //"09:30"
 		}
-		//t := time.Date(0, 0, 0, v.Time, 0, 0, 0, time.Local)
-		//t, err := time.ParseInLocation("1504", conv.String(v.Time), time.Local)
-		//if err != nil {
-		//	return nil, err
-		//}
-		if v.Time != 570 { //"15:00" {
+		if v.Time != 900 { //"15:00"
 			//特殊处理15:00,属于这个时间点,其他的需要加上间隔,例如09:30的成交量属于09:31
-			//t = t.Add(time.Minute)
 			v.Time += 1
 		}
-		//timeStr := t.Format("15:04")
 		m[v.Time] = append(m[v.Time], v)
 	}
 
@@ -87,7 +80,6 @@ func (this Trades) MinuteKlines() (Klines, error) {
 
 	minutes := []uint16(nil)
 	for t := start1; t.Before(end1); t = t.Add(time.Minute) {
-		//timeStr := t.Format("15:04")
 		_, minute := FromTime(t)
 		minutes = append(minutes, minute)
 		if _, ok := m[minute]; !ok {
@@ -96,7 +88,6 @@ func (this Trades) MinuteKlines() (Klines, error) {
 	}
 
 	for t := start2; t.Before(end2); t = t.Add(time.Minute) {
-		//timeStr := t.Format("15:04")
 		_, minute := FromTime(t)
 		minutes = append(minutes, minute)
 		if _, ok := m[minute]; !ok {
@@ -107,10 +98,6 @@ func (this Trades) MinuteKlines() (Klines, error) {
 	klines := []*Kline(nil)
 	price := this[0].Price
 	for _, minute := range minutes {
-		//t, err := time.ParseInLocation("2006010215:04", date+timeStr, time.Local)
-		//if err != nil {
-		//	return nil, err
-		//}
 		t := ToTime(date, minute)
 		k := m[minute].Kline(price, t.Unix())
 		price = k.Close.Int64()
@@ -142,7 +129,7 @@ func (this Trades) Kline(last int64, date int64) *Kline {
 			low = v.Price
 		}
 		volume += int64(v.Volume)
-		amount += int64(v.Volume) * v.Price
+		amount += int64(v.Volume) * 100 * v.Price
 	}
 
 	return &Kline{
@@ -156,12 +143,12 @@ func (this Trades) Kline(last int64, date int64) *Kline {
 	}
 }
 
-// MinuteKline 用分时数据计算分钟K线
-func (this Trades) MinuteKline() []*Kline {
-	ls := make([]*Kline, 60*4)
-	for _, v := range this {
-		_ = v
-	}
-
-	return ls
-}
+//// MinuteKline 用分时数据计算分钟K线
+//func (this Trades) MinuteKline() []*Kline {
+//	ls := make([]*Kline, 60*4)
+//	for _, v := range this {
+//		_ = v
+//	}
+//
+//	return ls
+//}
