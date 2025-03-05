@@ -8,27 +8,24 @@ import (
 	"path/filepath"
 	"pull-minute-trade/db"
 	"pull-minute-trade/model"
-	"sync"
 	"time"
 	"xorm.io/xorm"
 )
 
 func NewPullTrade(m *tdx.Manage, codes []string, dir string, limit int) *PullTrade {
 	return &PullTrade{
-		Dir:       filepath.Join(dir, "trade"),
-		Codes:     codes,
-		limitPull: chans.NewLimit(limit),
-		limitSave: chans.NewLimit(limit),
-		m:         m,
+		Dir:   filepath.Join(dir, "trade"),
+		Codes: codes,
+		limit: limit,
+		m:     m,
 	}
 }
 
 type PullTrade struct {
-	Dir       string   //数据保存目录
-	Codes     []string //用户指定操作的股票
-	limitPull *chans.Limit
-	limitSave *chans.Limit
-	m         *tdx.Manage
+	Dir   string   //数据保存目录
+	Codes []string //用户指定操作的股票
+	limit int
+	m     *tdx.Manage
 }
 
 func (this *PullTrade) Name() string {
@@ -45,7 +42,8 @@ func (this *PullTrade) RunInfo() string {
 
 func (this *PullTrade) Run(ctx context.Context) error {
 
-	var wg sync.WaitGroup
+	limit := chans.NewWaitLimit(uint(this.limit))
+	insertLimit := int(1e6)
 
 	select {
 	case <-ctx.Done():
@@ -68,9 +66,9 @@ func (this *PullTrade) Run(ctx context.Context) error {
 			default:
 			}
 
-			wg.Add(1)
+			limit.Add()
 			go func(code string) {
-				defer wg.Done()
+				defer limit.Done()
 				logs.Debug("开始更新:", code)
 				logs.Debug(filepath.Join(this.Dir, code+".db"))
 
@@ -100,6 +98,7 @@ func (this *PullTrade) Run(ctx context.Context) error {
 
 					if last.Date == 0 {
 						last.Date, _ = model.FromTime(ExchangeEstablish)
+						last.Date, _ = model.FromTime(time.Date(2000, 6, 8, 0, 0, 0, 0, time.Local))
 					}
 
 					//解析日期
@@ -129,7 +128,7 @@ func (this *PullTrade) Run(ctx context.Context) error {
 						}
 
 						//4. 插入数据库
-						if len(insert) > 1e6 {
+						if len(insert) > insertLimit {
 							err = b.SessionFunc(func(session *xorm.Session) error {
 								for _, v := range insert {
 									if _, err := session.Insert(v); err != nil {
@@ -169,7 +168,7 @@ func (this *PullTrade) Run(ctx context.Context) error {
 
 		}
 
-		wg.Wait()
+		limit.Wait()
 
 	}
 

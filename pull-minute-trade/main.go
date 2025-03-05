@@ -10,7 +10,6 @@ import (
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
 	"log"
-	"path/filepath"
 	"pull-minute-trade/plugins"
 	"pull-minute-trade/task"
 )
@@ -86,16 +85,16 @@ func _init(s *tray.Tray) {
 
 		ctx := context.Background()
 
-		//task.Run(ctx, plugins.NewPullTrade(m, codes, dir, disks))
+		task.Run(ctx, plugins.NewPullTrade(m, codes, dir, disks))
 
-		task.Run(ctx, plugins.NewExportMinuteKline(
-			m,
-			codes,
-			filepath.Join(dir, "trade"),
-			minute1KlineDir,
-			minute5KlineDir,
-			uint(disks),
-		))
+		//task.Run(ctx, plugins.NewExportMinuteKline(
+		//	m,
+		//	codes,
+		//	filepath.Join(dir, "trade"),
+		//	minute1KlineDir,
+		//	minute5KlineDir,
+		//	uint(disks),
+		//))
 
 	}
 

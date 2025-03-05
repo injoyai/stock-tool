@@ -6,7 +6,7 @@ import (
 )
 
 func TestToTime(t *testing.T) {
-	t.Log(ToTime(4009, 570))
+	t.Log(ToTime(7547, 570)) //sh600612
 }
 
 func TestFromTime(t *testing.T) {
