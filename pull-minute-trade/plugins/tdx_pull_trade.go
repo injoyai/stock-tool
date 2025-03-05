@@ -17,8 +17,6 @@ func NewPullTrade(m *tdx.Manage, codes []string, dir string, limit int) *PullTra
 	return &PullTrade{
 		Dir:       filepath.Join(dir, "trade"),
 		Codes:     codes,
-		chanPull:  make(chan *ModelPull, limit),
-		chanSave:  make(chan *ModelSave, limit),
 		limitPull: chans.NewLimit(limit),
 		limitSave: chans.NewLimit(limit),
 		m:         m,
@@ -28,8 +26,6 @@ func NewPullTrade(m *tdx.Manage, codes []string, dir string, limit int) *PullTra
 type PullTrade struct {
 	Dir       string   //数据保存目录
 	Codes     []string //用户指定操作的股票
-	chanPull  chan *ModelPull
-	chanSave  chan *ModelSave
 	limitPull *chans.Limit
 	limitSave *chans.Limit
 	m         *tdx.Manage
@@ -94,7 +90,7 @@ func (this *PullTrade) Run(ctx context.Context) error {
 						logs.Err(err)
 						continue
 					}
-					if last.Time != "" && last.Time != "15:00" {
+					if last.Time != 0 && last.Time != 900 {
 						//如果最后时间不是15:00,说明数据不全,删除这天的数据
 						if _, err := b.Where("Date=?", last.Date).Delete(&model.Trade{}); err != nil {
 							logs.Err(err)
@@ -102,17 +98,13 @@ func (this *PullTrade) Run(ctx context.Context) error {
 						}
 					}
 
-					if last.Date == "" {
-						last.Date = ExchangeEstablish.Format("20060102")
+					if last.Date == 0 {
+						last.Date, _ = model.FromTime(ExchangeEstablish)
 					}
 
 					//解析日期
 					now := time.Now()
-					t, err := time.ParseInLocation("20060102", last.Date, time.Local)
-					if err != nil {
-						logs.Err(err)
-						continue
-					}
+					t := model.ToTime(last.Date, 0)
 
 					var insert []*model.Trade
 					//遍历时间,并加入数据库
@@ -192,26 +184,33 @@ func (this *PullTrade) pullDay(c *tdx.Client, code string, start, now time.Time)
 	}
 
 	insert := []*model.Trade(nil)
-	date := start.Format("20060102")
+
+	date, _ := model.FromTime(start)
+	nowDate, _ := model.FromTime(now)
 	startTime := time.Now()
 	defer func() {
-		logs.Debug(date, "耗时:", time.Since(startTime), "数据数量:", len(insert))
+		logs.Debug(start.Format("2006-01-02"), "耗时:", time.Since(startTime), "数据数量:", len(insert))
 	}()
 
 	switch date {
-	case "":
+	case 0:
 		//
 
-	case now.Format("20060102"):
+	case nowDate:
 		//如果是当天,获取当天数据,会多个成交单数数据
 		resp, err := c.GetMinuteTradeAll(code)
 		if err != nil {
 			return nil, err
 		}
 		for _, v := range resp.List {
+			t, err := time.ParseInLocation("15:04", v.Time, time.Local)
+			if err != nil {
+				return nil, err
+			}
+			_, minute := model.FromTime(t)
 			insert = append(insert, &model.Trade{
 				Date:   date,
-				Time:   v.Time,
+				Time:   minute,
 				Price:  v.Price.Int64(),
 				Volume: v.Volume,
 				Order:  v.Number,
@@ -221,14 +220,19 @@ func (this *PullTrade) pullDay(c *tdx.Client, code string, start, now time.Time)
 
 	default:
 		//获取历史数据
-		resp, err := c.GetHistoryMinuteTradeAll(date, code)
+		resp, err := c.GetHistoryMinuteTradeAll(start.Format("20060102"), code)
 		if err != nil {
 			return nil, err
 		}
 		for _, v := range resp.List {
+			t, err := time.ParseInLocation("15:04", v.Time, time.Local)
+			if err != nil {
+				return nil, err
+			}
+			_, minute := model.FromTime(t)
 			insert = append(insert, &model.Trade{
 				Date:   date,
-				Time:   v.Time,
+				Time:   minute,
 				Price:  v.Price.Int64(),
 				Volume: v.Volume,
 				Order:  0,
@@ -239,28 +243,4 @@ func (this *PullTrade) pullDay(c *tdx.Client, code string, start, now time.Time)
 	}
 
 	return insert, nil
-}
-
-type ModelPull struct {
-	Code string
-	*model.Trade
-}
-
-// Updated 返回是否已经更新
-func (this *ModelPull) Updated() bool {
-	t := time.Now()
-	data := t.Format("20060102")
-	return this.Date == data && this.Time == t.Format("15:04")
-}
-
-func (this *ModelPull) RangeDate(f func(date string)) {
-	t := time.Now()
-	for ; this.Date < t.Format("20060102"); t.Add(-time.Hour * 24) {
-		f(t.Format("20060102"))
-	}
-}
-
-type ModelSave struct {
-	Code   string
-	Insert []*model.Trade
 }

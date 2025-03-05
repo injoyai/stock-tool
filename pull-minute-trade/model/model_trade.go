@@ -88,7 +88,7 @@ func (this Trades) MinuteKlines() (Klines, error) {
 	minutes := []uint16(nil)
 	for t := start1; t.Before(end1); t = t.Add(time.Minute) {
 		//timeStr := t.Format("15:04")
-		_, minute := fromTime(t)
+		_, minute := FromTime(t)
 		minutes = append(minutes, minute)
 		if _, ok := m[minute]; !ok {
 			m[minute] = []*Trade{}
@@ -97,7 +97,7 @@ func (this Trades) MinuteKlines() (Klines, error) {
 
 	for t := start2; t.Before(end2); t = t.Add(time.Minute) {
 		//timeStr := t.Format("15:04")
-		_, minute := fromTime(t)
+		_, minute := FromTime(t)
 		minutes = append(minutes, minute)
 		if _, ok := m[minute]; !ok {
 			m[minute] = []*Trade{}
@@ -111,8 +111,8 @@ func (this Trades) MinuteKlines() (Klines, error) {
 		//if err != nil {
 		//	return nil, err
 		//}
-		t := toTime(date, minute)
-		k := m[timeStr].Kline(price, t.Unix())
+		t := ToTime(date, minute)
+		k := m[minute].Kline(price, t.Unix())
 		price = k.Close.Int64()
 		klines = append(klines, k)
 	}
