@@ -1,7 +1,7 @@
 package plugins
 
 /*
-ExportMinuteKline2
+ExportMinuteKlineAll
 每5年一个文件
 
 	2000-2005
@@ -16,4 +16,4 @@ ExportMinuteKline2
 
 2020至今
 */
-type ExportMinuteKline2 struct{}
+type ExportMinuteKlineAll struct{}
