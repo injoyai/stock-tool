@@ -87,6 +87,8 @@ func _init(s *tray.Tray) {
 
 		task.Run(ctx, plugins.NewPullTrade(m, codes, dir, disks))
 
+		task.Run(ctx, plugins.NewPullTrade(m, codes, dir, disks))
+
 		//task.Run(ctx, plugins.NewExportMinuteKline(
 		//	m,
 		//	codes,

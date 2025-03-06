@@ -43,109 +43,105 @@ func (this *PullTrade) RunInfo() string {
 func (this *PullTrade) Run(ctx context.Context) error {
 
 	limit := chans.NewWaitLimit(uint(this.limit))
-	insertLimit := int(1e6)
+	insertLimit := int(1e5)
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
+	//1. 获取所有股票代码
+	codes := this.Codes
+	if len(codes) == 0 {
+		codes = this.m.Codes.GetStocks()
+	}
 
-	default:
+	for _, code := range codes {
 
-		//1. 获取所有股票代码
-		codes := this.Codes
-		if len(codes) == 0 {
-			codes = this.m.Codes.GetStocks()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+
+		default:
 		}
 
-		for _, code := range codes {
+		limit.Add()
+		go func(code string) {
+			defer limit.Done()
+			logs.Debug("开始更新:", code)
+			logs.Debug(filepath.Join(this.Dir, code+".db"))
 
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-
-			default:
+			//1. 打开数据库
+			b, err := db.Open(filepath.Join(this.Dir, code+".db"))
+			if err != nil {
+				logs.Err(err)
+				return
 			}
+			defer b.Close()
+			b.Sync2(new(model.Trade))
 
-			limit.Add()
-			go func(code string) {
-				defer limit.Done()
-				logs.Debug("开始更新:", code)
-				logs.Debug(filepath.Join(this.Dir, code+".db"))
-
-				//1. 打开数据库
-				b, err := db.Open(filepath.Join(this.Dir, code+".db"))
+			//2. 从数据库获取数据,并删除不全的最后一天数据
+			for x := 0; x < 3; x++ {
+				last, err := b.GetLastTrade()
 				if err != nil {
 					logs.Err(err)
-					return
+					continue
 				}
-				defer b.Close()
-				b.Sync2(new(model.Trade))
-
-				//2. 从数据库获取数据,并删除不全的最后一天数据
-				for x := 0; x < 3; x++ {
-					last, err := b.GetLastTrade()
-					if err != nil {
+				if last.Time != 0 && last.Time != 900 {
+					//如果最后时间不是15:00,说明数据不全,删除这天的数据
+					if _, err := b.Where("Date=?", last.Date).Delete(&model.Trade{}); err != nil {
 						logs.Err(err)
 						continue
 					}
-					if last.Time != 0 && last.Time != 900 {
-						//如果最后时间不是15:00,说明数据不全,删除这天的数据
-						if _, err := b.Where("Date=?", last.Date).Delete(&model.Trade{}); err != nil {
-							logs.Err(err)
-							continue
-						}
-					}
+				}
 
-					if last.Date == 0 {
-						last.Date, _ = model.FromTime(ExchangeEstablish)
-						last.Date, _ = model.FromTime(time.Date(2000, 6, 8, 0, 0, 0, 0, time.Local))
-					}
+				if last.Date == 0 {
+					last.Date, _ = model.FromTime(ExchangeEstablish)
+					last.Date, _ = model.FromTime(time.Date(2000, 6, 8, 0, 0, 0, 0, time.Local))
 
-					//解析日期
-					now := time.Now()
-					t := model.ToTime(last.Date, 0)
-
-					var insert []*model.Trade
-					//遍历时间,并加入数据库
-					for start := t.Add(time.Hour * 24); start.Before(now); start = start.Add(time.Hour * 24) {
-						//3. 获取数据
-						err = this.m.Do(func(c *tdx.Client) error {
-							ls, err := this.pullDay(c, code, start, now)
-							if err != nil {
-								return err
-							}
-							insert = append(insert, ls...)
-							return nil
-						})
+					//查询年K线,获取实际上市年份
+					this.m.Do(func(c *tdx.Client) error {
+						resp, err := c.GetKlineMonthAll(code)
 						if err != nil {
-							logs.Err(err)
-							return
+							return err
 						}
-
-						//排除数据为0的,可能这天停牌了啥的
-						if len(insert) == 0 {
-							continue
-						}
-
-						//4. 插入数据库
-						if len(insert) > insertLimit {
-							err = b.SessionFunc(func(session *xorm.Session) error {
-								for _, v := range insert {
-									if _, err := session.Insert(v); err != nil {
-										return err
-									}
-								}
-								return nil
-							})
-							if err != nil {
-								logs.Err(err)
-								return
+						if len(resp.List) > 0 {
+							//logs.Debug("上市月份:", resp.List[0].Time.AddDate(0, -1, 0))
+							date, _ := model.FromTime(resp.List[0].Time.AddDate(0, -1, 0))
+							if date > last.Date {
+								last.Date = date
 							}
-							insert = insert[:0]
 						}
+						//logs.Debug(model.ToTime(last.Date, 0))
+						//os.Exit(666)
+						return nil
+					})
+
+				}
+
+				//解析日期
+				now := time.Now()
+				t := model.ToTime(last.Date, 0)
+
+				var insert []*model.Trade
+				//遍历时间,并加入数据库
+				for start := t.Add(time.Hour * 24); start.Before(now); start = start.Add(time.Hour * 24) {
+					//3. 获取数据
+					err = this.m.Do(func(c *tdx.Client) error {
+						ls, err := this.pullDay(c, code, start, now)
+						if err != nil {
+							return err
+						}
+						insert = append(insert, ls...)
+						return nil
+					})
+					if err != nil {
+						logs.Err(err)
+						return
 					}
 
-					if len(insert) > 0 {
+					//排除数据为0的,可能这天停牌了啥的
+					if len(insert) == 0 {
+						continue
+					}
+
+					//4. 插入数据库
+					if len(insert) > insertLimit {
 						err = b.SessionFunc(func(session *xorm.Session) error {
 							for _, v := range insert {
 								if _, err := session.Insert(v); err != nil {
@@ -160,17 +156,32 @@ func (this *PullTrade) Run(ctx context.Context) error {
 						}
 						insert = insert[:0]
 					}
-
-					break
 				}
 
-			}(code)
+				if len(insert) > 0 {
+					err = b.SessionFunc(func(session *xorm.Session) error {
+						for _, v := range insert {
+							if _, err := session.Insert(v); err != nil {
+								return err
+							}
+						}
+						return nil
+					})
+					if err != nil {
+						logs.Err(err)
+						return
+					}
+					insert = insert[:0]
+				}
 
-		}
+				break
+			}
 
-		limit.Wait()
+		}(code)
 
 	}
+
+	limit.Wait()
 
 	return nil
 }
@@ -186,10 +197,10 @@ func (this *PullTrade) pullDay(c *tdx.Client, code string, start, now time.Time)
 
 	date, _ := model.FromTime(start)
 	nowDate, _ := model.FromTime(now)
-	startTime := time.Now()
-	defer func() {
-		logs.Debug(start.Format("2006-01-02"), "耗时:", time.Since(startTime), "数据数量:", len(insert))
-	}()
+	//startTime := time.Now()
+	//defer func() {
+	//	logs.Debug(code, start.Format("2006-01-02"), "耗时:", time.Since(startTime), "数据数量:", len(insert))
+	//}()
 
 	switch date {
 	case 0:

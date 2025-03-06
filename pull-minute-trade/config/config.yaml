@@ -1,9 +1,9 @@
 startup: true
 number: 2
-disks: 10
-#codes:
-#  - sz000001
-#  - sh000001
+disks: 100
+codes:
+  - sz000001
+#  - sh600000
 
 index:
   - sh000001

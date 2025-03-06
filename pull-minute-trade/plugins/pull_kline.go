@@ -18,9 +18,19 @@ var (
 	ExchangeEstablish = time.Date(1990, 12, 19, 0, 0, 0, 0, time.Local)
 )
 
+func NewPullKline(m *tdx.Manage, codes []string, dir string, limit int) *PullKline {
+	return &PullKline{
+		Dir:   filepath.Join(dir, "kline"),
+		Codes: codes,
+		limit: limit,
+		m:     m,
+	}
+}
+
 type PullKline struct {
 	Dir   string
 	Codes []string
+	limit int
 	m     *tdx.Manage
 }
 
