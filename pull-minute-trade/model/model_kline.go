@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"github.com/injoyai/tdx/protocol"
+	"sort"
 	"time"
 )
 
@@ -16,13 +17,14 @@ type DayKline struct {
 }
 
 type Kline struct {
-	Date   int64 `json:"date"`   //时间节点 2006-01-02 15:00
-	Open   Price `json:"open"`   //开盘价
-	High   Price `json:"high"`   //最高价
-	Low    Price `json:"low"`    //最低价
-	Close  Price `json:"close"`  //收盘价
-	Volume int64 `json:"volume"` //成交量
-	Amount Price `json:"amount"` //成交额
+	Code   string `json:"code" xorm:"-"` //代码
+	Date   int64  `json:"date"`          //时间节点 2006-01-02 15:00
+	Open   Price  `json:"open"`          //开盘价
+	High   Price  `json:"high"`          //最高价
+	Low    Price  `json:"low"`           //最低价
+	Close  Price  `json:"close"`         //收盘价
+	Volume int64  `json:"volume"`        //成交量
+	Amount Price  `json:"amount"`        //成交额
 }
 
 // RisePrice 涨跌
@@ -50,6 +52,14 @@ func (this *Kline) String() string {
 }
 
 type Klines []*Kline
+
+func (this Klines) Less(i, j int) bool { return this[i].Code > this[j].Code }
+
+func (this Klines) Swap(i, j int) { this[i], this[j] = this[j], this[i] }
+
+func (this Klines) Len() int { return len(this) }
+
+func (this Klines) Sort() { sort.Sort(this) }
 
 // Kline 计算多个K线,成一个K线
 func (this Klines) Kline() *Kline {

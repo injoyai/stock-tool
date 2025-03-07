@@ -33,3 +33,12 @@ func Open(filename string) (*Sqlite, error) {
 	db, err := sqlite.NewXorm(filename)
 	return &Sqlite{Engine: db}, err
 }
+
+func WithOpen(filename string, f func(db *Sqlite) error) error {
+	db, err := Open(filename)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	return f(db)
+}
