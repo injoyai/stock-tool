@@ -5,11 +5,11 @@ import (
 	"github.com/injoyai/base/chans"
 	"github.com/injoyai/conv/cfg/v2"
 	"github.com/injoyai/goutil/frame/mux"
-	"github.com/injoyai/goutil/oss/tray"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
 	"log"
+	"path/filepath"
 	"pull-minute-trade/plugins"
 	"pull-minute-trade/task"
 )
@@ -19,16 +19,17 @@ const (
 )
 
 var (
-	dir               = cfg.GetString("dir", "./data/database/")
-	minute1KlineDir   = cfg.GetString("dir", "./data/csv/1分钟K线/")
-	minute5KlineDir   = cfg.GetString("dir", "./data/csv/5分钟K线/")
-	dayKlineDir       = cfg.GetString("dir", "./data/csv/日K线/")
-	dayKlineByDateDir = cfg.GetString("dir", "./data/csv/日K线(按日期)/")
-	config            = &tdx.ManageConfig{
+	dirBase     = cfg.GetString("dir.base", "./data/")
+	dirDatabase = filepath.Join(dirBase, cfg.GetString("dir.database", "database"))
+	//minute1KlineDir   = cfg.GetString("dir", "./data/csv/1分钟K线/")
+	//minute5KlineDir   = cfg.GetString("dir", "./data/csv/5分钟K线/")
+	//dayKlineDir       = cfg.GetString("dir", "./data/csv/日K线/")
+	//dayKlineByDateDir = cfg.GetString("dir", "./data/csv/日K线(按日期)/")
+	config = &tdx.ManageConfig{
 		Hosts:      cfg.GetStrings("hosts"),
 		Number:     cfg.GetInt("number", 2),
-		CodesDir:   dir,
-		WorkdayDir: dir,
+		CodesDir:   dirDatabase,
+		WorkdayDir: dirDatabase,
 	}
 	disks   = cfg.GetInt("disks", 1)
 	spec    = cfg.GetString("spec", "0 1 15 * * *")
@@ -39,31 +40,33 @@ var (
 func init() {
 	logs.DefaultFormatter.SetFlag(log.Ltime | log.Lshortfile)
 	//logs.SetFormatter(logs.TimeFormatter)
+	logs.Info("版本:", Version)
 }
 
 func main() {
-	gui(_init, http)
+	_init()
+	http(20001)
 }
 
-func gui(op ...tray.Option) {
-	tray.Run(
-		tray.WithLabel("版本: "+Version),
-		tray.WithIco(IcoStock),
-		tray.WithHint("数据拉取工具"),
+//func gui(op ...tray.Option) {
+//	tray.Run(
+//		tray.WithLabel("版本: "+Version),
+//		tray.WithIco(IcoStock),
+//		tray.WithHint("数据拉取工具"),
+//
+//		tray.WithStartup(),
+//		tray.WithSeparator(),
+//		tray.WithExit(),
+//
+//		func(s *tray.Tray) {
+//			for _, v := range op {
+//				v(s)
+//			}
+//		},
+//	)
+//}
 
-		tray.WithStartup(),
-		tray.WithSeparator(),
-		tray.WithExit(),
-
-		func(s *tray.Tray) {
-			for _, v := range op {
-				v(s)
-			}
-		},
-	)
-}
-
-func _init(s *tray.Tray) {
+func _init() {
 
 	logs.Debug("配置的股票代码:", codes)
 
@@ -85,9 +88,9 @@ func _init(s *tray.Tray) {
 
 		ctx := context.Background()
 
-		task.Run(ctx, plugins.NewPullTrade(m, codes, dir, disks))
+		task.Run(ctx, plugins.NewPullTrade(m, codes, dirDatabase, disks))
 
-		task.Run(ctx, plugins.NewPullTrade(m, codes, dir, disks))
+		//task.Run(ctx, plugins.NewPullTrade(m, codes, dir, disks))
 
 		//task.Run(ctx, plugins.NewExportMinuteKline(
 		//	m,
@@ -113,7 +116,7 @@ func _init(s *tray.Tray) {
 
 }
 
-func http(_ *tray.Tray) {
+func http(port int) error {
 	s := mux.New()
 	s.Group("/api", func(g *mux.Grouper) {
 		g.POST("/task", func(r *mux.Request) {
@@ -123,5 +126,6 @@ func http(_ *tray.Tray) {
 
 		})
 	})
-	go s.SetPort(20001).Run()
+	s.SetPort(port)
+	return s.Run()
 }

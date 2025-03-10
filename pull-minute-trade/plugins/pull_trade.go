@@ -12,9 +12,9 @@ import (
 	"xorm.io/xorm"
 )
 
-func NewPullTrade(m *tdx.Manage, codes []string, dir string, limit int) *PullTrade {
+func NewPullTrade(m *tdx.Manage, codes []string, dirDatabase string, limit int) *PullTrade {
 	return &PullTrade{
-		Dir:   filepath.Join(dir, "trade"),
+		Dir:   filepath.Join(dirDatabase, "trade"),
 		Codes: codes,
 		limit: limit,
 		m:     m,
