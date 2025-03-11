@@ -1,0 +1,16 @@
+[Unit]
+Description=tdx daemon
+After=network.target
+
+[Service]
+PIDFile=/tmp/tdx.pid
+User=root
+Group=root
+WorkingDirectory=/root/stock/tdx
+ExecStart=/root/stock/tdx/tdx
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
