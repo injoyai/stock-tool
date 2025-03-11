@@ -2,8 +2,8 @@ package task
 
 import (
 	"context"
-	"github.com/injoyai/base/maps"
-	"sync"
+	"github.com/injoyai/conv"
+	"github.com/injoyai/logs"
 )
 
 type Tasker interface {
@@ -13,40 +13,13 @@ type Tasker interface {
 	//RunInfo() string
 }
 
-func New() *Manage {
-	m := &Manage{}
-	go m.run(context.Background())
-	return m
-}
-
-type Manage struct {
-	ch chan Tasker
-	m  *maps.Safe
-	mu sync.Mutex
-}
-
-func (this *Manage) Names() []string {
-	names := []string(nil)
-	this.m.Range(func(key, value interface{}) bool {
-		names = append(names, value.(Tasker).Name())
-		return true
-	})
-	return names
-}
-
-func (this *Manage) Add(t Tasker) {
-	this.ch <- t
-	this.m.Set(t, t)
-}
-
-func (this *Manage) run(ctx context.Context) error {
-	for v := range this.ch {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			v.Run(ctx)
-			this.m.Del(v)
+func Run(ctx context.Context, ls ...Tasker) error {
+	for _, i := range ls {
+		logs.Infof("任务[%s]开始...\n", i.Name())
+		err := i.Run(ctx)
+		logs.Infof("任务[%s]完成, 结果: %v\n", i.Name(), conv.New(err).String("成功"))
+		if err != nil {
+			return err
 		}
 	}
 	return nil

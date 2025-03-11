@@ -10,7 +10,6 @@ import (
 	"github.com/robfig/cron/v3"
 	"log"
 	"path/filepath"
-	"pull-minute-trade/plugins"
 	"pull-minute-trade/task"
 )
 
@@ -71,7 +70,7 @@ func _init() {
 		ctx := context.Background()
 
 		tasks := []task.Tasker{
-			plugins.NewPullTrade(m, codes, dirDatabase, disks),
+			task.NewPullTrade(m, codes, dirDatabase, disks),
 			//plugins.NewExportMinuteKline(
 			//	m,
 			//	codes,

@@ -1,17 +1,16 @@
-package plugins
+package task
 
 import (
 	"context"
-	"pull-minute-trade/task"
 )
 
-func NewGroup(name string, tasks ...task.Tasker) *Group {
+func NewGroup(name string, tasks ...Tasker) *Group {
 	return &Group{name: name, tasks: tasks}
 }
 
 type Group struct {
 	name  string
-	tasks []task.Tasker
+	tasks []Tasker
 }
 
 func (this *Group) Name() string {
@@ -20,7 +19,7 @@ func (this *Group) Name() string {
 
 func (this *Group) Run(ctx context.Context) error {
 	for _, v := range this.tasks {
-		if err := task.Run(ctx, v); err != nil {
+		if err := Run(ctx, v); err != nil {
 			return err
 		}
 	}
