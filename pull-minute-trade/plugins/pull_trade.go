@@ -114,6 +114,25 @@ func (this *PullTrade) Run(ctx context.Context) error {
 
 				}
 
+				//插入数据库
+				insertFunc := func(insert []*model.Trade, limit int) ([]*model.Trade, error) {
+					if len(insert) > limit {
+						err = b.SessionFunc(func(session *xorm.Session) error {
+							for _, v := range insert {
+								if _, err := session.Insert(v); err != nil {
+									return err
+								}
+							}
+							return nil
+						})
+						if err != nil {
+							return insert, err
+						}
+						insert = insert[:0]
+					}
+					return insert, nil
+				}
+
 				//解析日期
 				now := time.Now()
 				t := model.ToTime(last.Date, 0)
@@ -132,6 +151,7 @@ func (this *PullTrade) Run(ctx context.Context) error {
 					})
 					if err != nil {
 						logs.Err(err)
+						break
 						return
 					}
 
@@ -141,37 +161,17 @@ func (this *PullTrade) Run(ctx context.Context) error {
 					}
 
 					//4. 插入数据库
-					if len(insert) > insertLimit {
-						err = b.SessionFunc(func(session *xorm.Session) error {
-							for _, v := range insert {
-								if _, err := session.Insert(v); err != nil {
-									return err
-								}
-							}
-							return nil
-						})
-						if err != nil {
-							logs.Err(err)
-							return
-						}
-						insert = insert[:0]
-					}
-				}
-
-				if len(insert) > 0 {
-					err = b.SessionFunc(func(session *xorm.Session) error {
-						for _, v := range insert {
-							if _, err := session.Insert(v); err != nil {
-								return err
-							}
-						}
-						return nil
-					})
+					insert, err = insertFunc(insert, insertLimit)
 					if err != nil {
 						logs.Err(err)
 						return
 					}
-					insert = insert[:0]
+
+				}
+
+				if _, err := insertFunc(insert, 0); err != nil {
+					logs.Err(err)
+					return
 				}
 
 				break

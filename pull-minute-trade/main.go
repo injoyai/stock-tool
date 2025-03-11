@@ -48,24 +48,6 @@ func main() {
 	http(20001)
 }
 
-//func gui(op ...tray.Option) {
-//	tray.Run(
-//		tray.WithLabel("版本: "+Version),
-//		tray.WithIco(IcoStock),
-//		tray.WithHint("数据拉取工具"),
-//
-//		tray.WithStartup(),
-//		tray.WithSeparator(),
-//		tray.WithExit(),
-//
-//		func(s *tray.Tray) {
-//			for _, v := range op {
-//				v(s)
-//			}
-//		},
-//	)
-//}
-
 func _init() {
 
 	logs.Debug("配置的股票代码:", codes)
