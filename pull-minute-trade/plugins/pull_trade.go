@@ -197,10 +197,11 @@ func (this *PullTrade) pullDay(c *tdx.Client, code string, start, now time.Time)
 
 	date, _ := model.FromTime(start)
 	nowDate, _ := model.FromTime(now)
-	//startTime := time.Now()
-	//defer func() {
-	//	logs.Debug(code, start.Format("2006-01-02"), "耗时:", time.Since(startTime), "数据数量:", len(insert))
-	//}()
+
+	startTime := time.Now()
+	defer func() {
+		logs.Debug(code, start.Format("2006-01-02"), "耗时:", time.Since(startTime), "数据数量:", len(insert))
+	}()
 
 	switch date {
 	case 0:
