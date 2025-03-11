@@ -70,18 +70,20 @@ func _init() {
 
 		ctx := context.Background()
 
-		task.Run(ctx, plugins.NewPullTrade(m, codes, dirDatabase, disks))
+		tasks := []task.Tasker{
+			plugins.NewPullTrade(m, codes, dirDatabase, disks),
+			//plugins.NewExportMinuteKline(
+			//	m,
+			//	codes,
+			//	filepath.Join(dir, "trade"),
+			//	minute1KlineDir,
+			//	minute5KlineDir,
+			//	uint(disks),
+			//),
+		}
 
-		//task.Run(ctx, plugins.NewPullTrade(m, codes, dir, disks))
-
-		//task.Run(ctx, plugins.NewExportMinuteKline(
-		//	m,
-		//	codes,
-		//	filepath.Join(dir, "trade"),
-		//	minute1KlineDir,
-		//	minute5KlineDir,
-		//	uint(disks),
-		//))
+		err = task.Run(ctx, tasks...)
+		logs.PrintErr(err)
 
 	}
 
