@@ -52,7 +52,7 @@ func _init() {
 	logs.Debug("配置的股票代码:", codes)
 
 	//1. 连接服务器
-	m, err := tdx.NewManage(config)
+	m, err := tdx.NewManage(config, tdx.WithRedial())
 	logs.PanicErr(err)
 
 	/*
