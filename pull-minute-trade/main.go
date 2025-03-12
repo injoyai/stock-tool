@@ -40,6 +40,9 @@ func init() {
 	logs.DefaultFormatter.SetFlag(log.Ltime | log.Lshortfile)
 	//logs.SetFormatter(logs.TimeFormatter)
 	logs.Info("版本:", Version)
+	logs.Debug("连接客户端数量:", cfg.GetInt("number", 2))
+	logs.Debug("释放协程数量:", disks)
+	logs.Debug("配置的股票代码:", codes)
 }
 
 func main() {
@@ -48,8 +51,6 @@ func main() {
 }
 
 func _init() {
-
-	logs.Debug("配置的股票代码:", codes)
 
 	//1. 连接服务器
 	m, err := tdx.NewManage(config, tdx.WithRedial())

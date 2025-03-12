@@ -43,7 +43,7 @@ func (this *PullTrade) RunInfo() string {
 func (this *PullTrade) Run(ctx context.Context) error {
 
 	limit := chans.NewWaitLimit(uint(this.limit))
-	insertLimit := int(1e5)
+	insertLimit := int(1e4)
 
 	//1. 获取所有股票代码
 	codes := this.Codes
@@ -117,6 +117,11 @@ func (this *PullTrade) Run(ctx context.Context) error {
 				//插入数据库
 				insertFunc := func(insert []*model.Trade, limit int) ([]*model.Trade, error) {
 					if len(insert) > limit {
+						var err error
+						start := time.Now()
+						defer func(length int) {
+							logs.Debugf("插入数量: %d, 耗时:%v,结果: %v\n", length, time.Since(start), err)
+						}(len(insert))
 						err = b.SessionFunc(func(session *xorm.Session) error {
 							for _, v := range insert {
 								if _, err := session.Insert(v); err != nil {
