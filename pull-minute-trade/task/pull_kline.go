@@ -51,6 +51,14 @@ func (this *PullKline) Run(ctx context.Context) error {
 		go func(code string) {
 			defer wg.Done()
 
+			tables := []*model.KlineTable{
+				model.NewKlineTable("DayKline"),
+				model.NewKlineTable("WeekKline"),
+				model.NewKlineTable("MonthKline"),
+				model.NewKlineTable("QuarterKline"),
+				model.NewKlineTable("YearKline"),
+			}
+
 			//1. 打开数据库
 			b, err := db.Open(filepath.Join(this.Dir, code+".db"))
 			if err != nil {
@@ -58,36 +66,39 @@ func (this *PullKline) Run(ctx context.Context) error {
 				return
 			}
 			defer b.Close()
-			b.Sync2(new(model.DayKline))
+			for _, table := range tables {
+				b.Sync2(table)
 
-			//2. 获取最后一条数据
-			last, err := b.GetLastKline()
-			if err != nil {
-				logs.Err(err)
-				return
-			}
-
-			//3. 从服务器获取数据
-			insert := model.Klines{}
-			err = this.m.Do(func(c *tdx.Client) error {
-				insert, err = this.pull(c, code, last.Date)
-				return err
-			})
-			if err != nil {
-				logs.Err(err)
-				return
-			}
-
-			//4. 插入数据库
-			err = b.SessionFunc(func(session *xorm.Session) error {
-				for _, v := range insert {
-					if _, err := session.Insert(v); err != nil {
-						return err
-					}
+				//2. 获取最后一条数据
+				last, err := b.GetLastKline(table)
+				if err != nil {
+					logs.Err(err)
+					return
 				}
-				return nil
-			})
-			logs.PrintErr(err)
+
+				//3. 从服务器获取数据
+				insert := model.Klines{}
+				err = this.m.Do(func(c *tdx.Client) error {
+					insert, err = this.pull(c, code, last.Date)
+					return err
+				})
+				if err != nil {
+					logs.Err(err)
+					return
+				}
+
+				//4. 插入数据库
+				err = b.SessionFunc(func(session *xorm.Session) error {
+					for _, v := range insert {
+						if _, err := session.Insert(v); err != nil {
+							return err
+						}
+					}
+					return nil
+				})
+				logs.PrintErr(err)
+
+			}
 
 		}(v)
 	}
@@ -110,13 +121,15 @@ func (this *PullKline) pull(c *tdx.Client, code string, lastDate int64) (model.K
 	ks := model.Klines{}
 	for _, v := range resp.List {
 		ks = append(ks, &model.Kline{
+			Code:   code,
 			Date:   v.Time.Unix(),
-			Open:   v.Open,
-			High:   v.High,
-			Low:    v.Low,
-			Close:  v.Close,
+			Last:   v.Last.Float64(),
+			Open:   v.Open.Float64(),
+			High:   v.High.Float64(),
+			Low:    v.Low.Float64(),
+			Close:  v.Close.Float64(),
 			Volume: v.Volume,
-			Amount: v.Amount,
+			Amount: v.Amount.Float64(),
 		})
 	}
 
