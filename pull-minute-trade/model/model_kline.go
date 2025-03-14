@@ -32,6 +32,10 @@ type IndexDayKline struct {
 	DownCount int //下跌数量
 }
 
+func (this *IndexDayKline) TableName() string {
+	return "DayKline"
+}
+
 type Kline struct {
 	Code   string `json:"code" xorm:"-"`         //代码
 	Date   int64  `json:"date"`                  //时间节点 2006-01-02 15:00
