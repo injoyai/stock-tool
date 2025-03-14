@@ -20,11 +20,7 @@ const (
 var (
 	dirBase     = cfg.GetString("dir.base", "./data/")
 	dirDatabase = filepath.Join(dirBase, cfg.GetString("dir.database", "database"))
-	//minute1KlineDir   = cfg.GetString("dir", "./data/csv/1分钟K线/")
-	//minute5KlineDir   = cfg.GetString("dir", "./data/csv/5分钟K线/")
-	//dayKlineDir       = cfg.GetString("dir", "./data/csv/日K线/")
-	//dayKlineByDateDir = cfg.GetString("dir", "./data/csv/日K线(按日期)/")
-	config = &tdx.ManageConfig{
+	config      = &tdx.ManageConfig{
 		Hosts:      cfg.GetStrings("hosts"),
 		Number:     cfg.GetInt("number", 2),
 		CodesDir:   dirDatabase,
@@ -36,9 +32,17 @@ var (
 	startup = cfg.GetBool("startup")
 )
 
+var (
+	tasks = []task.Tasker{
+		//task.NewPullTrade(codes, filepath.Join(dirDatabase, "trade"), disks),
+		task.NewPullKline(codes, filepath.Join(dirDatabase, "kline"), disks),
+	}
+)
+
 func init() {
 	logs.DefaultFormatter.SetFlag(log.Ltime | log.Lshortfile)
 	//logs.SetFormatter(logs.TimeFormatter)
+
 	logs.Info("版本:", Version)
 	logs.Debug("连接客户端数量:", cfg.GetInt("number", 2))
 	logs.Debug("释放协程数量:", disks)
@@ -46,11 +50,11 @@ func init() {
 }
 
 func main() {
-	_init()
+	run()
 	http(20001)
 }
 
-func _init() {
+func run() {
 
 	//1. 连接服务器
 	m, err := tdx.NewManage(config, tdx.WithRedial())
@@ -70,21 +74,8 @@ func _init() {
 
 		ctx := context.Background()
 
-		tasks := []task.Tasker{
-			task.NewPullTrade(m, codes, dirDatabase, disks),
-			//plugins.NewExportMinuteKline(
-			//	m,
-			//	codes,
-			//	filepath.Join(dir, "trade"),
-			//	minute1KlineDir,
-			//	minute5KlineDir,
-			//	uint(disks),
-			//),
-		}
-
-		err = task.Run(ctx, tasks...)
+		err = task.Run(ctx, m, tasks...)
 		logs.PrintErr(err)
-
 	}
 
 	//3. 设置定时

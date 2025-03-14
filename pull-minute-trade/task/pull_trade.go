@@ -12,12 +12,11 @@ import (
 	"xorm.io/xorm"
 )
 
-func NewPullTrade(m *tdx.Manage, codes []string, dirDatabase string, limit int) *PullTrade {
+func NewPullTrade(codes []string, dir string, limit int) *PullTrade {
 	return &PullTrade{
-		Dir:   filepath.Join(dirDatabase, "trade"),
+		Dir:   dir,
 		Codes: codes,
 		limit: limit,
-		m:     m,
 	}
 }
 
@@ -25,7 +24,6 @@ type PullTrade struct {
 	Dir   string   //数据保存目录
 	Codes []string //用户指定操作的股票
 	limit int
-	m     *tdx.Manage
 }
 
 func (this *PullTrade) Name() string {
@@ -40,7 +38,7 @@ func (this *PullTrade) RunInfo() string {
 	return ""
 }
 
-func (this *PullTrade) Run(ctx context.Context) error {
+func (this *PullTrade) Run(ctx context.Context, m *tdx.Manage) error {
 
 	limit := chans.NewWaitLimit(uint(this.limit))
 	insertLimit := int(1e4)
@@ -48,7 +46,7 @@ func (this *PullTrade) Run(ctx context.Context) error {
 	//1. 获取所有股票代码
 	codes := this.Codes
 	if len(codes) == 0 {
-		codes = this.m.Codes.GetStocks()
+		codes = m.Codes.GetStocks()
 	}
 
 	for _, code := range codes {
@@ -95,7 +93,7 @@ func (this *PullTrade) Run(ctx context.Context) error {
 					last.Date, _ = model.FromTime(time.Date(2000, 6, 8, 0, 0, 0, 0, time.Local))
 
 					//查询年K线,获取实际上市年份
-					this.m.Do(func(c *tdx.Client) error {
+					m.Do(func(c *tdx.Client) error {
 						resp, err := c.GetKlineMonthAll(code)
 						if err != nil {
 							return err
@@ -145,8 +143,14 @@ func (this *PullTrade) Run(ctx context.Context) error {
 				var insert []*model.Trade
 				//遍历时间,并加入数据库
 				for start := t.Add(time.Hour * 24); start.Before(now); start = start.Add(time.Hour * 24) {
+
+					//排除休息日
+					if !m.Workday.Is(start) {
+						continue
+					}
+
 					//3. 获取数据
-					err = this.m.Do(func(c *tdx.Client) error {
+					err = m.Do(func(c *tdx.Client) error {
 						ls, err := this.pullDay(c, code, start, now)
 						if err != nil {
 							return err
@@ -192,11 +196,6 @@ func (this *PullTrade) Run(ctx context.Context) error {
 }
 
 func (this *PullTrade) pullDay(c *tdx.Client, code string, start, now time.Time) ([]*model.Trade, error) {
-
-	//排除休息日
-	if !this.m.Workday.Is(start) {
-		return nil, nil
-	}
 
 	insert := []*model.Trade(nil)
 

@@ -18,7 +18,7 @@ func (this *Sqlite) GetLastTrade() (*model.Trade, error) {
 }
 
 // GetLastKline 获取最后一条K线数据
-func (this *Sqlite) GetLastKline(table string) (*model.Kline, error) {
+func (this *Sqlite) GetLastKline(table any) (*model.Kline, error) {
 	data := new(model.Kline)
 	_, err := this.Table(table).Desc("Date").Get(data)
 	return data, err

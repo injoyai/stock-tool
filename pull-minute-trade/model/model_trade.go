@@ -142,13 +142,3 @@ func (this Trades) Kline(last int64, date int64) *Kline {
 		Amount: Price(amount),
 	}
 }
-
-//// MinuteKline 用分时数据计算分钟K线
-//func (this Trades) MinuteKline() []*Kline {
-//	ls := make([]*Kline, 60*4)
-//	for _, v := range this {
-//		_ = v
-//	}
-//
-//	return ls
-//}

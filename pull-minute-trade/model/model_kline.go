@@ -1,64 +1,51 @@
 package model
 
 import (
+	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/protocol"
 	"sort"
 )
 
-func NewKlineTable(tableName string) *KlineTable {
+type KlineHandler func(code string, f func(k *protocol.Kline) bool) (*protocol.KlineResp, error)
+
+func NewKlineTable(tableName string, handler func(c *tdx.Client) KlineHandler) *KlineTable {
 	return &KlineTable{
 		tableName: tableName,
+		Handler:   handler,
 	}
 }
 
 type KlineTable struct {
 	Kline     `xorm:"extends"`
 	tableName string
+	Handler   func(c *tdx.Client) KlineHandler `xorm:"-"`
 }
 
 func (this *KlineTable) TableName() string {
 	return this.tableName
 }
 
-// DayKline 日线,写入数据库
-type DayKline struct {
-	Date  int64 `json:"date"`  //时间节点 2006-01-02 15:00
-	Open  int64 `json:"open"`  //开盘价
-	High  int64 `json:"high"`  //最高价
-	Low   int64 `json:"low"`   //最低价
-	Close int64 `json:"close"` //收盘价
-}
-
 type Kline struct {
-	Code string `json:"code" xorm:"-"` //代码
-	Date int64  `json:"date"`          //时间节点 2006-01-02 15:00
-	//Open   Price  `json:"open"`          //开盘价
-	//High   Price  `json:"high"`          //最高价
-	//Low    Price  `json:"low"`           //最低价
-	//Close  Price  `json:"close"`         //收盘价
-	//Volume int64  `json:"volume"`        //成交量
-	//Amount Price  `json:"amount"`        //成交额
-
-	Last      float64 `json:"last"`                  //昨收
-	Open      float64 `json:"open"`                  //开盘价
-	High      float64 `json:"high"`                  //最高价
-	Low       float64 `json:"low"`                   //最低价
-	Close     float64 `json:"close"`                 //最新价,对应历史收盘价
-	Volume    int64   `json:"volume"`                //成交量
-	Amount    float64 `json:"amount"`                //成交额
-	RisePrice float64 `json:"risePrice"`             //涨跌幅
-	RiseRate  float64 `json:"riseRate"`              //涨跌幅度
-	InDate    int64   `json:"inDate" xorm:"created"` //创建时间
+	Code   string `json:"code" xorm:"-"`         //代码
+	Date   int64  `json:"date"`                  //时间节点 2006-01-02 15:00
+	Open   Price  `json:"open"`                  //开盘价
+	High   Price  `json:"high"`                  //最高价
+	Low    Price  `json:"low"`                   //最低价
+	Close  Price  `json:"close"`                 //收盘价
+	Volume int64  `json:"volume"`                //成交量
+	Amount Price  `json:"amount"`                //成交额
+	InDate int64  `json:"inDate" xorm:"created"` //创建时间
 }
 
-//// RisePrice 涨跌
-//func (this *Kline) RisePrice() Price {
-//	return this.Close - this.Open
-//}
-//
-//// RiseRate 涨跌幅
-//func (this *Kline) RiseRate() float64 {
-//	return float64(this.Close-this.Open) * 100 / float64(this.Open)
-//}
+// RisePrice 涨跌
+func (this *Kline) RisePrice() Price {
+	return this.Close - this.Open
+}
+
+// RiseRate 涨跌幅
+func (this *Kline) RiseRate() float64 {
+	return float64(this.Close-this.Open) * 100 / float64(this.Open)
+}
 
 // Amplitude 振幅
 func (this *Kline) Amplitude() float64 {
