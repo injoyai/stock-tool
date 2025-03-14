@@ -27,8 +27,9 @@ func (this *KlineTable) TableName() string {
 
 type IndexDayKline struct {
 	Kline     `xorm:"extends"`
-	UpCount   int
-	DownCount int
+	Total     int //总数量
+	UpCount   int //上涨数量
+	DownCount int //下跌数量
 }
 
 type Kline struct {
