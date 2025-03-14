@@ -50,6 +50,8 @@ func (this *PullKline) Run(ctx context.Context, m *tdx.Manage) error {
 			defer limit.Done()
 
 			tables := []*model.KlineTable{
+				model.NewKlineTable("MinuteKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineMinuteUntil }),
+				model.NewKlineTable("Minute5Kline", func(c *tdx.Client) model.KlineHandler { return c.GetKline5MinuteUntil }),
 				model.NewKlineTable("DayKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineDayUntil }),
 				model.NewKlineTable("WeekKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineWeekUntil }),
 				model.NewKlineTable("MonthKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineMonthUntil }),

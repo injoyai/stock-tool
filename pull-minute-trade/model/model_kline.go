@@ -25,6 +25,12 @@ func (this *KlineTable) TableName() string {
 	return this.tableName
 }
 
+type IndexDayKline struct {
+	Kline     `xorm:"extends"`
+	UpCount   int
+	DownCount int
+}
+
 type Kline struct {
 	Code   string `json:"code" xorm:"-"`         //代码
 	Date   int64  `json:"date"`                  //时间节点 2006-01-02 15:00
