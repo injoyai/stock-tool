@@ -3,9 +3,10 @@ module pull-index-once
 go 1.20
 
 require (
+	github.com/injoyai/conv v1.1.10
 	github.com/injoyai/goutil v0.0.0-20250220075818-1b6cf69bc75c
 	github.com/injoyai/logs v1.0.9
-	github.com/injoyai/tdx v0.0.7
+	github.com/injoyai/tdx v0.0.9
 )
 
 require (
@@ -16,7 +17,6 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/injoyai/base v1.0.19 // indirect
-	github.com/injoyai/conv v1.1.10 // indirect
 	github.com/injoyai/ios v0.0.6 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
