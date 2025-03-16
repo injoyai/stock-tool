@@ -26,14 +26,14 @@ func init() {
 	logs.SetShowColor(false)
 
 	ls := cfg.GetInterfaces("codes", []interface{}{
-		map[string]string{"sh000001": "上证指数"},
-		map[string]string{"sz399001": "深证成指"},
-		map[string]string{"sh000016": "上证50"},
-		map[string]string{"sh000010": "上证180"},
-		map[string]string{"sh000300": "上证300"},
-		map[string]string{"sh000905": "中证500"},
-		map[string]string{"sh000852": "中证1000"},
-		map[string]string{"sz399006": "创业板指"},
+		map[string]interface{}{"sh000001": "上证指数"},
+		map[string]interface{}{"sz399001": "深证成指"},
+		map[string]interface{}{"sh000016": "上证50"},
+		map[string]interface{}{"sh000010": "上证180"},
+		map[string]interface{}{"sh000300": "上证300"},
+		map[string]interface{}{"sh000905": "中证500"},
+		map[string]interface{}{"sh000852": "中证1000"},
+		map[string]interface{}{"sz399006": "创业板指"},
 	})
 	for _, v := range ls {
 		if m, ok := v.(map[string]interface{}); ok {
@@ -63,6 +63,7 @@ func main() {
 			logs.Err(err)
 			return
 		}
+		logs.Info("有效期: " + Invalid)
 		if time.Now().After(t) {
 			logs.Err("已过有效期: " + Invalid)
 			return

@@ -1,5 +1,5 @@
 name="拉取指数"
-invalid="2026-06-01"
+invalid="2025-01-01"
 
 fullName="$name($invalid)"
 GOOS=windows GOARCH=amd64 go build -v -ldflags="-w -s -X main.Invalid=$invalid" -o ./bin/$fullName.exe
