@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
-	"log"
 	"time"
 )
 
@@ -95,11 +94,6 @@ func Check(highs, lows []Point) bool {
 	h := highs[len(highs)-2:]
 	l := lows[len(lows)-2:]
 
-	//log.Println(l[0])
-	//log.Println(h[0])
-	//log.Println(l[1])
-	//log.Println(h[1])
-
 	//判断顶点是否过远
 	if time.Now().Sub(h[1].Kline.Time).Hours()/24 > 10 {
 		return false
@@ -127,10 +121,10 @@ func Check(highs, lows []Point) bool {
 		或者顶部底部间隔天数等
 	*/
 
-	log.Println(l[0])
-	log.Println(h[0])
-	log.Println(l[1])
-	log.Println(h[1])
+	//log.Println(l[0])
+	//log.Println(h[0])
+	//log.Println(l[1])
+	//log.Println(h[1])
 
 	return true
 }
