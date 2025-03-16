@@ -38,7 +38,14 @@ func (this *PullKline) Name() string {
 
 func (this *PullKline) Run(ctx context.Context, m *tdx.Manage) error {
 	limit := chans.NewWaitLimit(uint(this.limit))
-	for _, v := range this.Codes {
+
+	//1. 获取所有股票代码
+	codes := this.Codes
+	if len(codes) == 0 {
+		codes = m.Codes.GetStocks()
+	}
+
+	for _, v := range codes {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

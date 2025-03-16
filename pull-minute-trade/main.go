@@ -34,8 +34,8 @@ var (
 
 var (
 	tasks = []task.Tasker{
-		//task.NewPullTrade(codes, filepath.Join(dirDatabase, "trade"), disks),
-		task.NewPullKline(codes, filepath.Join(dirDatabase, "kline"), disks),
+		task.NewPullTrade(codes, filepath.Join(dirDatabase, "trade"), disks),
+		//task.NewPullKline(codes, filepath.Join(dirDatabase, "kline"), disks),
 	}
 )
 
