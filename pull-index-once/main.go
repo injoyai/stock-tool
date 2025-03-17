@@ -9,6 +9,7 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
+	"github.com/robfig/cron/v3"
 	"strings"
 	"time"
 )
@@ -26,14 +27,17 @@ func init() {
 	logs.SetShowColor(false)
 
 	ls := cfg.GetInterfaces("codes", []interface{}{
-		map[string]interface{}{"sh000001": "上证指数"},
-		map[string]interface{}{"sz399001": "深证成指"},
-		map[string]interface{}{"sh000016": "上证50"},
-		map[string]interface{}{"sh000010": "上证180"},
-		map[string]interface{}{"sh000300": "上证300"},
-		map[string]interface{}{"sh000905": "中证500"},
-		map[string]interface{}{"sh000852": "中证1000"},
-		map[string]interface{}{"sz399006": "创业板指"},
+		map[string]any{"sh000001": "上证指数"},
+		map[string]any{"sz399001": "深证成指"},
+		map[string]any{"sh000016": "上证50"},
+		map[string]any{"sh000688": "科创50"},
+		map[string]any{"sh000010": "上证180"},
+		map[string]any{"sh000300": "上证300"},
+		map[string]any{"sh000905": "中证500"},
+		map[string]any{"sh000852": "中证1000"},
+		map[string]any{"sz399006": "创业板指"},
+		map[string]any{"sh000932": "中证消费指数"},
+		map[string]any{"sh000827": "中证环保指数"},
 	})
 	for _, v := range ls {
 		if m, ok := v.(map[string]interface{}); ok {
@@ -48,6 +52,11 @@ func init() {
 	Hosts = cfg.GetStrings("hosts", tdx.Hosts)
 
 	Filename = cfg.GetString("filename", "./data/{type}线/{code}({name}).csv")
+
+	//logs.Debug(Codes)
+	//logs.Debug(Types)
+	//logs.Debug(Hosts)
+	//logs.Debug(Filename)
 
 }
 
@@ -86,32 +95,39 @@ func main() {
 	}
 	c.Wait.SetTimeout(time.Second * 5)
 
-	for _, _type := range Types {
-		switch _type {
-		case "日":
-			err = do(c.GetKlineDayAll, _type, Filename)
-			logs.PrintErr(err)
+	f := func() {
+		for _, _type := range Types {
+			switch _type {
+			case "日":
+				err = do(c.GetKlineDayAll, _type, Filename)
+				logs.PrintErr(err)
 
-		case "周":
-			err = do(c.GetKlineWeekAll, _type, Filename)
-			logs.PrintErr(err)
+			case "周":
+				err = do(c.GetKlineWeekAll, _type, Filename)
+				logs.PrintErr(err)
 
-		case "月":
-			err = do(c.GetKlineMonthAll, _type, Filename)
-			logs.PrintErr(err)
+			case "月":
+				err = do(c.GetKlineMonthAll, _type, Filename)
+				logs.PrintErr(err)
 
-		case "季":
-			err = do(c.GetKlineQuarterAll, _type, Filename)
-			logs.PrintErr(err)
+			case "季":
+				err = do(c.GetKlineQuarterAll, _type, Filename)
+				logs.PrintErr(err)
 
-		case "年":
-			err = do(c.GetKlineYearAll, _type, Filename)
-			logs.PrintErr(err)
+			case "年":
+				err = do(c.GetKlineYearAll, _type, Filename)
+				logs.PrintErr(err)
 
+			}
 		}
+		logs.Info("拉取完成")
 	}
 
-	logs.Info("拉取完成")
+	f()
+
+	cr := cron.New(cron.WithSeconds())
+	cr.AddFunc("0 1 15 * * *", f)
+	cr.Run()
 
 }
 
