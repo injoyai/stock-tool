@@ -82,7 +82,7 @@ func main() {
 	var c *tdx.Client
 	var err error
 	for _, host := range Hosts {
-		c, err = tdx.Dial(host)
+		c, err = tdx.Dial(host, tdx.WithRedial())
 		if err != nil {
 			logs.Err(err)
 			return
