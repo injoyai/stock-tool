@@ -3,12 +3,13 @@ package main
 import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"log"
 	"time"
 )
 
 var (
 	testCodes = []string{
-		"sh603799",
+		"sh601398",
 	}
 )
 
@@ -17,16 +18,13 @@ func main() {
 	c, err := tdx.DialHostsRandom(nil, tdx.WithRedial())
 	logs.PanicErr(err)
 
-	codes, err := tdx.NewCodes(c, "./codes.db")
-	logs.PanicErr(err)
-
 	s := &Strategy{
-		WindowsSize: 5,
+		WindowsSize: 8,
 		DayStart:    0,
 		DayNumber:   50,
 	}
 
-	testCodes = codes.GetStocks()
+	//testCodes = codes.GetStocks()
 
 	result := s.Find(c, testCodes)
 
@@ -93,6 +91,11 @@ func Check(highs, lows []Point) bool {
 	//各取2个最新的顶部和底部
 	h := highs[len(highs)-2:]
 	l := lows[len(lows)-2:]
+
+	log.Println(l[0])
+	log.Println(h[0])
+	log.Println(l[1])
+	log.Println(h[1])
 
 	//判断顶点是否过远
 	if time.Now().Sub(h[1].Kline.Time).Hours()/24 > 10 {
