@@ -5,6 +5,7 @@ import (
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/logs"
+	"github.com/injoyai/tdx"
 	"path/filepath"
 	"pull-minute-trade/db"
 	"pull-minute-trade/model"
@@ -22,11 +23,25 @@ func (this *ExportKline) Name() string {
 	return "导出k线数据"
 }
 
-func (this *ExportKline) Run(ctx context.Context) error {
+func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
+
+	for _, v := range this.Type {
+		switch v {
+		case "code":
+			if err := this.byCode(ctx, m); err != nil {
+				return err
+			}
+		case "date":
+			if err := this.byDate(ctx, m); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
-func (this *ExportKline) byDate(ctx context.Context) error {
+func (this *ExportKline) byDate(ctx context.Context, m *tdx.Manage) error {
 	now := time.Now().Format("20060102")
 	ls := model.Klines{}
 	err := this.Range.Run(ctx, func(code string) {
@@ -65,7 +80,7 @@ func (this *ExportKline) byDate(ctx context.Context) error {
 	return oss.New(filepath.Join(this.To, now+".csv"), buf)
 }
 
-func (this *ExportKline) byCode(ctx context.Context) error {
+func (this *ExportKline) byCode(ctx context.Context, m *tdx.Manage) error {
 	return this.Range.Run(ctx, func(code string) {
 		filename := filepath.Join(this.From, code+".db")
 		all := []*model.Kline(nil)
@@ -79,11 +94,11 @@ func (this *ExportKline) byCode(ctx context.Context) error {
 
 		//
 		data := [][]any{
-			{"序号", "日期", "开盘", "收盘", "最高", "最低", "成交量", "成交额"},
+			{"序号", "代码", "名称", "日期", "开盘", "收盘", "最高", "最低", "成交量", "成交额", "涨幅", "涨幅比"},
 		}
 		for _, v := range all {
 			data = append(data, []any{
-				v.Date, v.Open, v.Close, v.High, v.Low, v.Volume, v.Amount,
+				v.Date, code, m.Codes.GetName(code), v.Open.Float64(), v.Close.Float64(), v.High.Float64(), v.Low.Float64(), v.Volume, v.Amount.Float64(), v.RisePrice(), v.RiseRate(),
 			})
 		}
 		buf, err := excel.ToCsv(data)
