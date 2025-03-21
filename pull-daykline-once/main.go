@@ -10,17 +10,24 @@ import (
 	"time"
 )
 
+var (
+	codes = []string{"sh600797", "sh600519", "sh601899"}
+	start = time.Date(2021, 10, 1, 0, 0, 0, 0, time.Local)
+	end   = time.Date(2022, 9, 30, 23, 0, 0, 0, time.Local)
+)
+
 func main() {
 
 	c, err := tdx.DialDefault()
 	logs.PanicErr(err)
 
-	codes := tdx.DefaultCodes.GetStocks()
-	//	codes = []string{"sz000001"}
+	if len(codes) == 0 {
+		codes = tdx.DefaultCodes.GetStocks()
+	}
 
 	for _, code := range codes {
 		resp, err := c.GetKlineDayUntil(code, func(k *protocol.Kline) bool {
-			return k.Time.Before(time.Date(2024, 1, 1, 0, 0, 0, 0, time.Local))
+			return k.Time.Before(start)
 		})
 		if err != nil {
 			logs.Err(err)
@@ -31,11 +38,14 @@ func main() {
 			{"时间", "代码", "名称", "开盘", "收盘", "最高", "最低", "成交量", "成交额", "涨幅", "涨幅比"},
 		}
 
-		if len(resp.List) > 1 {
-			resp.List = resp.List[1 : len(resp.List)-1]
+		if len(resp.List) > 0 {
+			resp.List = resp.List[1:]
 		}
 
 		for _, v := range resp.List {
+			if v.Time.After(end) {
+				break
+			}
 			data = append(data, []any{
 				v.Time.Format("2006-01-02"),
 				code,
