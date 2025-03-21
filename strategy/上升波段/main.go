@@ -24,7 +24,7 @@ func main() {
 		DayNumber:   50,
 	}
 
-	//testCodes = codes.GetStocks()
+	testCodes = codes.GetStocks()
 
 	result := s.Find(c, testCodes)
 
