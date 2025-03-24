@@ -7,7 +7,6 @@ import (
 	"github.com/injoyai/goutil/frame/mux"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
-	"github.com/robfig/cron/v3"
 	"log"
 	"path/filepath"
 	"pull-minute-trade/task"
@@ -79,9 +78,9 @@ func run() {
 	}
 
 	//3. 设置定时
-	cr := cron.New(cron.WithSeconds())
-	cr.AddFunc(spec, f)
-	cr.Start()
+	//cr := cron.New(cron.WithSeconds())
+	//cr.AddFunc(spec, f)
+	//cr.Start()
 
 	//4. 启动便执行
 	if startup {
