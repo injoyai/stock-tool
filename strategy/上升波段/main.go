@@ -15,7 +15,7 @@ var (
 
 func main() {
 
-	c, err := tdx.DialHostsRandom(nil, tdx.WithRedial())
+	c, err := tdx.DialDefault(nil, tdx.WithRedial())
 	logs.PanicErr(err)
 
 	s := &Strategy{
@@ -24,16 +24,12 @@ func main() {
 		DayNumber:   50,
 	}
 
-	testCodes = codes.GetStocks()
+	testCodes = tdx.DefaultCodes.GetStocks()
 
 	result := s.Find(c, testCodes)
 
 	logs.Debug(result)
 
-}
-
-type Result struct {
-	Points [4]Point
 }
 
 type Strategy struct {
@@ -62,7 +58,7 @@ func (this *Strategy) Find(c *tdx.Client, codes []string) []string {
 			})
 		}
 
-		h, l := ls.FindPoint(this.WindowsSize)
+		h, l := ls.Vertexes(this.WindowsSize)
 
 		if Check(h, l) {
 			result = append(result, code)
@@ -83,7 +79,7 @@ l2>l1 && h2>h1
 
 */
 
-func Check(highs, lows []Point) bool {
+func Check(highs, lows []*Vertex) bool {
 	if len(highs) < 2 || len(lows) < 2 {
 		return false
 	}
@@ -131,51 +127,3 @@ func Check(highs, lows []Point) bool {
 
 	return true
 }
-
-//type Klines []*Kline
-//
-//// FindPoint ，windowSize为0时使用基础模式
-//func (this Klines) FindPoint(windowSize int) (highs, lows []Point) {
-//	if len(this) == 0 {
-//		return
-//	}
-//
-//	for i := range this {
-//		// 计算有效窗口范围
-//		start := int(math.Max(0, float64(i-windowSize)))
-//		end := int(math.Min(float64(len(this)-1), float64(i+windowSize)))
-//
-//		// 极值标记
-//		isHigh := true
-//		isLow := true
-//
-//		// 窗口内遍历
-//		for j := start; j <= end; j++ {
-//			if i == j {
-//				continue // 跳过自身比较
-//			}
-//
-//			if this[j].High > this[i].High {
-//				isHigh = false // 存在更高值则不是高点
-//			}
-//
-//			if this[j].Low < this[i].Low {
-//				isLow = false // 存在更低值则不是低点
-//			}
-//
-//			// 提前退出优化：当两个标记都为false时停止检查
-//			if !isHigh && !isLow {
-//				break
-//			}
-//		}
-//
-//		// 记录有效极值
-//		if isHigh {
-//			highs = append(highs, Point{i, this[i]})
-//		}
-//		if isLow {
-//			lows = append(lows, Point{i, this[i]})
-//		}
-//	}
-//	return
-//}

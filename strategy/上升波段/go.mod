@@ -3,8 +3,8 @@ module strategy
 go 1.20
 
 require (
-	github.com/injoyai/logs v1.0.10
-	github.com/injoyai/tdx v0.0.10
+	github.com/injoyai/logs v1.0.9
+	github.com/injoyai/tdx v0.0.14
 )
 
 require (

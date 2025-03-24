@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/excel"
@@ -18,11 +19,6 @@ func main() {
 	m, err := tdx.NewManage(nil, tdx.WithRedial())
 	logs.PanicErr(err)
 
-	if !m.Workday.TodayIs() {
-		logs.Err("今天不是工作日")
-		return
-	}
-
 	err = do(m, m.Codes.GetStocks())
 	logs.PrintErr(err)
 
@@ -32,6 +28,10 @@ func main() {
 }
 
 func do(m *tdx.Manage, codes []string) error {
+
+	if !m.Workday.TodayIs() {
+		return errors.New("今天不是工作日")
+	}
 
 	defer logs.Spend("耗时")()
 
