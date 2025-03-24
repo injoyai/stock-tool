@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/injoyai/tdx/protocol"
-	"math"
+	"strings"
 	"time"
 )
 
@@ -15,153 +15,92 @@ type Kline struct {
 	Close protocol.Price //收盘价
 }
 
-type Point struct {
-	Index int    // 数据点索引
-	Kline *Kline // 数据点数值
-}
-
-func (this Point) String() string {
-	return fmt.Sprintf("%v %s %v", this.Index, this.Kline.Time.Format(time.DateOnly), this.Kline.High)
-}
-
 type Klines []*Kline
 
-func (this Klines) FindPoint2(windowSize int) (highs, lows []Point) {
-	if len(this) == 0 {
-		return
+func (this Klines) String() string {
+	ls := []string(nil)
+	for _, v := range this {
+		ls = append(ls, fmt.Sprintf("max:%.2f, min:%.2f", v.High.Float64(), v.Low.Float64()))
+	}
+	return strings.Join(ls, "\n")
+}
+
+// IsVertex 判断当前值是否是顶点(最大值/最小值)
+func (this Klines) IsVertex(k *Kline) (bool, bool) {
+	isMax := true
+	isMin := true
+	//判断当前值是否是最大值/最小值
+	for _, v := range this {
+		if k == v {
+			continue
+		}
+		if k.High <= v.High {
+			isMax = false
+		}
+		if k.Low >= v.Low {
+			isMin = false
+		}
+	}
+	return isMax, isMin
+}
+
+func (this Klines) Vertexes(windowSize int, filterEdge ...bool) (maxs []*Vertex, mins []*Vertex) {
+
+	filter := false
+	if len(filterEdge) > 0 {
+		filter = filterEdge[0]
 	}
 
-	max := func(a, b int) int {
-		if a > b {
-			return a
-		}
-		return b
-	}
+	for i := 0; i < len(this); i++ {
 
-	min := func(a, b int) int {
-		if a < b {
-			return a
-		}
-		return b
-	}
+		var cache Klines
 
-	for i := range this {
-		// 动态计算有效窗口边界
-		left := max(0, i-windowSize)
-		right := min(len(this)-1, i+windowSize)
-
-		// 边缘检测标志
-		isLeftEdge := i-windowSize < 0
-		isRightEdge := i+windowSize > len(this)-1
-
-		// 极值标记初始化
-		isHigh := true
-		isLow := true
-
-		// 遍历有效窗口范围
-		for j := left; j <= right; j++ {
-			if j == i {
-				continue // 跳过自身比较
-			}
-
-			// 高点检测：存在更高值则取消资格
-			if this[j].High >= this[i].High {
-				isHigh = false
-			}
-
-			// 低点检测：存在更低值则取消资格
-			if this[j].Low <= this[i].Low {
-				isLow = false
-			}
-		}
-
-		// 特殊处理数据边界情况
 		switch {
-		case isLeftEdge && !isRightEdge: // 左边界
-			// 只需要比右侧窗口内的高点更高
-			if isHigh && this[i].High == maxInWindow(this, i, right) {
-				highs = append(highs, Point{i, this[i]})
+		case i-windowSize < 0 && len(this)-i < windowSize:
+			//左边右边都不满足窗口大小
+			if filter {
+				continue
 			}
-		case isRightEdge && !isLeftEdge: // 右边界
-			// 只需要比左侧窗口内的低点更低
-			if isLow && this[i].Low == minInWindow(this, left, i) {
-				lows = append(lows, Point{i, this[i]})
+			cache = this
+
+		case i-windowSize < 0:
+			//左侧不满足窗口大小
+			if filter {
+				continue
 			}
-		default: // 正常区间
-			if isHigh {
-				highs = append(highs, Point{i, this[i]})
+			cache = this[:i+windowSize]
+
+		case len(this)-1-i < windowSize:
+			//右侧不满足窗口大小
+			if filter {
+				continue
 			}
-			if isLow {
-				lows = append(lows, Point{i, this[i]})
-			}
+			cache = this[i-windowSize:]
+
+		default:
+			//满足左边右边都有窗口大小
+			cache = this[i-windowSize : i+windowSize+1]
+
 		}
+
+		//logs.Debug()
+		//fmt.Println(cache)
+
+		//判断当前值是否是最大值/最小值
+		isMax, isMin := cache.IsVertex(this[i])
+		if isMax {
+			maxs = append(maxs, &Vertex{Index: i, Kline: this[i]})
+		}
+		if isMin {
+			mins = append(mins, &Vertex{Index: i, Kline: this[i]})
+		}
+
 	}
+
 	return
 }
 
-func (this Klines) FindPoint(windowSize int) (highs, lows []Point) {
-	if len(this) == 0 {
-		return
-	}
-
-	for i := range this {
-		// 计算有效窗口范围
-		start := int(math.Max(0, float64(i-windowSize)))
-		end := int(math.Min(float64(len(this)-1), float64(i+windowSize)))
-
-		// 极值标记
-		isHigh := true
-		isLow := true
-
-		// 窗口内遍历
-		for j := start; j <= end; j++ {
-			if i == j {
-				continue // 跳过自身比较
-			}
-
-			if this[j].High > this[i].High {
-				isHigh = false // 存在更高值则不是高点
-			}
-
-			if this[j].Low < this[i].Low {
-				isLow = false // 存在更低值则不是低点
-			}
-
-			// 提前退出优化：当两个标记都为false时停止检查
-			if !isHigh && !isLow {
-				break
-			}
-		}
-
-		// 记录有效极值
-		if isHigh {
-			highs = append(highs, Point{i, this[i]})
-		}
-		if isLow {
-			lows = append(lows, Point{i, this[i]})
-		}
-	}
-	return
-}
-
-// 辅助函数：计算窗口内最大值
-func maxInWindow(prices []*Kline, start, end int) protocol.Price {
-	maxVal := prices[start].High
-	for i := start + 1; i <= end; i++ {
-		if prices[i].High > maxVal {
-			maxVal = prices[i].High
-		}
-	}
-	return maxVal
-}
-
-// 辅助函数：计算窗口内最小值
-func minInWindow(prices []*Kline, start, end int) protocol.Price {
-	minVal := prices[start].Low
-	for i := start + 1; i <= end; i++ {
-		if prices[i].Low < minVal {
-			minVal = prices[i].Low
-		}
-	}
-	return minVal
+type Vertex struct {
+	Index int
+	*Kline
 }

@@ -38,6 +38,7 @@ github.com/injoyai/logs v1.0.9 h1:Wq7rCVIQKcPx+z+lzKQb2qyDK4TML/cgmaSZN9tx33c=
 github.com/injoyai/logs v1.0.9/go.mod h1:CLchJCGhb39Obyrci816R+KMtbxZhgPs0FuikhyixK4=
 github.com/injoyai/tdx v0.0.10 h1:7DDH4BroONtf3y9qUwXiTub9s/C4GeXzxje/0sHVnG0=
 github.com/injoyai/tdx v0.0.10/go.mod h1:TQi/oWeEF0BHrheOmn0ftYvuYg+3zm9xcYr5zr1n76Q=
+github.com/injoyai/tdx v0.0.14/go.mod h1:TQi/oWeEF0BHrheOmn0ftYvuYg+3zm9xcYr5zr1n76Q=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 h1:Z9n2FFNUXsshfwJMBgNA0RU6/i7WVaAegv3PtuIHPMs=
