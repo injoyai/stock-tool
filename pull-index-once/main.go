@@ -47,7 +47,7 @@ func init() {
 		}
 	}
 
-	Types = cfg.GetStrings("types", []string{"日", "周", "月", "季", "年"})
+	Types = cfg.GetStrings("types", []string{"分", "日", "周", "月", "季", "年"})
 
 	Hosts = cfg.GetStrings("hosts", tdx.Hosts)
 
@@ -98,6 +98,10 @@ func main() {
 	f := func() {
 		for _, _type := range Types {
 			switch _type {
+			case "分":
+				err = do(c.GetKlineMinuteAll, _type, Filename)
+				logs.PrintErr(err)
+
 			case "日":
 				err = do(c.GetKlineDayAll, _type, Filename)
 				logs.PrintErr(err)
