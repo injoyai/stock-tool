@@ -47,16 +47,11 @@ func init() {
 		}
 	}
 
-	Types = cfg.GetStrings("types", []string{"分", "日", "周", "月", "季", "年"})
+	Types = cfg.GetStrings("types", []string{"分", "5分", "15分", "日", "周", "月", "季", "年"})
 
 	Hosts = cfg.GetStrings("hosts", tdx.Hosts)
 
 	Filename = cfg.GetString("filename", "./data/{type}线/{code}({name}).csv")
-
-	//logs.Debug(Codes)
-	//logs.Debug(Types)
-	//logs.Debug(Hosts)
-	//logs.Debug(Filename)
 
 }
 
@@ -100,6 +95,14 @@ func main() {
 			switch _type {
 			case "分":
 				err = do(c.GetKlineMinuteAll, _type, Filename)
+				logs.PrintErr(err)
+
+			case "5分":
+				err = do(c.GetKline5MinuteAll, _type, Filename)
+				logs.PrintErr(err)
+
+			case "15分":
+				err = do(c.GetKline15MinuteAll, _type, Filename)
 				logs.PrintErr(err)
 
 			case "日":
