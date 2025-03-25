@@ -10,9 +10,22 @@ import (
 
 func bySector(codes []string, start, end time.Time) {
 
+	size := 200
+
 	resp, err := pull(codes, start, end)
 	logs.PanicErr(err)
 
+	save := func(data [][]any, name string) error {
+		buf, err := excel.ToCsv(data)
+		if err != nil {
+			return err
+		}
+		return oss.New("./data/csv/"+name+time.Now().Format("15-04-05")+".csv", buf)
+	}
+
+	countSh := 0
+	countSz0 := 0
+	countSz30 := 0
 	dataSh := [][]any{title}
 	dataSz0 := [][]any{title}
 	dataSz30 := [][]any{title}
@@ -20,30 +33,54 @@ func bySector(codes []string, start, end time.Time) {
 	for code, ls := range resp {
 		switch {
 		case strings.HasPrefix(code, "sh"):
+			if countSh >= size {
+				//保存
+				if err = save(dataSh, "沪市"); err != nil {
+					logs.Err(err)
+					continue
+				}
+				dataSh = [][]any{title}
+				countSh = 0
+			}
+			countSh++
 			for _, v := range ls {
 				dataSh = append(dataSh, body(code, v))
 			}
 		case strings.HasPrefix(code, "sz0"):
+			if countSz0 >= size {
+				//保存
+				if err = save(dataSz0, "深市"); err != nil {
+					logs.Err(err)
+					continue
+				}
+				dataSz0 = [][]any{title}
+				countSz0 = 0
+			}
+			countSz0++
 			for _, v := range ls {
 				dataSz0 = append(dataSz0, body(code, v))
 			}
 		case strings.HasPrefix(code, "sz30"):
+			if countSz30 >= size {
+				//保存
+				if err = save(dataSz30, "科创"); err != nil {
+					logs.Err(err)
+					continue
+				}
+				dataSz30 = [][]any{title}
+				countSz30 = 0
+			}
+			countSz30++
 			for _, v := range ls {
 				dataSz30 = append(dataSz30, body(code, v))
 			}
 		}
 	}
 
-	buf, err := excel.ToCsv(dataSh)
-	logs.PanicErr(err)
-	oss.New("./data/csv/沪市.csv", buf)
+	logs.PrintErr(save(dataSh, "沪市"))
 
-	buf, err = excel.ToCsv(dataSz0)
-	logs.PanicErr(err)
-	oss.New("./data/csv/深市.csv", buf)
+	logs.PrintErr(save(dataSz0, "深市"))
 
-	buf, err = excel.ToCsv(dataSz30)
-	logs.PanicErr(err)
-	oss.New("./data/csv/科创.csv", buf)
+	logs.PrintErr(save(dataSz30, "科创"))
 
 }

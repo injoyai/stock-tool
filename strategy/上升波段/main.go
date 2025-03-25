@@ -9,31 +9,30 @@ import (
 
 var (
 	testCodes = []string{
-		"sh601398",
+		"sz001914",
 	}
+	debug = len(testCodes) > 0
 )
 
 func main() {
 
-	c, err := tdx.DialHostsRandom(nil, tdx.WithRedial())
+	c, err := tdx.DialDefault(tdx.WithRedial())
 	logs.PanicErr(err)
 
 	s := &Strategy{
 		WindowsSize: 8,
 		DayStart:    0,
-		DayNumber:   50,
+		DayNumber:   100,
 	}
 
-	testCodes = codes.GetStocks()
+	if len(testCodes) == 0 {
+		testCodes = tdx.DefaultCodes.GetStocks()
+	}
 
 	result := s.Find(c, testCodes)
 
 	logs.Debug(result)
 
-}
-
-type Result struct {
-	Points [4]Point
 }
 
 type Strategy struct {
@@ -62,9 +61,18 @@ func (this *Strategy) Find(c *tdx.Client, codes []string) []string {
 			})
 		}
 
-		h, l := ls.FindPoint(this.WindowsSize)
+		h, l := ls.Vertexes(this.WindowsSize)
 
-		if Check(h, l) {
+		if debug {
+			for _, v := range h {
+				logs.Debug(v.Kline)
+			}
+			for _, v := range l {
+				logs.Debug(v.Kline)
+			}
+		}
+
+		if Check(h, l, this.WindowsSize) {
 			result = append(result, code)
 			logs.Debug(code)
 		}
@@ -83,7 +91,7 @@ l2>l1 && h2>h1
 
 */
 
-func Check(highs, lows []Point) bool {
+func Check(highs, lows []*Vertex, windowSize int) bool {
 	if len(highs) < 2 || len(lows) < 2 {
 		return false
 	}
@@ -92,13 +100,15 @@ func Check(highs, lows []Point) bool {
 	h := highs[len(highs)-2:]
 	l := lows[len(lows)-2:]
 
-	log.Println(l[0])
-	log.Println(h[0])
-	log.Println(l[1])
-	log.Println(h[1])
+	if debug {
+		log.Println(l[0].Kline)
+		log.Println(h[0].Kline)
+		log.Println(l[1].Kline)
+		log.Println(h[1].Kline)
+	}
 
 	//判断顶点是否过远
-	if time.Now().Sub(h[1].Kline.Time).Hours()/24 > 10 {
+	if int(time.Now().Sub(h[1].Kline.Time).Hours()/24) > windowSize*2 {
 		return false
 	}
 
@@ -106,6 +116,11 @@ func Check(highs, lows []Point) bool {
 	if !(h[1].Kline.Time.After(l[1].Kline.Time) &&
 		l[1].Kline.Time.After(h[0].Kline.Time) &&
 		h[0].Kline.Time.After(l[0].Kline.Time)) {
+		return false
+	}
+
+	//判断间隔是否过近
+	if h[1].Index-l[1].Index < windowSize || l[1].Index-h[0].Index < windowSize || h[0].Index-l[0].Index < windowSize {
 		return false
 	}
 
@@ -131,51 +146,3 @@ func Check(highs, lows []Point) bool {
 
 	return true
 }
-
-//type Klines []*Kline
-//
-//// FindPoint ，windowSize为0时使用基础模式
-//func (this Klines) FindPoint(windowSize int) (highs, lows []Point) {
-//	if len(this) == 0 {
-//		return
-//	}
-//
-//	for i := range this {
-//		// 计算有效窗口范围
-//		start := int(math.Max(0, float64(i-windowSize)))
-//		end := int(math.Min(float64(len(this)-1), float64(i+windowSize)))
-//
-//		// 极值标记
-//		isHigh := true
-//		isLow := true
-//
-//		// 窗口内遍历
-//		for j := start; j <= end; j++ {
-//			if i == j {
-//				continue // 跳过自身比较
-//			}
-//
-//			if this[j].High > this[i].High {
-//				isHigh = false // 存在更高值则不是高点
-//			}
-//
-//			if this[j].Low < this[i].Low {
-//				isLow = false // 存在更低值则不是低点
-//			}
-//
-//			// 提前退出优化：当两个标记都为false时停止检查
-//			if !isHigh && !isLow {
-//				break
-//			}
-//		}
-//
-//		// 记录有效极值
-//		if isHigh {
-//			highs = append(highs, Point{i, this[i]})
-//		}
-//		if isLow {
-//			lows = append(lows, Point{i, this[i]})
-//		}
-//	}
-//	return
-//}
