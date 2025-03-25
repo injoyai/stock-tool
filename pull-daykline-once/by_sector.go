@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/logs"
@@ -34,16 +35,52 @@ func bySector(codes []string, start, end time.Time) {
 		}
 	}
 
-	buf, err := excel.ToCsv(dataSh)
-	logs.PanicErr(err)
-	oss.New("./data/csv/沪市.csv", buf)
+	size := 200
+	cache := [][]any(nil)
 
-	buf, err = excel.ToCsv(dataSz0)
-	logs.PanicErr(err)
-	oss.New("./data/csv/深市.csv", buf)
+	for i := 0; ; i += size {
+		if i >= len(dataSh) {
+			break
+		}
+		switch {
+		case i+size >= len(dataSh):
+			cache = dataSh[i:]
+		default:
+			cache = dataSh[i : i+size]
+		}
+		buf, err := excel.ToCsv(cache)
+		logs.PanicErr(err)
+		oss.New("./data/csv/沪市"+conv.String(i/size+1)+".csv", buf)
+	}
 
-	buf, err = excel.ToCsv(dataSz30)
-	logs.PanicErr(err)
-	oss.New("./data/csv/科创.csv", buf)
+	for i := 0; ; i += size {
+		if i >= len(dataSz0) {
+			break
+		}
+		switch {
+		case i+size >= len(dataSz0):
+			cache = dataSz0[i:]
+		default:
+			cache = dataSz0[i : i+size]
+		}
+		buf, err := excel.ToCsv(cache)
+		logs.PanicErr(err)
+		oss.New("./data/csv/深市"+conv.String(i/size+1)+".csv", buf)
+	}
+
+	for i := 0; ; i += size {
+		if i >= len(dataSz30) {
+			break
+		}
+		switch {
+		case i+size >= len(dataSz30):
+			cache = dataSz30[i:]
+		default:
+			cache = dataSz30[i : i+size]
+		}
+		buf, err := excel.ToCsv(cache)
+		logs.PanicErr(err)
+		oss.New("./data/csv/科创"+conv.String(i/size+1)+".csv", buf)
+	}
 
 }

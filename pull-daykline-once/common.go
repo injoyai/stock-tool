@@ -51,8 +51,11 @@ func pull(codes []string, start, end time.Time) (map[string][]*protocol.Kline, e
 	return result, nil
 }
 
-func done() {
-	notice.DefaultWindows.Publish(&notice.Message{Content: "执行结束"})
+func done() func() {
+	start := time.Now()
+	return func() {
+		notice.DefaultWindows.Publish(&notice.Message{Content: "执行结束,耗时: " + time.Since(start).String()})
+	}
 }
 
 func body(code string, v *protocol.Kline) []any {
