@@ -41,7 +41,7 @@ func (this *PullTrade) RunInfo() string {
 func (this *PullTrade) Run(ctx context.Context, m *tdx.Manage) error {
 
 	limit := chans.NewWaitLimit(uint(this.limit))
-	insertLimit := int(1e4)
+	insertLimit := int(1e5)
 
 	//1. 获取所有股票代码
 	codes := this.Codes
@@ -75,17 +75,23 @@ func (this *PullTrade) Run(ctx context.Context, m *tdx.Manage) error {
 
 			//2. 从数据库获取数据,并删除不全的最后一天数据
 			for x := 0; x < 3; x++ {
+				logs.Debug("开始获取数据:", code)
+				start := time.Now()
 				last, err := b.GetLastTrade()
 				if err != nil {
 					logs.Err(err)
 					continue
 				}
+				logs.Debug("获取数据耗时:", time.Since(start))
+
 				if last.Time != 0 && last.Time != 900 {
 					//如果最后时间不是15:00,说明数据不全,删除这天的数据
+					start = time.Now()
 					if _, err := b.Where("Date=?", last.Date).Delete(&model.Trade{}); err != nil {
 						logs.Err(err)
 						continue
 					}
+					logs.Debug("删除数据耗时:", time.Since(start))
 				}
 
 				if last.Date == 0 {
@@ -93,13 +99,14 @@ func (this *PullTrade) Run(ctx context.Context, m *tdx.Manage) error {
 					last.Date, _ = model.FromTime(time.Date(2000, 6, 8, 0, 0, 0, 0, time.Local))
 
 					//查询年K线,获取实际上市年份
+					start = time.Now()
 					m.Do(func(c *tdx.Client) error {
 						resp, err := c.GetKlineMonthAll(code)
 						if err != nil {
 							return err
 						}
 						if len(resp.List) > 0 {
-							//logs.Debug("上市月份:", resp.List[0].Time.AddDate(0, -1, 0))
+							logs.Debugf("%s 上市月份: %s\n", code, resp.List[0].Time.AddDate(0, -1, 0))
 							date, _ := model.FromTime(resp.List[0].Time.AddDate(0, -1, 0))
 							if date > last.Date {
 								last.Date = date
@@ -109,6 +116,7 @@ func (this *PullTrade) Run(ctx context.Context, m *tdx.Manage) error {
 						//os.Exit(666)
 						return nil
 					})
+					logs.Debug("获取年数据耗时:", time.Since(start))
 
 				}
 

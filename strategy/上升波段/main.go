@@ -9,22 +9,25 @@ import (
 
 var (
 	testCodes = []string{
-		"sh601398",
+		"sz001914",
 	}
+	debug = len(testCodes) > 0
 )
 
 func main() {
 
-	c, err := tdx.DialDefault(nil, tdx.WithRedial())
+	c, err := tdx.DialDefault(tdx.WithRedial())
 	logs.PanicErr(err)
 
 	s := &Strategy{
 		WindowsSize: 8,
 		DayStart:    0,
-		DayNumber:   50,
+		DayNumber:   100,
 	}
 
-	testCodes = tdx.DefaultCodes.GetStocks()
+	if len(testCodes) == 0 {
+		testCodes = tdx.DefaultCodes.GetStocks()
+	}
 
 	result := s.Find(c, testCodes)
 
@@ -60,7 +63,16 @@ func (this *Strategy) Find(c *tdx.Client, codes []string) []string {
 
 		h, l := ls.Vertexes(this.WindowsSize)
 
-		if Check(h, l) {
+		if debug {
+			for _, v := range h {
+				logs.Debug(v.Kline)
+			}
+			for _, v := range l {
+				logs.Debug(v.Kline)
+			}
+		}
+
+		if Check(h, l, this.WindowsSize) {
 			result = append(result, code)
 			logs.Debug(code)
 		}
@@ -79,7 +91,7 @@ l2>l1 && h2>h1
 
 */
 
-func Check(highs, lows []*Vertex) bool {
+func Check(highs, lows []*Vertex, windowSize int) bool {
 	if len(highs) < 2 || len(lows) < 2 {
 		return false
 	}
@@ -88,13 +100,15 @@ func Check(highs, lows []*Vertex) bool {
 	h := highs[len(highs)-2:]
 	l := lows[len(lows)-2:]
 
-	log.Println(l[0])
-	log.Println(h[0])
-	log.Println(l[1])
-	log.Println(h[1])
+	if debug {
+		log.Println(l[0].Kline)
+		log.Println(h[0].Kline)
+		log.Println(l[1].Kline)
+		log.Println(h[1].Kline)
+	}
 
 	//判断顶点是否过远
-	if time.Now().Sub(h[1].Kline.Time).Hours()/24 > 10 {
+	if int(time.Now().Sub(h[1].Kline.Time).Hours()/24) > windowSize*2 {
 		return false
 	}
 
@@ -102,6 +116,11 @@ func Check(highs, lows []*Vertex) bool {
 	if !(h[1].Kline.Time.After(l[1].Kline.Time) &&
 		l[1].Kline.Time.After(h[0].Kline.Time) &&
 		h[0].Kline.Time.After(l[0].Kline.Time)) {
+		return false
+	}
+
+	//判断间隔是否过近
+	if h[1].Index-l[1].Index < windowSize || l[1].Index-h[0].Index < windowSize || h[0].Index-l[0].Index < windowSize {
 		return false
 	}
 
