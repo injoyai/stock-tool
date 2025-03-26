@@ -3,6 +3,7 @@ module strategy
 go 1.20
 
 require (
+	github.com/injoyai/goutil v0.0.0-20250321055049-7f75d8239d2b
 	github.com/injoyai/logs v1.0.9
 	github.com/injoyai/tdx v0.0.14
 )
@@ -14,9 +15,9 @@ require (
 	github.com/goccy/go-json v0.8.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.5.0 // indirect
-	github.com/injoyai/base v1.0.18 // indirect
+	github.com/injoyai/base v1.0.19 // indirect
 	github.com/injoyai/conv v1.1.10 // indirect
-	github.com/injoyai/ios v0.0.4 // indirect
+	github.com/injoyai/ios v0.0.6 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
