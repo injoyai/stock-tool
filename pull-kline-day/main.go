@@ -23,7 +23,7 @@ func main() {
 	logs.PrintErr(err)
 
 	cr := cron.New(cron.WithSeconds())
-	cr.AddFunc("0 10 15 * *", func() { do(m, m.Codes.GetStocks()) })
+	cr.AddFunc("0 10 15 * * *", func() { do(m, m.Codes.GetStocks()) })
 	cr.Start()
 	select {}
 }
