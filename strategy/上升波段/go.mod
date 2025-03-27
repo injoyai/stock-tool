@@ -15,6 +15,8 @@ require (
 	github.com/goccy/go-json v0.8.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.5.0 // indirect
+	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/injoyai/base v1.0.19 // indirect
 	github.com/injoyai/conv v1.1.10 // indirect
 	github.com/injoyai/ios v0.0.6 // indirect

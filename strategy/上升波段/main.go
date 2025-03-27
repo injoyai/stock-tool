@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/injoyai/goutil/database/sqlite"
+	"github.com/injoyai/goutil/frame/in/v3"
+	"github.com/injoyai/goutil/frame/mux"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/extend"
@@ -18,6 +20,8 @@ var (
 )
 
 func main() {
+
+	RunHTTP(8080)
 
 	s := &Strategy{
 		WindowsSize: 8,
@@ -161,4 +165,16 @@ func Check(highs, lows []*Vertex, windowSize int) bool {
 	//log.Println(h[1])
 
 	return true
+}
+
+func RunHTTP(port int) error {
+	s := mux.New()
+	s.SetPort(port)
+	s.GET("/", func(r *mux.Request) {
+
+	})
+	s.GET("/data.json", func(r *mux.Request) {
+		in.FileLocal("", "./data/kline_data.json")
+	})
+	return s.Run()
 }

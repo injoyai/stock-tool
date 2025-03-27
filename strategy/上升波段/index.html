@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock K-Line Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3"></script>
+</head>
+<body>
+    <canvas id="klineChart" width="800" height="400"></canvas>
+    <button id="prevButton">Previous</button>
+    <button id="nextButton">Next</button>
+
+    <script>
+        // Register the financial chart type
+        Chart.register(Chart.FinancialController, Chart.CandlestickElement, Chart.FinancialScale);
+
+        // Example datasets for multiple stocks
+        const stockDataSets = [
+            [
+                { date: "2023-01-01", open: 100, high: 110, low: 90, close: 105 },
+                { date: "2023-01-02", open: 106, high: 115, low: 95, close: 110 },
+                { date: "2023-01-03", open: 111, high: 120, low: 100, close: 115 },
+                { date: "2023-01-04", open: 116, high: 125, low: 105, close: 120 },
+                { date: "2023-01-05", open: 121, high: 130, low: 110, close: 125 },
+                { date: "2023-01-06", open: 126, high: 135, low: 115, close: 130 },
+                { date: "2023-01-07", open: 131, high: 140, low: 120, close: 135 },
+            ],
+            [
+                { date: "2023-01-01", open: 200, high: 210, low: 190, close: 205 },
+                { date: "2023-01-02", open: 206, high: 215, low: 195, close: 210 },
+                { date: "2023-01-03", open: 211, high: 220, low: 200, close: 215 },
+                { date: "2023-01-04", open: 216, high: 225, low: 205, close: 220 },
+                { date: "2023-01-05", open: 221, high: 230, low: 210, close: 225 },
+                { date: "2023-01-06", open: 226, high: 235, low: 215, close: 230 },
+                { date: "2023-01-07", open: 231, high: 240, low: 220, close: 235 },
+            ],
+            // More datasets...
+        ];
+
+        let currentIndex = 0;
+
+        function updateChart(chart, data) {
+            const labels = data.map(d => d.date);
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = data.map(d => ({
+                x: new Date(d.date),
+                o: d.open,
+                h: d.high,
+                l: d.low,
+                c: d.close
+            }));
+            chart.update();
+        }
+
+        const ctx = document.getElementById('klineChart').getContext('2d');
+        const klineChart = new Chart(ctx, {
+            type: 'candlestick',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Stock K-Line',
+                    data: []
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initialize the chart
+        updateChart(klineChart, stockDataSets[currentIndex]);
+
+        // Event listeners
+        document.getElementById('prevButton').addEventListener('click', () => {
+            currentIndex = (currentIndex - 1 + stockDataSets.length) % stockDataSets.length;
+            updateChart(klineChart, stockDataSets[currentIndex]);
+        });
+
+        document.getElementById('nextButton').addEventListener('click', () => {
+            currentIndex = (currentIndex + 1) % stockDataSets.length;
+            updateChart(klineChart, stockDataSets[currentIndex]);
+        });
+
+        // Keyboard event listeners
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft') {
+                currentIndex = (currentIndex - 1 + stockDataSets.length) % stockDataSets.length;
+                updateChart(klineChart, stockDataSets[currentIndex]);
+            } else if (event.key === 'ArrowRight') {
+                currentIndex = (currentIndex + 1) % stockDataSets.length;
+                updateChart(klineChart, stockDataSets[currentIndex]);
+            }
+        });
+    </script>
+</body>
+</html>

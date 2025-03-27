@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-func main1() {
+func main() {
 	pull := extend.NewPullKline(
 		nil,
 		[]string{extend.Day},
