@@ -47,16 +47,11 @@ func init() {
 		}
 	}
 
-	Types = cfg.GetStrings("types", []string{"分", "日", "周", "月", "季", "年"})
+	Types = cfg.GetStrings("types", []string{"分", "5分", "15分", "日", "周", "月", "季", "年"})
 
 	Hosts = cfg.GetStrings("hosts", tdx.Hosts)
 
 	Filename = cfg.GetString("filename", "./data/{type}线/{code}({name}).csv")
-
-	//logs.Debug(Codes)
-	//logs.Debug(Types)
-	//logs.Debug(Hosts)
-	//logs.Debug(Filename)
 
 }
 
@@ -100,6 +95,14 @@ func main() {
 			switch _type {
 			case "分":
 				err = do(c.GetKlineMinuteAll, _type, Filename)
+				logs.PrintErr(err)
+
+			case "5分":
+				err = do(c.GetKline5MinuteAll, _type, Filename)
+				logs.PrintErr(err)
+
+			case "15分":
+				err = do(c.GetKline15MinuteAll, _type, Filename)
 				logs.PrintErr(err)
 
 			case "日":
@@ -146,10 +149,21 @@ func do(f func(code string) (*protocol.KlineResp, error), _type, filename string
 		}
 
 		data := [][]any{
-			{"日期", "开盘", "最高", "最低", "收盘", "成交量", "成交额", "涨跌价", "涨跌幅"},
+			{"日期", "时间", "开盘", "最高", "最低", "收盘", "成交量", "成交额", "涨跌价", "涨跌幅"},
 		}
 		for _, v := range resp.List {
-			data = append(data, []any{v.Time.Format("2006-01-02"), v.Open.Float64(), v.High.Float64(), v.Low.Float64(), v.Close.Float64(), v.Volume, v.Amount.Float64(), v.RisePrice().Float64(), v.RiseRate()})
+			data = append(data, []any{
+				v.Time.Format("2006-01-02"),
+				v.Time.Format("15:04"),
+				v.Open.Float64(),
+				v.High.Float64(),
+				v.Low.Float64(),
+				v.Close.Float64(),
+				v.Volume,
+				v.Amount.Float64(),
+				v.RisePrice().Float64(),
+				v.RiseRate(),
+			})
 		}
 		buf, err := excel.ToCsv(data)
 		if err != nil {

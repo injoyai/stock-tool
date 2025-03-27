@@ -1,9 +1,12 @@
 package main
 
 import (
+	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/extend"
 	"log"
+	"path/filepath"
 	"time"
 )
 
@@ -16,20 +19,18 @@ var (
 
 func main() {
 
-	c, err := tdx.DialDefault(tdx.WithRedial())
-	logs.PanicErr(err)
-
 	s := &Strategy{
 		WindowsSize: 8,
 		DayStart:    0,
 		DayNumber:   100,
+		Dir:         filepath.Join(tdx.DefaultDatabaseDir, "daykline"),
 	}
 
 	if len(testCodes) == 0 {
 		testCodes = tdx.DefaultCodes.GetStocks()
 	}
 
-	result := s.Find(c, testCodes)
+	result := s.Find(testCodes)
 
 	logs.Debug(result)
 
@@ -38,28 +39,43 @@ func main() {
 type Strategy struct {
 	WindowsSize int    //窗口大小
 	DayStart    uint16 //股票起始
-	DayNumber   uint16 //股票天数
+	DayNumber   int    //股票天数
+	Dir         string
 }
 
-func (this *Strategy) Find(c *tdx.Client, codes []string) []string {
+func (this *Strategy) GetKlines(code string, limit int) (Klines, error) {
+	data := []*extend.Kline(nil)
+	db, err := sqlite.NewXorm(filepath.Join(this.Dir, code+".db"))
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	err = db.Table(extend.NewKlineTable("DayKline", nil)).Desc("Date").Limit(limit).Find(&data)
+	if err != nil {
+		return nil, err
+	}
+	klines := Klines(nil)
+	for i := len(data) - 1; i >= 0; i-- {
+		v := data[i]
+		klines = append(klines, &Kline{
+			Time:  time.Unix(v.Date, 0),
+			Open:  v.Open,
+			High:  v.High,
+			Low:   v.Low,
+			Close: v.Close,
+		})
+	}
+	return klines, nil
+}
+
+func (this *Strategy) Find(codes []string) []string {
 
 	result := []string(nil)
 
 	for _, code := range codes {
 
-		resp, err := c.GetKlineDay(code, this.DayStart, this.DayNumber)
+		ls, err := this.GetKlines(code, this.DayNumber)
 		logs.PanicErr(err)
-
-		ls := Klines{}
-		for _, v := range resp.List {
-			ls = append(ls, &Kline{
-				Time:  v.Time,
-				Open:  v.Open,
-				High:  v.High,
-				Low:   v.Low,
-				Close: v.Close,
-			})
-		}
 
 		h, l := ls.Vertexes(this.WindowsSize)
 
