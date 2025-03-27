@@ -23,11 +23,13 @@ func main() {
 	logs.PrintErr(err)
 
 	cr := cron.New(cron.WithSeconds())
-	cr.AddFunc("0 10 15 * *", func() { do(m, m.Codes.GetStocks()) })
-	cr.Run()
+	cr.AddFunc("0 10 15 * * *", func() { do(m, m.Codes.GetStocks()) })
+	cr.Start()
+	select {}
 }
 
 func do(m *tdx.Manage, codes []string) error {
+	logs.Debug("开始执行...")
 
 	if !m.Workday.TodayIs() {
 		return errors.New("今天不是工作日")
