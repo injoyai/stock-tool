@@ -1,27 +1,30 @@
 package main
 
 import (
+	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/frame/in/v3"
 	"github.com/injoyai/goutil/frame/mux"
+	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/extend"
 	"log"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 var (
 	testCodes = []string{
-		"sz001914",
+		//"sz001914",
 	}
 	debug = len(testCodes) > 0
 )
 
 func main() {
 
-	RunHTTP(8080)
+	//RunHTTP(8080)
 
 	s := &Strategy{
 		WindowsSize: 8,
@@ -30,13 +33,26 @@ func main() {
 		Dir:         filepath.Join(tdx.DefaultDatabaseDir, "daykline"),
 	}
 
+	c, err := tdx.DialDefault()
+	logs.PanicErr(err)
+
+	codes, err := tdx.NewCodes(c, filepath.Join(tdx.DefaultDatabaseDir, "codes.db"))
+	logs.PanicErr(err)
+
 	if len(testCodes) == 0 {
-		testCodes = tdx.DefaultCodes.GetStocks()
+		oss.RangeFileInfo(s.Dir, func(info *oss.FileInfo) (bool, error) {
+			testCodes = append(testCodes, strings.SplitN(info.Name(), ".", 2)[0])
+			return true, nil
+		})
 	}
 
 	result := s.Find(testCodes)
 
-	logs.Debug(result)
+	for _, v := range result {
+		v.Name = codes.GetName(v.Name) + "(" + v.Name + ")"
+	}
+
+	RunHTTP(8080, result)
 
 }
 
@@ -72,9 +88,9 @@ func (this *Strategy) GetKlines(code string, limit int) (Klines, error) {
 	return klines, nil
 }
 
-func (this *Strategy) Find(codes []string) []string {
+func (this *Strategy) Find(codes []string) []*Result {
 
-	result := []string(nil)
+	result := []*Result(nil)
 
 	for _, code := range codes {
 
@@ -93,13 +109,61 @@ func (this *Strategy) Find(codes []string) []string {
 		}
 
 		if Check(h, l, this.WindowsSize) {
-			result = append(result, code)
+			result = append(result, &Result{
+				Name: code,
+				Data: &Data{
+					Data: func() [][5]string {
+						res := [][5]string(nil)
+						for _, v := range ls {
+							res = append(res, [5]string{
+								v.Time.Format("2006-01-02"),
+								conv.String(v.Open.Float64()),
+								conv.String(v.Close.Float64()),
+								conv.String(v.High.Float64()),
+								conv.String(v.Low.Float64()),
+							})
+						}
+						return res
+					}(),
+					Points: func() []*Point {
+						res := []*Point(nil)
+						for _, v := range h {
+							res = append(res, &Point{
+								Index: v.Index,
+								Type:  "high",
+							})
+						}
+						for _, v := range l {
+							res = append(res, &Point{
+								Index: v.Index,
+								Type:  "low",
+							})
+						}
+						return res
+					}(),
+				},
+			})
 			logs.Debug(code)
 		}
 
 	}
 
 	return result
+}
+
+type Result struct {
+	Name string `json:"name"`
+	Data *Data  `json:"data"`
+}
+
+type Data struct {
+	Data   [][5]string `json:"data"`
+	Points []*Point    `json:"markPoints"`
+}
+
+type Point struct {
+	Index int    `json:"index"`
+	Type  string `json:"type"`
 }
 
 /*
@@ -167,14 +231,14 @@ func Check(highs, lows []*Vertex, windowSize int) bool {
 	return true
 }
 
-func RunHTTP(port int) error {
+func RunHTTP(port int, data any) error {
 	s := mux.New()
 	s.SetPort(port)
 	s.GET("/", func(r *mux.Request) {
 
 	})
 	s.GET("/data.json", func(r *mux.Request) {
-		in.FileLocal("", "./data/kline_data.json")
+		in.Json200(data)
 	})
 	return s.Run()
 }
