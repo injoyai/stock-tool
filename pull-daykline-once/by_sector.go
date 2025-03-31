@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/logs"
@@ -8,9 +9,7 @@ import (
 	"time"
 )
 
-func bySector(codes []string, start, end time.Time) {
-
-	size := 200
+func bySector(codes []string, start, end time.Time, size int) {
 
 	resp, err := pull(codes, start, end)
 	logs.PanicErr(err)
@@ -20,7 +19,7 @@ func bySector(codes []string, start, end time.Time) {
 		if err != nil {
 			return err
 		}
-		return oss.New("./data/csv/"+name+time.Now().Format("15-04-05")+".csv", buf)
+		return oss.New("./data/csv/"+name+conv.String(time.Now().UnixMilli())+".csv", buf)
 	}
 
 	countSh := 0
