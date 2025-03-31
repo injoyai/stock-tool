@@ -1,16 +1,19 @@
 package main
 
 import (
+	_ "embed"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/frame/in/v3"
 	"github.com/injoyai/goutil/frame/mux"
 	"github.com/injoyai/goutil/oss"
+	"github.com/injoyai/goutil/oss/shell"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/extend"
 	"log"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -21,6 +24,9 @@ var (
 	}
 	debug = len(testCodes) > 0
 )
+
+//go:embed kline.html
+var index []byte
 
 func main() {
 
@@ -52,7 +58,7 @@ func main() {
 		v.Name = codes.GetName(v.Name) + "(" + v.Name + ")"
 	}
 
-	RunHTTP(8080, result)
+	RunHTTP(8080, index, result)
 
 }
 
@@ -231,14 +237,18 @@ func Check(highs, lows []*Vertex, windowSize int) bool {
 	return true
 }
 
-func RunHTTP(port int, data any) error {
+func RunHTTP(port int, index []byte, data any) error {
 	s := mux.New()
 	s.SetPort(port)
 	s.GET("/", func(r *mux.Request) {
-
+		in.Html200(index)
 	})
 	s.GET("/data.json", func(r *mux.Request) {
 		in.Json200(data)
 	})
+	go func() {
+		<-time.After(time.Millisecond * 100)
+		shell.OpenBrowser("http://127.0.0.1:" + strconv.Itoa(port))
+	}()
 	return s.Run()
 }
