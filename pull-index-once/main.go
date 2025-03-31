@@ -91,38 +91,38 @@ func main() {
 	c.Wait.SetTimeout(time.Second * 5)
 
 	f := func() {
-		for _, _type := range Types {
-			switch _type {
+		for _, typeName := range Types {
+			switch typeName {
 			case "分":
-				err = do(c.GetKlineMinuteAll, _type, Filename)
+				err = do(c.GetIndexAll, protocol.TypeKlineMinute, typeName, Filename)
 				logs.PrintErr(err)
 
 			case "5分":
-				err = do(c.GetKline5MinuteAll, _type, Filename)
+				err = do(c.GetIndexAll, protocol.TypeKline5Minute, typeName, Filename)
 				logs.PrintErr(err)
 
 			case "15分":
-				err = do(c.GetKline15MinuteAll, _type, Filename)
+				err = do(c.GetIndexAll, protocol.TypeKline15Minute, typeName, Filename)
 				logs.PrintErr(err)
 
 			case "日":
-				err = do(c.GetKlineDayAll, _type, Filename)
+				err = do(c.GetIndexAll, protocol.TypeKlineDay, typeName, Filename)
 				logs.PrintErr(err)
 
 			case "周":
-				err = do(c.GetKlineWeekAll, _type, Filename)
+				err = do(c.GetIndexAll, protocol.TypeKlineWeek, typeName, Filename)
 				logs.PrintErr(err)
 
 			case "月":
-				err = do(c.GetKlineMonthAll, _type, Filename)
+				err = do(c.GetIndexAll, protocol.TypeKlineMonth, typeName, Filename)
 				logs.PrintErr(err)
 
 			case "季":
-				err = do(c.GetKlineQuarterAll, _type, Filename)
+				err = do(c.GetIndexAll, protocol.TypeKlineQuarter, typeName, Filename)
 				logs.PrintErr(err)
 
 			case "年":
-				err = do(c.GetKlineYearAll, _type, Filename)
+				err = do(c.GetIndexAll, protocol.TypeKlineYear, typeName, Filename)
 				logs.PrintErr(err)
 
 			}
@@ -138,11 +138,11 @@ func main() {
 
 }
 
-func do(f func(code string) (*protocol.KlineResp, error), _type, filename string) error {
+func do(f func(Type uint8, code string) (*protocol.KlineResp, error), indexType uint8, _type, filename string) error {
 	for code, name := range Codes {
 
 		logs.Infof("开始拉取%s线: %s(%s)\n", _type, code, name)
-		resp, err := f(code)
+		resp, err := f(indexType, code)
 		if err != nil {
 			logs.Err(err)
 			continue
