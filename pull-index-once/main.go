@@ -32,7 +32,7 @@ func init() {
 		map[string]any{"sh000016": "上证50"},
 		map[string]any{"sh000688": "科创50"},
 		map[string]any{"sh000010": "上证180"},
-		map[string]any{"sh000300": "上证300"},
+		map[string]any{"sh000300": "沪深300"},
 		map[string]any{"sh000905": "中证500"},
 		map[string]any{"sh000852": "中证1000"},
 		map[string]any{"sz399006": "创业板指"},
@@ -47,7 +47,7 @@ func init() {
 		}
 	}
 
-	Types = cfg.GetStrings("types", []string{"分", "5分", "15分", "日", "周", "月", "季", "年"})
+	Types = cfg.GetStrings("types", []string{"日", "周", "月", "季", "年"})
 
 	Hosts = cfg.GetStrings("hosts", tdx.Hosts)
 
@@ -94,7 +94,7 @@ func main() {
 		for _, typeName := range Types {
 			switch typeName {
 			case "分":
-				err = do(c.GetIndexAll, protocol.TypeKlineMinute, typeName, Filename)
+				err = do(c.GetIndexAll, protocol.TypeKlineMinute2, typeName, Filename)
 				logs.PrintErr(err)
 
 			case "5分":
