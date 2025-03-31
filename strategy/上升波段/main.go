@@ -119,8 +119,8 @@ func (this *Strategy) Find(codes []string) []*Result {
 								v.Time.Format("2006-01-02"),
 								conv.String(v.Open.Float64()),
 								conv.String(v.Close.Float64()),
-								conv.String(v.High.Float64()),
 								conv.String(v.Low.Float64()),
+								conv.String(v.High.Float64()),
 							})
 						}
 						return res
