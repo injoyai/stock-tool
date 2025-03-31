@@ -10,17 +10,20 @@ import (
 )
 
 func main() {
-	defer done()()
 
-	byStock(nil, time.Time{}, time.Now().Add(time.Hour*24), func(c *tdx.Client) Handler { return c.GetKline15MinuteUntil })
+	byStock(
+		nil,
+		time.Time{},
+		time.Now().Add(time.Hour*24),
+		func(c *tdx.Client) Handler { return c.GetKline15MinuteUntil },
+	)
 
 }
 
 func byStock(codes []string, start, end time.Time, f func(c *tdx.Client) Handler) {
-
+	defer done()()
 	resp, err := pull(codes, start, end, f)
 	logs.PanicErr(err)
-
 	for code, ls := range resp {
 		data := [][]any{title}
 		for _, v := range ls {
@@ -30,5 +33,4 @@ func byStock(codes []string, start, end time.Time, f func(c *tdx.Client) Handler
 		logs.PanicErr(err)
 		oss.New(filepath.Join("./data/csv", code+".csv"), buf)
 	}
-
 }
