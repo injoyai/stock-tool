@@ -52,8 +52,8 @@ func (this Trades) MinuteKlines() (Klines, error) {
 		return nil, errors.New("无效的数据源: 为空")
 	}
 
-	if this[0].Time != 565 { // "09:25" {
-		return nil, errors.New("无效的数据源: 时间非09:25起始")
+	if this[0].Time != 565 && this[0].Time != 570 { // "09:25" { 早期的数据不一定是9.25开始的
+		return nil, errors.New("无效的数据源: 时间非09:25/09:30起始")
 	}
 
 	m := map[uint16]Trades{}

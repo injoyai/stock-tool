@@ -10,6 +10,7 @@ import (
 	"log"
 	"path/filepath"
 	"pull-minute-trade/task"
+	"time"
 )
 
 const (
@@ -19,6 +20,7 @@ const (
 var (
 	dirBase     = cfg.GetString("dir.base", "./data/")
 	dirDatabase = filepath.Join(dirBase, cfg.GetString("dir.database", "database"))
+	dirExport   = filepath.Join(dirBase, cfg.GetString("dir.export", "export"))
 	config      = &tdx.ManageConfig{
 		Hosts:      cfg.GetStrings("hosts"),
 		Number:     cfg.GetInt("number", 2),
@@ -33,8 +35,23 @@ var (
 
 var (
 	tasks = []task.Tasker{
-		task.NewPullTrade(codes, filepath.Join(dirDatabase, "trade"), disks),
+		//task.NewPullTrade(codes, filepath.Join(dirDatabase, "trade"), disks),
 		//task.NewPullKline(codes, filepath.Join(dirDatabase, "kline"), disks),
+		//task.NewExportMinuteKline(
+		//	codes,
+		//	filepath.Join(dirDatabase, "trade"),
+		//	filepath.Join(dirExport, "csv", "1分钟"),
+		//	filepath.Join(dirExport, "csv", "5分钟"),
+		//	disks,
+		//	),
+		&task.ExportMinuteKlineAll{
+			Codes:       codes,
+			Start:       time.Date(2000, 1, 1, 0, 0, 0, 0, time.Local),
+			End:         time.Date(2004, 12, 31, 0, 0, 0, 0, time.Local),
+			DatabaseDir: filepath.Join(dirDatabase, "trade"),
+			OutputDir:   filepath.Join(dirExport, "csv", "1分钟"),
+			Limit:       disks,
+		},
 	}
 )
 

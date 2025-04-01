@@ -13,14 +13,13 @@ import (
 	"time"
 )
 
-func NewExportMinuteKline(m *tdx.Manage, codes []string, databaseDir, minute1Dir, minute5Dir string, limit uint) *ExportMinuteKline {
+func NewExportMinuteKline(codes []string, databaseDir, minute1Dir, minute5Dir string, limit int) *ExportMinuteKline {
 	return &ExportMinuteKline{
 		Codes:       codes,
 		databaseDir: databaseDir,
 		minute1Dir:  minute1Dir,
 		minute5Dir:  minute5Dir,
 		Limit:       limit,
-		m:           m,
 	}
 }
 
@@ -29,26 +28,25 @@ type ExportMinuteKline struct {
 	databaseDir string
 	minute1Dir  string
 	minute5Dir  string
-	Limit       uint
-	m           *tdx.Manage
+	Limit       int
 }
 
 func (this *ExportMinuteKline) Name() string {
 	return "导出分时k线数据"
 }
 
-func (this *ExportMinuteKline) Run(ctx context.Context) error {
+func (this *ExportMinuteKline) Run(ctx context.Context, m *tdx.Manage) error {
 	now := time.Now()
 	date, _ := model.FromTime(now)
 
 	codes := this.Codes
 	if len(codes) == 0 {
-		codes = this.m.Codes.GetStocks()
+		codes = m.Codes.GetStocks()
 	}
 
 	//logs.Debug(codes)
 
-	wg := chans.NewWaitLimit(this.Limit)
+	wg := chans.NewWaitLimit(uint(this.Limit))
 
 	for i := range codes {
 		code := codes[i]
@@ -94,7 +92,7 @@ func (this *ExportMinuteKline) Run(ctx context.Context) error {
 				}
 				for _, v := range minuteKlines {
 					ls = append(ls, []any{
-						time.Unix(v.Date, 0).Format(time.DateTime), code, this.m.Codes.GetName(code),
+						time.Unix(v.Date, 0).Format(time.DateTime), code, m.Codes.GetName(code),
 						v.Open.Float64(), v.High.Float64(), v.Low.Float64(), v.Close.Float64(),
 						v.Volume, v.Amount.Float64(), v.RisePrice().Float64(), v.RiseRate()},
 					)
@@ -117,7 +115,7 @@ func (this *ExportMinuteKline) Run(ctx context.Context) error {
 					{"日期", "代码", "名称", "开盘", "最高", "最低", "收盘", "总手", "金额", "涨幅", "涨幅比"},
 				}
 				for _, v := range minute5Klines {
-					ls = append(ls, []any{time.Unix(v.Date, 0).Format(time.DateTime), code, this.m.Codes.GetName(code),
+					ls = append(ls, []any{time.Unix(v.Date, 0).Format(time.DateTime), code, m.Codes.GetName(code),
 						v.Open.Float64(), v.High.Float64(), v.Low.Float64(), v.Close.Float64(),
 						v.Volume, v.Amount.Float64(), v.RisePrice().Float64(), v.RiseRate()})
 				}

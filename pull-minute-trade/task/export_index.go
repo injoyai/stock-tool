@@ -1,6 +1,9 @@
 package task
 
-import "context"
+import (
+	"context"
+	"github.com/injoyai/tdx"
+)
 
 // ExportIndex 导出指数
 type ExportIndex struct {
@@ -11,6 +14,6 @@ func (this *ExportIndex) Name() string {
 	return "导出指数数据"
 }
 
-func (this *ExportIndex) Run(ctx context.Context) error {
-	return this.ExportKline.Run(ctx)
+func (this *ExportIndex) Run(ctx context.Context, m *tdx.Manage) error {
+	return this.ExportKline.Run(ctx, m)
 }
