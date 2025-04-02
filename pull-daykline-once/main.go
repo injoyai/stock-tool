@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+func init() {
+	logs.SetFormatter(logs.TimeFormatter)
+	logs.SetShowColor(false)
+}
+
 func main() {
 	defer done()()
 
@@ -24,14 +29,14 @@ func main() {
 			logs.Err(err)
 		}
 		for {
-			end := g.Input("请输入结束时间(例2025-02-17): ")
+			end := g.InputVar("请输入结束时间(默认今天): ").String(time.Now().Format(time.DateOnly))
 			endDate, err = time.Parse("2006-01-02 15:04:05", end+" 23:00:00")
 			if err == nil {
 				break
 			}
 			logs.Err(err)
 		}
-		size = g.InputVar("请数据每个文件代码数量:").Int(200)
+		size = g.InputVar("请数据每个文件代码数量(默认6000):").Int(6000)
 		logs.Info("准备开始下载数据...")
 	}
 
