@@ -1,12 +1,19 @@
 package main
 
 import (
+	"context"
+	"customized-pull/api"
+	_ "embed"
+	"fmt"
+	"github.com/injoyai/conv"
+	"github.com/injoyai/conv/cfg/v2"
+	"github.com/injoyai/conv/codec"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
-	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/logs"
-	"github.com/injoyai/tdx"
-	"github.com/injoyai/tdx/protocol"
+	"github.com/injoyai/lorca"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -15,123 +22,213 @@ func init() {
 	logs.SetShowColor(false)
 }
 
+//go:embed index.html
+var index string
+
 func main() {
 
-	defer func() {
-		if e := recover(); e != nil {
-			logs.Err(e)
+	lorca.Run(&lorca.Config{
+		Width:  800,
+		Height: 800,
+		Index:  index,
+	}, func(app lorca.APP) error {
+
+		configPath := "./config/config.json"
+		codePath := "./股票列表.txt"
+		oss.NewNotExist(configPath, g.Map{
+			"clients":  1,
+			"disks":    10,
+			"dir":      "./data/",
+			"codes":    []string{"sz000001"},
+			"userText": false,
+			"interval": 100,
+			"start1":   "09:30",
+			"end1":     "11:30",
+			"start2":   "13:00",
+			"end2":     "15:00",
+			"auto":     false,
+		})
+		oss.NewNotExist(codePath, "")
+		cfg.Init(cfg.WithFile(configPath, codec.Json))
+
+		dealErr := func(err error) {
+			if err != nil {
+				logs.Err(err)
+				app.Eval(fmt.Sprintf(`log('%s')`, err.Error()))
+				return
+			}
+			app.Eval(`log('完成')`)
 		}
-		g.Input("按回车键结束...")
-	}()
+		log := func(s string) { app.Eval(fmt.Sprintf(`log('%s')`, s)) }
+		plan := func(current, total int) {
+			app.Eval(fmt.Sprintf(`updateProgress(%d,%d)`, current, total))
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		getCodes := func() ([]string, error) {
+			if true { //cfg.GetBool("useText") {
+				str, err := oss.ReadString(codePath)
+				if err != nil {
+					return nil, err
+				}
+				return strings.Split(str, "\r\n"), nil
+			}
+			return cfg.GetStrings("codes"), nil
+		}
 
-	offset := uint16(g.InputVar("请输入偏移量:").Int())
+		//连接服务器
+		c := api.Dial(
+			cfg.GetInt("clients", 1),
+			cfg.GetInt("disks", 10),
+			time.Duration(cfg.GetInt("timeout", 2))*time.Second,
+			log,
+		)
+		log(fmt.Sprintf(`连接服务器成功...`))
+		c.GetCodes = getCodes
+		c.Dir = cfg.GetString("dir")
 
-	c, err := tdx.DialDefault()
-	logs.PanicErr(err)
-
-	cs, err := tdx.NewCodes(c, "./codes.db")
-	logs.PanicErr(err)
-
-	codes := cs.GetStocks()
-	//codes := []string{
-	//	"sz000001",
-	//}
-
-	now := time.Now().Add(-time.Hour * 24 * time.Duration(offset))
-	lastDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
-
-	ks6 := [6][]*protocol.Kline{}
-	for _, code := range codes {
-		logs.Debug(code)
-
-		resp, err := c.GetKlineMinuteUntil(code, func(k *protocol.Kline) bool {
-			return k.Time.Before(lastDate)
+		app.Bind("_download_today", func() {
+			offset := conv.Uint16(app.GetValueByID("offset-day"))
+			failCodes := []string(nil)
+			dealErr(c.Pull(ctx, offset, log, plan, func(code string, err error) {
+				failCodes = append(failCodes, code)
+			}))
+			if len(failCodes) > 0 {
+				oss.New("./失败代码.txt", strings.Join(failCodes, "\r\n"))
+			}
 		})
-		logs.PanicErr(err)
-		ks6[0] = resp.List
 
-		resp, err = c.GetKline5MinuteUntil(code, func(k *protocol.Kline) bool {
-			return k.Time.Before(lastDate.Add(-time.Hour * 24 * 2))
-		})
-		logs.PanicErr(err)
-		ks6[1] = resp.List
+		var refreshLock sync.Mutex
+		refresh := func(hand bool) {
+			if !refreshLock.TryLock() {
+				log("正在实时刷新数据中...")
+				return
+			}
+			failCodes := []string(nil)
+			cc := ctx
+			defer func() {
+				refreshLock.Unlock()
+				log("结束实时刷新数据...")
+				if len(failCodes) > 0 {
+					oss.New("./失败代码.txt", strings.Join(failCodes, "\r\n"))
+				}
+			}()
 
-		resp, err = c.GetKline15MinuteUntil(code, func(k *protocol.Kline) bool {
-			return k.Time.Before(lastDate.Add(-time.Hour * 24 * 2))
-		})
-		logs.PanicErr(err)
-		ks6[2] = resp.List
+			f := func() {
+				log("实时刷新数据...")
+				dealErr(c.DownloadTodayAll2(cc, log, plan, func(code string, err error) {
+					failCodes = append(failCodes, code)
+				}))
+				<-time.After(time.Duration(cfg.GetInt("interval", 1000)) * time.Millisecond)
+			}
 
-		resp, err = c.GetKline30MinuteUntil(code, func(k *protocol.Kline) bool {
-			return k.Time.Before(lastDate.Add(-time.Hour * 24 * 3))
-		})
-		logs.PanicErr(err)
-		ks6[3] = resp.List
+			for {
+				select {
+				case <-cc.Done():
+					return
 
-		resp, err = c.GetKlineHourUntil(code, func(k *protocol.Kline) bool {
-			return k.Time.Before(lastDate.Add(-time.Hour * 24 * 4))
-		})
-		logs.PanicErr(err)
-		ks6[4] = resp.List
+				default:
 
-		resp, err = c.GetKlineDay(code, offset, 30)
-		logs.PanicErr(err)
-		ks6[5] = resp.List
+					if hand {
+						f()
+						continue
+					}
 
-		err = klineToCsv(ks6, "./data/"+code+".csv", lastDate)
-		logs.PrintErr(err)
-	}
+					now := time.Now()
+					date := now.Format("2006-01-02 ")
 
-}
+					start1, _ := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("start1"), time.Local)
+					end1, _ := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("end1"), time.Local)
+					if !start1.IsZero() && !end1.IsZero() {
+						if now.After(start1) && now.Before(end1) {
+							f()
+							continue
+						}
+					}
 
-var (
-	title = []any{"日期", "时间", "总手", "金额"}
-)
+					start2, _ := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("start2"), time.Local)
+					end2, _ := time.ParseInLocation("2006-01-02 15:04", date+cfg.GetString("end2"), time.Local)
+					if !start2.IsZero() && !end2.IsZero() {
+						if now.After(start2) && now.Before(end2) {
+							f()
+							continue
+						}
+					}
 
-func klineToCsv(ks6 [6][]*protocol.Kline, filename string, lastDate time.Time) (err error) {
-	lss := [][]any{
-		{
-			"日期", "时间", "总手", "金额", "", "", "",
-			"日期", "时间", "总手", "金额", "", "", "",
-			"日期", "时间", "总手", "金额", "", "", "",
-			"日期", "时间", "总手", "金额", "", "", "",
-			"日期", "时间", "总手", "金额", "", "", "",
-			"日期", "时间", "总手", "金额", "", "", "",
-		},
-	}
-
-	for i := 1; i <= 240; i++ {
-		ls := []any(nil)
-		for y := 0; y < 6; y++ {
-			if len(ks6[y]) > i {
-				v := ks6[y][i]
-				if v.Time.Before(lastDate.Add(time.Hour * 24)) {
-					ls = append(ls, []any{
-						v.Time.Format(time.DateTime),
-						v.Time.Format("15:04"),
-						v.Volume,
-						v.Amount.Float64(),
-						"", "", "",
-					}...)
-					continue
+					<-time.After(time.Second * 1)
 				}
 
 			}
-			ls = append(ls, []any{
-				"",
-				"",
-				"",
-				"",
-				"", "", "",
-			}...)
-		}
-		lss = append(lss, ls)
-	}
 
-	buf, err := excel.ToCsv(lss)
-	if err != nil {
-		logs.Err(err)
-		return err
-	}
-	return oss.New(filename, buf)
+		}
+		stop := func() {
+			logs.Debug("停止下载...")
+			cancel()
+			ctx, cancel = context.WithCancel(context.Background())
+			log("停止成功...")
+		}
+
+		if cfg.GetBool("auto", false) {
+			log("开启自动刷新...")
+			go refresh(false)
+		}
+
+		app.Bind("_refresh_real", func() {
+			stop()
+			for i := 0; i < 20; i++ {
+				<-time.After(time.Millisecond * 500)
+				if refreshLock.TryLock() {
+					refreshLock.Unlock()
+					break
+				}
+			}
+			refresh(true)
+		})
+
+		app.Bind("_download_history", func(startDate, endDate string) {
+			start, err := time.Parse("2006-01-02", startDate)
+			if err != nil {
+				dealErr(err)
+				return
+			}
+			end, err := time.Parse("2006-01-02", endDate)
+			if err != nil {
+				dealErr(err)
+				return
+			}
+			dealErr(c.DownloadHistoryAll(ctx, start, end, log, plan))
+		})
+
+		app.Bind("_stop_download", stop)
+
+		app.Bind("_get_config", func() string {
+			return cfg.GetString("")
+		})
+
+		app.Bind("_save_config", func(clients, disks, dir, timeout string, codes []string, useText, auto bool, interval, startTime1, endTime1, startTime2, endTime2 string) {
+			c.Dir = dir
+			m := g.Map{
+				"clients":  clients,
+				"disks":    disks,
+				"dir":      dir,
+				"timeout":  timeout,
+				"codes":    codes,
+				"useText":  useText,
+				"interval": interval,
+				"start1":   startTime1,
+				"end1":     endTime1,
+				"start2":   startTime2,
+				"end2":     endTime2,
+				"auto":     auto,
+			}
+			dealErr(oss.New(configPath, m))
+			cfg.Init(cfg.WithAny(m))
+			c.GetCodes = getCodes
+			if auto {
+				refresh(false)
+			}
+		})
+
+		return nil
+	})
+
 }

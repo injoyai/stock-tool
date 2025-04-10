@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K线数据下载(v1.0)</title>
+    <style>
+        body {
+            display: flex;
+            font-family: Arial, sans-serif;
+            height: 100vh; /* 确保整个页面占满视窗高度 */
+            margin: 0;
+            overflow: hidden; /* 确保页面本身没有滚动条 */
+        }
+        #left-panel {
+            width: 30%;
+            padding: 10px;
+            border-right: 1px solid #ccc;
+            box-sizing: border-box; /* 确保内边距和边框包含在宽度内 */
+        }
+        #right-panel {
+            width: 70%;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box; /* 确保内边距和边框包含在宽度内 */
+        }
+        button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input[type="date"],
+        input[type="number"],
+        textarea {
+            margin: 10px 0;
+            padding: 10px;
+            width: calc(100% - 20px); /* 减去左右内边距 */
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background: white; /* 设置背景颜色 */
+        }
+        h3 {
+            margin-bottom: 10px;
+        }
+        #config-panel {
+            position: fixed; /* 固定位置 */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* 居中 */
+            width: 400px; /* 增加宽度 */
+            padding: 20px;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 阴影效果 */
+            z-index: 1000; /* 确保在其他元素之上 */
+            display: none; /* 默认隐藏 */
+        }
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5); /* 半透明背景 */
+            z-index: 999; /* 确保在配置面板下方 */
+            display: none; /* 默认隐藏 */
+        }
+        .config-row {
+            display: flex;
+            flex-direction: row;
+            margin-bottom: 8px; /* 减小间距 */
+            align-items: center; /* 垂直居中对齐 */
+        }
+        .config-row label {
+            margin-right: 10px; /* 标签与输入框之间的间距 */
+            flex: 0 0 150px; /* 固定标签宽度 */
+        }
+        .config-row input {
+            flex: 1; /* 输入框占据剩余空间 */
+        }
+        .button-group {
+            display: flex;
+            justify-content: space-between; /* 按钮之间的间距 */
+        }
+        #log-output {
+            flex: 1;
+            overflow-y: auto; /* 只在日志区域内容过长时添加垂直滚动条 */
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            font-family: monospace;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        progress {
+            width: 100%;
+            height: 20px; /* 设置进度条高度 */
+            margin-top: 10px;
+            appearance: none; /* 移除默认样式 */
+        }
+        progress::-webkit-progress-bar {
+            background-color: #f3f3f3;
+            border-radius: 5px;
+        }
+        progress::-webkit-progress-value {
+            background-color: #4CAF50;
+            border-radius: 5px;
+        }
+        progress::-moz-progress-bar {
+            background-color: #4CAF50;
+            border-radius: 5px;
+        }
+        #log-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        #clear-log {
+            margin-left: 10px;
+            padding: 2px 4px; /* 进一步缩小按钮的内边距 */
+            font-size: 0.8em; /* 调整字体大小 */
+            background-color: #e0e0e0;
+            color: #333;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            vertical-align: middle; /* 确保按钮与文本垂直居中对齐 */
+            white-space: nowrap; /* 防止按钮内容换行 */
+            max-width: 80px; /* 设置按钮的最大宽度 */
+        }
+        #clear-log:hover {
+            background-color: #d0d0d0;
+        }
+        #realtime-config-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            padding: 20px;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="left-panel">
+        <h3>操作</h3>
+        <button id="download-today">下载当日数据</button>
+<!--        <button id="refresh-realtime">实时刷新数据</button>-->
+<!--        <div style="display: flex; flex-direction: column; margin-bottom: 10px;">-->
+<!--            <label for="start-date">开始日期:</label>-->
+<!--            <input type="date" id="start-date" placeholder="选择开始日期" />-->
+<!--        </div>-->
+<!--        <div style="display: flex; flex-direction: column; margin-bottom: 10px;">-->
+<!--            <label for="end-date">结束日期:</label>-->
+<!--            <input type="date" id="end-date" placeholder="选择结束日期" />-->
+<!--        </div>-->
+<!--        <button id="download">下载历史数据</button>-->
+<!--        <button id="config-button">配置</button>-->
+        <label for="client-connections">偏移天数:</label>
+        <input type="number" id="offset-day" placeholder="输入偏移天数" />
+        <button id="stop">停止下载数据</button>
+        <div style="margin-top: 10px;">
+            <label for="progress-bar" id="progress-label">进度: 0/100</label>
+            <progress id="progress-bar" value="0" max="100" style="width: 100%;"></progress>
+        </div>
+    </div>
+    <div id="overlay"></div>
+    <div id="config-panel">
+        <h3>配置</h3>
+        <div class="config-row">
+            <label for="client-connections">客户端连接数:</label>
+            <input type="number" id="client-connections" placeholder="输入客户端连接数" />
+        </div>
+        <div class="config-row">
+            <label for="disk-operations">写入磁盘线程:</label>
+            <input type="number" id="disk-operations" placeholder="输入操作磁盘数" />
+        </div>
+        <div class="config-row">
+            <label for="timeout">超时时间(秒):</label>
+            <input type="number" id="timeout" placeholder="输入超时时间" />
+        </div>
+        <div class="config-row">
+            <label for="save-path">数据保存路径:</label>
+            <input type="text" id="save-path" placeholder="输入保存路径" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px;" />
+        </div>
+        <div class="config-row">
+            <label for="use-text-code">使用文本代码:</label>
+            <select id="use-text-code" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                <option value="true">是</option>
+                <option value="false">否</option>
+            </select>
+        </div>
+
+        <div style="display: flex; flex-direction: column; margin-bottom: 10px;">
+            <label for="stock-codes">股票代码:</label>
+            <textarea id="stock-codes" rows="10" placeholder="输入股票代码，每行一个"></textarea>
+        </div>
+        <h3>实时数据配置</h3>
+
+        <div class="config-row">
+            <label for="auto-refresh">是否自动实时刷新:</label>
+            <select id="auto-refresh" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                <option value="true">是</option>
+                <option value="false">否</option>
+            </select>
+        </div>
+        <div class="config-row">
+            <label for="interval">时间间隔(毫秒):</label>
+            <input type="number" id="interval" placeholder="输入时间间隔" />
+        </div>
+        <div class="config-row">
+            <label for="start-time-1">上午开始:</label>
+            <input type="time" id="start-time-1" />
+        </div>
+        <div class="config-row">
+            <label for="end-time-1">上午结束:</label>
+            <input type="time" id="end-time-1" />
+        </div>
+        <div class="config-row">
+            <label for="start-time-2">下午开始:</label>
+            <input type="time" id="start-time-2" />
+        </div>
+        <div class="config-row">
+            <label for="end-time-2">下午结束:</label>
+            <input type="time" id="end-time-2" />
+        </div>
+        <div class="button-group" style="gap: 10px;">
+            <button id="save-config">保存</button>
+            <button id="close-config">关闭</button>
+        </div>
+    </div>
+    <div id="right-panel">
+        <div id="log-header">
+            <h3 style="margin: 0;">日志</h3>
+            <button id="clear-log">清空</button>
+        </div>
+        <pre id="log-output"></pre>
+    </div>
+
+    <script>
+        // 设置默认日期为今天
+        window.onload = function() {
+            //const today = new Date().toISOString().split('T')[0];
+            // document.getElementById('start-date').value = today;
+            // document.getElementById('end-date').value = today;
+        };
+
+        // 更新进度条和标签的值
+        function updateProgress(current, total) {
+            const progressBar = document.getElementById('progress-bar');
+            const progressLabel = document.getElementById('progress-label');
+            progressBar.value = (current / total) * 100;
+            progressLabel.textContent = `进度: ${current}/${total}`;
+        }
+
+        // 这里可以添加按钮的事件处理逻辑
+        document.getElementById('download-today').onclick = function() {
+            log('下载当日数据');
+            _download_today();
+        };
+
+        // document.getElementById('refresh-realtime').onclick = function() {
+        //     //log('实时刷新数据');
+        //     _refresh_real();
+        // };
+
+        // document.getElementById('download').onclick = function() {
+        //     // const startDate = document.getElementById('start-date').value;
+        //     // const endDate = document.getElementById('end-date').value;
+        //     log(`开始下载数据，从 ${startDate} 到 ${endDate}`);
+        //     _download_history(startDate, endDate);
+        // };
+
+        document.getElementById('stop').onclick = function() {
+            log('停止操作');
+            _stop_download();
+        };
+
+        // document.getElementById('config-button').onclick = function() {
+        //     document.getElementById('config-panel').style.display = 'block';
+        //     document.getElementById('overlay').style.display = 'block';
+        //     _get_config().then(function(text) {
+        //         config=JSON.parse(text)
+        //         console.log(config)
+        //         document.getElementById('client-connections').value = config.clients;
+        //         document.getElementById('disk-operations').value = config.disks;
+        //         document.getElementById('timeout').value = config.timeout;
+        //         document.getElementById('save-path').value = config.dir;
+        //         document.getElementById('stock-codes').value = config.codes.join('\n');
+        //         document.getElementById('use-text-code').value = config.useText ? 'true' : 'false';
+        //
+        //         document.getElementById('auto-refresh').value = config.auto ? 'true' : 'false';
+        //         document.getElementById('interval').value = config.interval;
+        //         document.getElementById('start-time-1').value = config.start1;
+        //         document.getElementById('end-time-1').value = config.end1;
+        //         document.getElementById('start-time-2').value = config.start2;
+        //         document.getElementById('end-time-2').value = config.end2;
+        //     })
+        // };
+
+        // document.getElementById('close-config').onclick = function() {
+        //     document.getElementById('config-panel').style.display = 'none'; // 关闭配置面板
+        //     document.getElementById('overlay').style.display = 'none'; // 隐藏遮罩层
+        // };
+        //
+        // document.getElementById('save-config').onclick = function() {
+        //     const clientConnections = document.getElementById('client-connections').value;
+        //     const diskOperations = document.getElementById('disk-operations').value;
+        //     const timeout = document.getElementById('timeout').value;
+        //     const savePath = document.getElementById('save-path').value;
+        //     const stockCodes = document.getElementById('stock-codes').value.split('\n');
+        //     const useTextCode = document.getElementById('use-text-code').value === 'true';
+        //
+        //     const autoRefresh = document.getElementById('auto-refresh').value === 'true';
+        //     const interval = document.getElementById('interval').value;
+        //     const startTime1 = document.getElementById('start-time-1').value;
+        //     const endTime1 = document.getElementById('end-time-1').value;
+        //     const startTime2 = document.getElementById('start-time-2').value;
+        //     const endTime2 = document.getElementById('end-time-2').value;
+        //
+        //     log(`保存配置成功`);
+        //     _save_config(clientConnections, diskOperations, savePath, timeout, stockCodes, useTextCode, autoRefresh, interval, startTime1, endTime1, startTime2, endTime2);
+        // };
+
+        // 清空日志的功能
+        document.getElementById('clear-log').onclick = function() {
+            document.getElementById('log-output').textContent = '';
+        };
+
+        function log(message) {
+            const logOutput = document.getElementById('log-output');
+            logOutput.textContent += message + '\n'; // 不覆盖日志
+        }
+
+        function _download_today() {}
+        function _refresh_real() {}
+        function _download_history(startDate, endDate) {}
+        function _stop_download() {}
+        function _get_config() {}
+        function _save_config(clientConnections, diskOperations, timeout, savePath, stockCodes, useTextCode, autoRefresh, interval, startTime1, endTime1, startTime2, endTime2) {}
+
+    </script>
+</body>
+</html> 
