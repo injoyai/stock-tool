@@ -161,21 +161,13 @@
 <body>
     <div id="left-panel">
         <h3>操作</h3>
-        <button id="download-today">下载当日数据</button>
-<!--        <button id="refresh-realtime">实时刷新数据</button>-->
-<!--        <div style="display: flex; flex-direction: column; margin-bottom: 10px;">-->
-<!--            <label for="start-date">开始日期:</label>-->
-<!--            <input type="date" id="start-date" placeholder="选择开始日期" />-->
-<!--        </div>-->
-<!--        <div style="display: flex; flex-direction: column; margin-bottom: 10px;">-->
-<!--            <label for="end-date">结束日期:</label>-->
-<!--            <input type="date" id="end-date" placeholder="选择结束日期" />-->
-<!--        </div>-->
-<!--        <button id="download">下载历史数据</button>-->
-<!--        <button id="config-button">配置</button>-->
-        <label for="client-connections">偏移天数:</label>
-        <input type="number" id="offset-day" placeholder="输入偏移天数" />
+        <button id="download-today">下载数据</button>
+        <div style="display: flex; flex-direction: column; margin-bottom: 10px;">
+            <label for="last-date">截止日期:</label>
+            <input type="date" id="last-date" placeholder="选择截止日期" />
+        </div>
         <button id="stop">停止下载数据</button>
+        <button id="config-button">配置</button>
         <div style="margin-top: 10px;">
             <label for="progress-bar" id="progress-label">进度: 0/100</label>
             <progress id="progress-bar" value="0" max="100" style="width: 100%;"></progress>
@@ -208,38 +200,45 @@
             </select>
         </div>
 
+        <div class="config-row">
+            <label for="disk-operations">总手均值小数位:</label>
+            <input type="number" id="avg-decimal" placeholder="输入均值小数点" />
+        </div>
+        <div class="config-row">
+            <label for="disk-operations">金额均值缩放:</label>
+            <input type="number" id="avg2-scale" placeholder="输入金额均值缩放" />
+        </div>
+        <div class="config-row">
+            <label for="disk-operations">金额均值小数位:</label>
+            <input type="number" id="avg2-decimal" placeholder="输入均值小数点" />
+        </div>
         <div style="display: flex; flex-direction: column; margin-bottom: 10px;">
             <label for="stock-codes">股票代码:</label>
             <textarea id="stock-codes" rows="10" placeholder="输入股票代码，每行一个"></textarea>
         </div>
-        <h3>实时数据配置</h3>
-
         <div class="config-row">
-            <label for="auto-refresh">是否自动实时刷新:</label>
-            <select id="auto-refresh" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-                <option value="true">是</option>
-                <option value="false">否</option>
-            </select>
+            <label for="timeout">1分钟天数:</label>
+            <input type="number" id="1minute-day" placeholder="1分钟天数" />
         </div>
         <div class="config-row">
-            <label for="interval">时间间隔(毫秒):</label>
-            <input type="number" id="interval" placeholder="输入时间间隔" />
+            <label for="timeout">5分钟天数:</label>
+            <input type="number" id="5minute-day" placeholder="5分钟天数" />
         </div>
         <div class="config-row">
-            <label for="start-time-1">上午开始:</label>
-            <input type="time" id="start-time-1" />
+            <label for="timeout">15分钟天数:</label>
+            <input type="number" id="15minute-day" placeholder="15分钟天数" />
         </div>
         <div class="config-row">
-            <label for="end-time-1">上午结束:</label>
-            <input type="time" id="end-time-1" />
+            <label for="timeout">30分钟天数:</label>
+            <input type="number" id="30minute-day" placeholder="30分钟天数" />
         </div>
         <div class="config-row">
-            <label for="start-time-2">下午开始:</label>
-            <input type="time" id="start-time-2" />
+            <label for="timeout">1小时天数:</label>
+            <input type="number" id="hour-day" placeholder="小时天数" />
         </div>
         <div class="config-row">
-            <label for="end-time-2">下午结束:</label>
-            <input type="time" id="end-time-2" />
+            <label for="timeout">天天数:</label>
+            <input type="number" id="day-day" placeholder="天天数" />
         </div>
         <div class="button-group" style="gap: 10px;">
             <button id="save-config">保存</button>
@@ -255,11 +254,11 @@
     </div>
 
     <script>
+
         // 设置默认日期为今天
         window.onload = function() {
-            //const today = new Date().toISOString().split('T')[0];
-            // document.getElementById('start-date').value = today;
-            // document.getElementById('end-date').value = today;
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('last-date').value = today;
         };
 
         // 更新进度条和标签的值
@@ -272,72 +271,71 @@
 
         // 这里可以添加按钮的事件处理逻辑
         document.getElementById('download-today').onclick = function() {
-            log('下载当日数据');
-            _download_today();
+            const lastDate = document.getElementById('last-date').value;
+            log('下载数据');
+            _download_history(lastDate);
         };
 
-        // document.getElementById('refresh-realtime').onclick = function() {
-        //     //log('实时刷新数据');
-        //     _refresh_real();
-        // };
-
-        // document.getElementById('download').onclick = function() {
-        //     // const startDate = document.getElementById('start-date').value;
-        //     // const endDate = document.getElementById('end-date').value;
-        //     log(`开始下载数据，从 ${startDate} 到 ${endDate}`);
-        //     _download_history(startDate, endDate);
-        // };
 
         document.getElementById('stop').onclick = function() {
             log('停止操作');
             _stop_download();
         };
 
-        // document.getElementById('config-button').onclick = function() {
-        //     document.getElementById('config-panel').style.display = 'block';
-        //     document.getElementById('overlay').style.display = 'block';
-        //     _get_config().then(function(text) {
-        //         config=JSON.parse(text)
-        //         console.log(config)
-        //         document.getElementById('client-connections').value = config.clients;
-        //         document.getElementById('disk-operations').value = config.disks;
-        //         document.getElementById('timeout').value = config.timeout;
-        //         document.getElementById('save-path').value = config.dir;
-        //         document.getElementById('stock-codes').value = config.codes.join('\n');
-        //         document.getElementById('use-text-code').value = config.useText ? 'true' : 'false';
-        //
-        //         document.getElementById('auto-refresh').value = config.auto ? 'true' : 'false';
-        //         document.getElementById('interval').value = config.interval;
-        //         document.getElementById('start-time-1').value = config.start1;
-        //         document.getElementById('end-time-1').value = config.end1;
-        //         document.getElementById('start-time-2').value = config.start2;
-        //         document.getElementById('end-time-2').value = config.end2;
-        //     })
-        // };
+        document.getElementById('config-button').onclick = function() {
+            document.getElementById('config-panel').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            _get_config().then(function(text) {
+                config=JSON.parse(text)
+                console.log(config)
+                document.getElementById('client-connections').value = config.clients;
+                document.getElementById('disk-operations').value = config.disks;
+                document.getElementById('timeout').value = config.timeout;
+                document.getElementById('save-path').value = config.dir;
+                document.getElementById('stock-codes').value = config.codes.join('\n');
+                document.getElementById('use-text-code').value = config.useText ? 'true' : 'false';
 
-        // document.getElementById('close-config').onclick = function() {
-        //     document.getElementById('config-panel').style.display = 'none'; // 关闭配置面板
-        //     document.getElementById('overlay').style.display = 'none'; // 隐藏遮罩层
-        // };
-        //
-        // document.getElementById('save-config').onclick = function() {
-        //     const clientConnections = document.getElementById('client-connections').value;
-        //     const diskOperations = document.getElementById('disk-operations').value;
-        //     const timeout = document.getElementById('timeout').value;
-        //     const savePath = document.getElementById('save-path').value;
-        //     const stockCodes = document.getElementById('stock-codes').value.split('\n');
-        //     const useTextCode = document.getElementById('use-text-code').value === 'true';
-        //
-        //     const autoRefresh = document.getElementById('auto-refresh').value === 'true';
-        //     const interval = document.getElementById('interval').value;
-        //     const startTime1 = document.getElementById('start-time-1').value;
-        //     const endTime1 = document.getElementById('end-time-1').value;
-        //     const startTime2 = document.getElementById('start-time-2').value;
-        //     const endTime2 = document.getElementById('end-time-2').value;
-        //
-        //     log(`保存配置成功`);
-        //     _save_config(clientConnections, diskOperations, savePath, timeout, stockCodes, useTextCode, autoRefresh, interval, startTime1, endTime1, startTime2, endTime2);
-        // };
+
+                document.getElementById('avg-decimal').value = config.avgDecimal;
+                document.getElementById('avg2-scale').value = config.avg2Scale;
+                document.getElementById('avg2-decimal').value = config.avg2Decimal;
+                document.getElementById('1minute-day').value = config.minute1Day;
+                document.getElementById('5minute-day').value = config.minute5Day;
+                document.getElementById('15minute-day').value = config.minute15Day;
+                document.getElementById('30minute-day').value = config.minute30Day;
+                document.getElementById('hour-day').value = config.hourDay;
+                document.getElementById('day-day').value = config.dayDay;
+
+            })
+        };
+
+        document.getElementById('close-config').onclick = function() {
+            document.getElementById('config-panel').style.display = 'none'; // 关闭配置面板
+            document.getElementById('overlay').style.display = 'none'; // 隐藏遮罩层
+        };
+
+        document.getElementById('save-config').onclick = function() {
+            const clientConnections = document.getElementById('client-connections').value;
+            const diskOperations = document.getElementById('disk-operations').value;
+            const timeout = document.getElementById('timeout').value;
+            const savePath = document.getElementById('save-path').value;
+            const stockCodes = document.getElementById('stock-codes').value.split('\n');
+            const useTextCode = document.getElementById('use-text-code').value === 'true';
+
+            const avgDecimal = document.getElementById('avg-decimal').value;
+            const avg2Scale = document.getElementById('avg2-scale').value;
+            const avg2Decimal = document.getElementById('avg2-decimal').value;
+            const minute1_day = document.getElementById('1minute-day').value;
+            const minute5_day = document.getElementById('5minute-day').value;
+            const minute15_day = document.getElementById('15minute-day').value;
+            const minute30_day = document.getElementById('30minute-day').value;
+            const hour_day = document.getElementById('hour-day').value;
+            const day_day = document.getElementById('day-day').value;
+
+
+            log(`保存配置成功`);
+            _save_config(clientConnections, diskOperations, savePath, timeout, stockCodes, useTextCode,avgDecimal,avg2Scale,avg2Decimal, minute1_day, minute5_day, minute15_day, minute30_day, hour_day, day_day);
+        };
 
         // 清空日志的功能
         document.getElementById('clear-log').onclick = function() {
@@ -349,9 +347,7 @@
             logOutput.textContent += message + '\n'; // 不覆盖日志
         }
 
-        function _download_today() {}
-        function _refresh_real() {}
-        function _download_history(startDate, endDate) {}
+        function _download_history(lastDate) {}
         function _stop_download() {}
         function _get_config() {}
         function _save_config(clientConnections, diskOperations, timeout, savePath, stockCodes, useTextCode, autoRefresh, interval, startTime1, endTime1, startTime2, endTime2) {}

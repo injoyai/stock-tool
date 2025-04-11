@@ -3,15 +3,19 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/injoyai/conv"
+	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
+	"path/filepath"
 	"time"
 )
 
-func (this *Client) Pull(ctx context.Context, offset uint16, log func(s string), plan func(cu, to int), dealErr func(code string, err error)) error {
+func (this *Client) Pull(ctx context.Context, lastDate time.Time, log func(s string), plan func(cu, to int), dealErr func(code string, err error), day [6]int, avgDecimal, avg2Scale, avg2Decimal, limit int) error {
 
 	//offset := uint16(g.InputVar("请输入偏移量:").Int())
 
@@ -25,6 +29,23 @@ func (this *Client) Pull(ctx context.Context, offset uint16, log func(s string),
 	//	return err
 	//}
 
+	dateList := []time.Time(nil)
+	err := this.Pool.Do(func(c *tdx.Client) error {
+		resp, err := c.GetIndexDay("sh000001", 0, 800)
+		if err != nil {
+			return err
+		}
+		for _, v := range resp.List {
+			if v.Time.Before(lastDate.Add(time.Hour * 16)) {
+				dateList = append(dateList, time.Date(v.Time.Year(), v.Time.Month(), v.Time.Day(), 0, 0, 0, 0, time.Local))
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
 	//codes := cs.GetStocks()
 	codes, err := this.GetCodes()
 	if err != nil {
@@ -35,8 +56,13 @@ func (this *Client) Pull(ctx context.Context, offset uint16, log func(s string),
 	//	"sz000001",
 	//}
 
-	now := time.Now().Add(-time.Hour * 24 * time.Duration(offset))
-	lastDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+	if len(codes) > limit {
+		codes = codes[:limit]
+	}
+
+	//now := time.Now().Add(-time.Hour * 24 * time.Duration(offset))
+	//lastDate := time.Date(now.Year(), now.Month(), now.Day(), 23, 0, 0, 0, time.Local)
+	lastDate = lastDate.Add(time.Hour * 23)
 
 	ks6 := [6][]*protocol.Kline{}
 
@@ -58,7 +84,8 @@ func (this *Client) Pull(ctx context.Context, offset uint16, log func(s string),
 			}()
 
 			resp, err := c.GetKlineMinuteUntil(code, func(k *protocol.Kline) bool {
-				return k.Time.Before(lastDate)
+				return k.Time.Before(dateList[len(dateList)-day[0]])
+				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[0])))
 			})
 			if err != nil {
 				dealErr(code, err)
@@ -67,7 +94,8 @@ func (this *Client) Pull(ctx context.Context, offset uint16, log func(s string),
 			ks6[0] = resp.List
 
 			resp, err = c.GetKline5MinuteUntil(code, func(k *protocol.Kline) bool {
-				return k.Time.Before(lastDate.Add(-time.Hour * 24 * 2))
+				return k.Time.Before(dateList[len(dateList)-day[1]])
+				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[1])))
 			})
 			if err != nil {
 				dealErr(code, err)
@@ -76,7 +104,8 @@ func (this *Client) Pull(ctx context.Context, offset uint16, log func(s string),
 			ks6[1] = resp.List
 
 			resp, err = c.GetKline15MinuteUntil(code, func(k *protocol.Kline) bool {
-				return k.Time.Before(lastDate.Add(-time.Hour * 24 * 2))
+				return k.Time.Before(dateList[len(dateList)-day[2]])
+				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[2])))
 			})
 			if err != nil {
 				dealErr(code, err)
@@ -85,7 +114,8 @@ func (this *Client) Pull(ctx context.Context, offset uint16, log func(s string),
 			ks6[2] = resp.List
 
 			resp, err = c.GetKline30MinuteUntil(code, func(k *protocol.Kline) bool {
-				return k.Time.Before(lastDate.Add(-time.Hour * 24 * 3))
+				return k.Time.Before(dateList[len(dateList)-day[3]])
+				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[3])))
 			})
 			if err != nil {
 				dealErr(code, err)
@@ -94,7 +124,8 @@ func (this *Client) Pull(ctx context.Context, offset uint16, log func(s string),
 			ks6[3] = resp.List
 
 			resp, err = c.GetKlineHourUntil(code, func(k *protocol.Kline) bool {
-				return k.Time.Before(lastDate.Add(-time.Hour * 24 * 4))
+				return k.Time.Before(dateList[len(dateList)-day[4]])
+				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[4])))
 			})
 			if err != nil {
 				dealErr(code, err)
@@ -102,14 +133,17 @@ func (this *Client) Pull(ctx context.Context, offset uint16, log func(s string),
 			}
 			ks6[4] = resp.List
 
-			resp, err = c.GetKlineDay(code, offset, 30)
+			resp, err = c.GetKlineDayUntil(code, func(k *protocol.Kline) bool {
+				return k.Time.Before(dateList[len(dateList)-day[5]])
+				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[5])))
+			})
 			if err != nil {
 				dealErr(code, err)
 				return
 			}
 			ks6[5] = resp.List
 
-			err = klineToCsv(ks6, "./data/"+code+".csv", lastDate)
+			err = klineToCsv(ks6, filepath.Join(this.Dir, lastDate.Format("2006-01-02"), code+".csv"), lastDate, avgDecimal, avg2Scale, avg2Decimal)
 			if err != nil {
 				dealErr(code, err)
 				return
@@ -124,15 +158,15 @@ var (
 	title = []any{"日期", "时间", "总手", "金额"}
 )
 
-func klineToCsv(ks6 [6][]*protocol.Kline, filename string, lastDate time.Time) (err error) {
+func klineToCsv(ks6 [6][]*protocol.Kline, filename string, lastDate time.Time, avgDecimal, avg2Scale, avg2Decimal int) (err error) {
 	lss := [][]any{
 		{
-			"日期", "时间", "总手", "金额", "", "", "",
-			"日期", "时间", "总手", "金额", "", "", "",
-			"日期", "时间", "总手", "金额", "", "", "",
-			"日期", "时间", "总手", "金额", "", "", "",
-			"日期", "时间", "总手", "金额", "", "", "",
-			"日期", "时间", "总手", "金额", "", "", "",
+			"日期", "时间", "总手", "5行均值", "10行均值", "金额", "5行均值", "10行均值", "",
+			"日期", "时间", "总手", "5行均值", "10行均值", "金额", "5行均值", "10行均值", "",
+			"日期", "时间", "总手", "5行均值", "10行均值", "金额", "5行均值", "10行均值", "",
+			"日期", "时间", "总手", "5行均值", "10行均值", "金额", "5行均值", "10行均值", "",
+			"日期", "时间", "总手", "5行均值", "10行均值", "金额", "5行均值", "10行均值", "",
+			"日期", "时间", "总手", "5行均值", "10行均值", "金额", "5行均值", "10行均值", "",
 		},
 	}
 
@@ -141,14 +175,59 @@ func klineToCsv(ks6 [6][]*protocol.Kline, filename string, lastDate time.Time) (
 		for y := 0; y < 6; y++ {
 			if len(ks6[y]) > i {
 				v := ks6[y][i]
-				if v.Time.Before(lastDate.Add(time.Hour * 24)) {
-					ls = append(ls, []any{
-						v.Time.Format(time.DateTime),
-						v.Time.Format("15:04"),
+				if v.Time.Before(lastDate) {
+					x := []any{
+						v.Time.Format("2006/01/02"),
+						v.Time.Format("1504"),
 						v.Volume,
-						v.Amount.Float64(),
-						"", "", "",
-					}...)
+						func() string {
+							if len(lss) >= 5 {
+								total := float64(v.Volume)
+								for _, vv := range lss[len(lss)-4:] {
+									total += float64(vv[2+y*9].(int64))
+								}
+								return fmt.Sprintf(fmt.Sprintf("%%0.%df", avgDecimal), total/5)
+								return conv.String(g.Decimals(total/5, avgDecimal))
+							}
+							return ""
+						}(),
+						func() string {
+							if len(lss) >= 10 {
+								total := float64(v.Volume)
+								for _, vv := range lss[len(lss)-9:] {
+									total += float64(vv[2+y*9].(int64))
+								}
+								return fmt.Sprintf(fmt.Sprintf("%%0.%df", avgDecimal), total/10)
+								return conv.String(g.Decimals(total/10, avgDecimal))
+							}
+							return ""
+						}(),
+						v.Amount.Float64() / float64(avg2Scale),
+						func() string {
+							if len(lss) >= 5 {
+								total := v.Amount.Float64() / float64(avg2Scale)
+								for _, vv := range lss[len(lss)-4:] {
+									total += conv.Float64(vv[5+y*9])
+								}
+								return fmt.Sprintf(fmt.Sprintf("%%0.%df", avg2Decimal), total/5)
+								return conv.String(g.Decimals(total/5, avgDecimal))
+							}
+							return ""
+						}(),
+						func() string {
+							if len(lss) >= 10 {
+								total := v.Amount.Float64() / float64(avg2Scale)
+								for _, vv := range lss[len(lss)-9:] {
+									total += conv.Float64(vv[5+y*9])
+								}
+								return fmt.Sprintf(fmt.Sprintf("%%0.%df", avg2Decimal), total/10)
+								return conv.String(g.Decimals(total/10, avgDecimal))
+							}
+							return ""
+						}(),
+						"",
+					}
+					ls = append(ls, x...)
 					continue
 				}
 
@@ -157,11 +236,21 @@ func klineToCsv(ks6 [6][]*protocol.Kline, filename string, lastDate time.Time) (
 				"",
 				"",
 				"",
+				"", "",
 				"",
-				"", "", "",
+				"", "",
+				"",
 			}...)
 		}
 		lss = append(lss, ls)
+	}
+
+	for _, ls := range lss {
+		for y := 0; y < 6; y++ {
+			if f, ok := ls[5+y*9].(float64); ok {
+				ls[5+y*9] = fmt.Sprintf(fmt.Sprintf("%%0.%df", avg2Decimal), f)
+			}
+		}
 	}
 
 	buf, err := excel.ToCsv(lss)
