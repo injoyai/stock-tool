@@ -64,13 +64,11 @@ func (this *Client) Pull(ctx context.Context, lastDate time.Time, log func(s str
 	//lastDate := time.Date(now.Year(), now.Month(), now.Day(), 23, 0, 0, 0, time.Local)
 	lastDate = lastDate.Add(time.Hour * 23)
 
-	ks6 := [6][]*protocol.Kline{}
-
 	total := len(codes)
 	plan(0, total)
 	for i := range codes {
 		code := codes[i]
-
+		ks6 := [6][]*protocol.Kline{}
 		select {
 		case <-ctx.Done():
 			return errors.New("手动停止")
@@ -85,7 +83,6 @@ func (this *Client) Pull(ctx context.Context, lastDate time.Time, log func(s str
 
 			resp, err := c.GetKlineMinuteUntil(code, func(k *protocol.Kline) bool {
 				return k.Time.Before(dateList[len(dateList)-day[0]])
-				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[0])))
 			})
 			if err != nil {
 				dealErr(code, err)
@@ -95,7 +92,6 @@ func (this *Client) Pull(ctx context.Context, lastDate time.Time, log func(s str
 
 			resp, err = c.GetKline5MinuteUntil(code, func(k *protocol.Kline) bool {
 				return k.Time.Before(dateList[len(dateList)-day[1]])
-				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[1])))
 			})
 			if err != nil {
 				dealErr(code, err)
@@ -105,7 +101,6 @@ func (this *Client) Pull(ctx context.Context, lastDate time.Time, log func(s str
 
 			resp, err = c.GetKline15MinuteUntil(code, func(k *protocol.Kline) bool {
 				return k.Time.Before(dateList[len(dateList)-day[2]])
-				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[2])))
 			})
 			if err != nil {
 				dealErr(code, err)
@@ -115,7 +110,6 @@ func (this *Client) Pull(ctx context.Context, lastDate time.Time, log func(s str
 
 			resp, err = c.GetKline30MinuteUntil(code, func(k *protocol.Kline) bool {
 				return k.Time.Before(dateList[len(dateList)-day[3]])
-				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[3])))
 			})
 			if err != nil {
 				dealErr(code, err)
@@ -125,7 +119,6 @@ func (this *Client) Pull(ctx context.Context, lastDate time.Time, log func(s str
 
 			resp, err = c.GetKlineHourUntil(code, func(k *protocol.Kline) bool {
 				return k.Time.Before(dateList[len(dateList)-day[4]])
-				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[4])))
 			})
 			if err != nil {
 				dealErr(code, err)
@@ -135,7 +128,6 @@ func (this *Client) Pull(ctx context.Context, lastDate time.Time, log func(s str
 
 			resp, err = c.GetKlineDayUntil(code, func(k *protocol.Kline) bool {
 				return k.Time.Before(dateList[len(dateList)-day[5]])
-				return k.Time.Before(lastDate.Add(-time.Hour * 24 * time.Duration(day[5])))
 			})
 			if err != nil {
 				dealErr(code, err)

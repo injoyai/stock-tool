@@ -160,6 +160,7 @@ func main() {
 				"minute30Day": minute30Day,
 				"hourDay":     hourDay,
 				"dayDay":      dayDay,
+				"Files":       cfg.GetInt("Files", 6000),
 
 				//"interval": interval,
 				//"start1":   startTime1,
