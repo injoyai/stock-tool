@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"github.com/injoyai/conv"
@@ -15,6 +16,9 @@ import (
 	"os"
 	"time"
 )
+
+//go:embed index.html
+var index string
 
 var (
 	filename = oss.UserInjoyDir("/monitor-price/config/config.json")
@@ -56,7 +60,7 @@ func gui() {
 	lorca.Run(&lorca.Config{
 		Width:  900,
 		Height: 640,
-		Index:  "./index.html",
+		Index:  index,
 	}, func(app lorca.APP) error {
 
 		app.Bind("getConfig", func() any {
