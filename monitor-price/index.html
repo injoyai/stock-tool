@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>监听价格</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .rule {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .rule label {
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        input[type="text"],
+        input[type="number"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            height: 40px;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        .code-input {
+            width: 100px;
+        }
+        .price-input {
+            width: 80px;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+            margin-left: 10px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #007bff;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        button {
+            display: inline-block;
+            width: auto;
+            padding: 8px 16px;
+            margin-top: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .deleteRule {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            font-size: 20px;
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .deleteRule:hover {
+            background-color: #c82333;
+            transform: scale(1.1);
+        }
+        label[for="interval"] {
+            margin-bottom: 10px;
+            display: block;
+        }
+        #interval {
+            margin-bottom: 20px;
+        }
+        #rules {
+            text-align: center;
+        }
+        .rule div {
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>监听价格</h1>
+        <label for="interval">监听间隔(秒):</label>
+        <input type="number" id="interval" value="10" min="1" required>
+
+        <div id="rules"></div>
+
+        <button id="addRule">添加规则</button>
+        <button id="submit">提交配置</button>
+    </div>
+
+    <script>
+
+
+        // 初始化界面
+        function initialize() {
+            const configStr = getConfig();
+            configStr.then(function (config) {
+                document.getElementById('interval').value = config.interval;
+                config.rule.forEach(rule => {
+                    addRule(rule.code, rule.price, rule.greater, rule.enable);
+                });
+            })
+        }
+
+        // 添加规则的函数
+        function addRule(code = "", price = 0, greater = false, enable = true) {
+            const ruleDiv = document.createElement('div');
+            ruleDiv.className = 'rule';
+            ruleDiv.innerHTML = `
+                <label for="code">代码:</label>
+                <input type="text" class="code code-input" value="${code}" required>
+                <label for="price">价格:</label>
+                <input type="number" class="price price-input" step="0.01" value="${price}" required>
+                <div>
+                    <label for="greater">大于/小于:</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" class="greater" ${greater ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div>
+                    <label for="enable">启用:</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" class="enable" ${enable ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <button class="deleteRule">-</button>
+            `;
+            document.getElementById('rules').appendChild(ruleDiv);
+
+            // 为删除按钮添加事件监听器
+            ruleDiv.querySelector('.deleteRule').addEventListener('click', function() {
+                ruleDiv.remove(); // 删除对应的规则
+            });
+        }
+
+        document.getElementById('addRule').addEventListener('click', function() {
+            addRule(); // 添加空白规则
+        });
+
+        document.getElementById('submit').addEventListener('click', function() {
+            const interval = document.getElementById('interval').value;
+            const rules = Array.from(document.querySelectorAll('.rule')).map(rule => ({
+                code: rule.querySelector('.code').value,
+                price: parseFloat(rule.querySelector('.price').value),
+                greater: rule.querySelector('.greater').checked,
+                enable: rule.querySelector('.enable').checked
+            }));
+            const config = { interval: parseInt(interval), rule: rules };
+            console.log(JSON.stringify(config));
+            setConfig(config); // 调用保存配置的函数
+        });
+
+        // 页面加载时初始化
+        //window.onload = initialize;
+    </script>
+</body>
+</html>
