@@ -9,6 +9,7 @@ import (
 	"github.com/injoyai/goutil/notice"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/oss/tray"
+	"github.com/injoyai/goutil/times"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/lorca"
 	"github.com/injoyai/tdx"
@@ -114,6 +115,18 @@ func (this *monitor) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(this.interval):
+			now := time.Now()
+			if now.Before(times.IntegerDay(now).Add(time.Hour*9 + time.Minute*30)) {
+				continue
+			}
+			if now.After(times.IntegerDay(now).Add(time.Hour * 15)) {
+				continue
+			}
+			if now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30)) &&
+				now.Before(times.IntegerDay(now).Add(time.Hour*13)) {
+				continue
+			}
+
 			logs.Debug("codes:", this.codes)
 			for code, config := range this.codes {
 				if !config.Enable {
