@@ -75,8 +75,9 @@
                     },
                     markPoint: {
                         data: stockData.markPoints.map(point => {
+                            const price = stockData.data[point.index][1]; // 获取开盘价作为标记点的价格
                             return {
-                                coord: [stockData.data[point.index][0], stockData.data[point.index][point.type === "high" ? 4 : 3]], // 高点使用最高价，低点使用最低价
+                                coord: [stockData.data[point.index][0], stockData.data[point.index][point.type === "high" ? 2 : 3]], // 高点使用最高价，低点使用最低价
                                 value: point.type,
                                 itemStyle: {
                                     color: point.type === "high" ? '#f54545' : '#47b262'
@@ -85,7 +86,7 @@
                                     show: true,
                                     position: point.type === "high" ? 'top' : 'bottom', // 高点在上，低点在下
                                     distance: 5, // 调整距离
-                                    formatter: `${point.type === "high" ? stockData.data[point.index][4] : stockData.data[point.index][3]}`, // 显示开盘价
+                                    formatter: `${stockData.data[point.index][1]}`, // 显示开盘价
                                     color: '#fff',
                                     backgroundColor: point.type === "high" ? '#f54545' : '#47b262',
                                     borderRadius: 4,
