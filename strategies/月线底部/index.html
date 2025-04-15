@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K线图表</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        canvas {
+            width: 100% !important;
+            height: 400px !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>K线图表</h1>
+    <canvas id="kLineChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script>
+    // 假数据
+    const data = {
+        datasets: [{
+            label: 'K线图',
+            data: [
+                { x: '2023-10-01', o: 100, h: 115, l: 95, c: 110 },
+                { x: '2023-10-02', o: 110, h: 125, l: 105, c: 120 },
+                { x: '2023-10-03', o: 120, h: 130, l: 115, c: 125 },
+                { x: '2023-10-04', o: 125, h: 135, l: 120, c: 130 },
+                { x: '2023-10-05', o: 130, h: 140, l: 125, c: 135 }
+            ],
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1,
+        },
+        {
+            label: '5日均线',
+            data: [
+                { x: '2023-10-03', y: 115 }, // SMA for 2023-10-03
+                { x: '2023-10-04', y: 125 }, // SMA for 2023-10-04
+                { x: '2023-10-05', y: 130 }  // SMA for 2023-10-05
+            ],
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 2,
+            type: 'line',
+        },
+        {
+            label: '成交量',
+            data: [
+                { x: '2023-10-01', y: 200 },
+                { x: '2023-10-02', y: 250 },
+                { x: '2023-10-03', y: 300 },
+                { x: '2023-10-04', y: 350 },
+                { x: '2023-10-05', y: 400 }
+            ],
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            type: 'bar',
+        }]
+    };
+
+    const config = {
+        type: 'candlestick',
+        data: data,
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day'
+                    }
+                },
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                }
+            }
+        }
+    };
+
+    const ctx = document.getElementById('kLineChart').getContext('2d');
+    const kLineChart = new Chart(ctx, config);
+</script>
+
+</body>
+</html> 

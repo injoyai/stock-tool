@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>多股票K线图展示</title>
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+        }
+        .chart {
+            width: 600px;
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-container" id="chartContainer"></div>
+
+    <script>
+        // 从HTTP接口加载数据
+        async function loadData() {
+            const response = await fetch('http://127.0.0.1:8080/data.json');
+            if (!response.ok) {
+                throw new Error('网络响应错误');
+            }
+            const data = await response.json();
+            return data;
+        }
+
+        // 创建K线图
+        function createKLineChart(elementId, stockName, stockData) {
+            const chart = echarts.init(document.getElementById(elementId));
+            
+            const option = {
+                title: {
+                    text: stockName,
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    data: stockData.data.map(item => item[0]),
+                    scale: true
+                },
+                yAxis: {
+                    type: 'value',
+                    scale: true
+                },
+                series: [{
+                    name: stockName,
+                    type: 'candlestick',
+                    data: stockData.data.map(item => [
+                        item[1],
+                        item[2],
+                        item[3],
+                        item[4]
+                    ]),
+                    itemStyle: {
+                        color: '#ec0000',
+                        color0: '#00da3c',
+                        borderColor: '#ec0000',
+                        borderColor0: '#00da3c'
+                    },
+                    markPoint: {
+                        data: stockData.markPoints.map(point => {
+                            return {
+                                coord: [stockData.data[point.index][0], stockData.data[point.index][point.type === "high" ? 4 : 3]], // 高点使用最高价，低点使用最低价
+                                value: point.type,
+                                itemStyle: {
+                                    color: point.type === "high" ? '#f54545' : '#47b262'
+                                },
+                                label: {
+                                    show: true,
+                                    position: point.type === "high" ? 'top' : 'bottom', // 高点在上，低点在下
+                                    distance: 5, // 调整距离
+                                    formatter: `${point.type === "high" ? stockData.data[point.index][4] : stockData.data[point.index][3]}`, // 显示开盘价
+                                    color: '#fff',
+                                    backgroundColor: point.type === "high" ? '#f54545' : '#47b262',
+                                    borderRadius: 4,
+                                    padding: [4, 8]
+                                },
+                                symbol: point.type === "high" ? 'triangle' : 'rect', // 高点使用三角形，低点使用矩形
+                                symbolSize: point.type === "high" ? [12, 12] : [10, 10],
+                                symbolOffset: [0, point.type === "high" ? -10 : 10] // 高点向上偏移，低点向下偏移
+                            };
+                        }),
+                        z: 100
+                    }
+                }]
+            };
+            
+            chart.setOption(option);
+        }
+
+        // 页面加载时创建图表
+        window.onload = async function() {
+            try {
+                const stocksData = await loadData();
+                stocksData.forEach(stock => {
+                    const chartId = `chart_${Date.now()}`;
+                    const chartDiv = document.createElement('div');
+                    chartDiv.id = chartId;
+                    chartDiv.className = 'chart';
+                    document.getElementById('chartContainer').appendChild(chartDiv);
+                    createKLineChart(chartId, stock.name, stock.data);
+                });
+            } catch (error) {
+                console.error('数据加载失败:', error);
+            }
+        };
+    </script>
+</body>
+</html>
