@@ -96,6 +96,7 @@ type monitor struct {
 	interval time.Duration
 	codes    map[string]Config
 	getName  func(code string) string
+	refresh  bool
 }
 
 func (this *monitor) setConfig(cfg any) {
@@ -104,6 +105,7 @@ func (this *monitor) setConfig(cfg any) {
 	if this.interval < time.Second {
 		this.interval = time.Second * 10
 	}
+	this.refresh = true
 	this.codes = func() map[string]Config {
 		result := make(map[string]Config)
 		for _, v := range m.GetInterfaces("rule") {
@@ -134,37 +136,39 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 			}
 
 			now := time.Now()
-			if i > 0 && now.Before(times.IntegerDay(now).Add(time.Hour*9+time.Minute*30)) {
-				continue
-			}
-			if i > 0 && now.After(times.IntegerDay(now).Add(time.Hour*15)) {
-				continue
-			}
-			if i > 0 && now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30)) &&
-				now.Before(times.IntegerDay(now).Add(time.Hour*13)) {
-				continue
+			if !this.refresh {
+				if now.Before(times.IntegerDay(now).Add(time.Hour*9 + time.Minute*30)) {
+					continue
+				}
+				if now.After(times.IntegerDay(now).Add(time.Hour * 15)) {
+					continue
+				}
+				if now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30)) &&
+					now.Before(times.IntegerDay(now).Add(time.Hour*13)) {
+					continue
+				}
 			}
 
-			//logs.Debug("codes:", this.codes)
 			hint := fmt.Sprintf("数据时间: %s", now.Format(time.TimeOnly))
 			for code, config := range this.codes {
 				if !config.Enable {
 					continue
 				}
-				resp, err := this.Client.GetMinuteTrade(code, 0, 1)
+				resp, err := this.Client.GetKlineDay(code, 0, 1)
 				if err != nil {
 					logs.Err(err)
 					continue
 				}
 				if len(resp.List) > 0 {
-					lastPrice := resp.List[0].Price
-					hint += fmt.Sprintf("\n%s: %.2f, 阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64())
-					logs.Info(code, lastPrice)
+					lastPrice := resp.List[0].Close
+					info := fmt.Sprintf("%s: %.2f", this.getName(code), lastPrice.Float64())
+					hint += "\n" + info
+					logs.Info(info)
 					if config.Greater && lastPrice <= config.Price {
 						notice.DefaultWindows.Publish(&notice.Message{
 							Content: fmt.Sprintf("代码[%s],[%.2f]大于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
 						})
-					} else if !config.Greater && resp.List[0].Price >= config.Price {
+					} else if !config.Greater && lastPrice >= config.Price {
 						notice.DefaultWindows.Publish(&notice.Message{
 							Content: fmt.Sprintf("代码[%s],[%.2f]小于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
 						})
@@ -172,7 +176,8 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 
 				}
 			}
-			s.SetHint(hint)
+			s.SetHint(hint + "\n123")
+			this.refresh = false
 		}
 	}
 }
