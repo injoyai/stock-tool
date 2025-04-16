@@ -43,6 +43,13 @@ func main() {
 					}
 					logs.Err(err)
 				}
+				codes, _ := tdx.NewCodes(mon.Client, oss.UserInjoyDir("/monitor-price/codes.db"))
+				mon.getName = func(code string) string {
+					if codes == nil {
+						return code
+					}
+					return codes.GetName(code)
+				}
 				bs, _ := os.ReadFile(filename)
 				mon.setConfig(bs)
 				mon.Run(context.Background(), s)
@@ -51,14 +58,14 @@ func main() {
 		},
 		tray.WithIco(Ico),
 		tray.WithHint("监听价格"),
-		tray.WithShow(func(m *tray.Menu) { gui() }),
+		tray.WithShow(func(m *tray.Menu) { gui(mon) }),
 		tray.WithStartup(),
 		tray.WithSeparator(),
 		tray.WithExit(),
 	)
 }
 
-func gui() {
+func gui(mon *monitor) {
 	lorca.Run(&lorca.Config{
 		Width:  900,
 		Height: 640,
@@ -73,6 +80,7 @@ func gui() {
 		})
 
 		app.Bind("setConfig", func(cfg any) {
+			mon.setConfig(cfg)
 			oss.New(filename, cfg)
 		})
 
@@ -87,6 +95,7 @@ type monitor struct {
 	*tdx.Client
 	interval time.Duration
 	codes    map[string]Config
+	getName  func(code string) string
 }
 
 func (this *monitor) setConfig(cfg any) {
@@ -120,6 +129,10 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(interval):
+			if this.Client == nil {
+				continue
+			}
+
 			now := time.Now()
 			if i > 0 && now.Before(times.IntegerDay(now).Add(time.Hour*9+time.Minute*30)) {
 				continue
@@ -133,7 +146,7 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 			}
 
 			//logs.Debug("codes:", this.codes)
-			hint := fmt.Sprintf("最新价格: %s\n", now.Format(time.TimeOnly))
+			hint := fmt.Sprintf("数据时间: %s", now.Format(time.TimeOnly))
 			for code, config := range this.codes {
 				if !config.Enable {
 					continue
@@ -144,16 +157,16 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 					continue
 				}
 				if len(resp.List) > 0 {
-					hint += fmt.Sprintf("%s: %.2f\n", code, resp.List[0].Price.Float64())
-					logs.Info(code, resp.List[0].Price)
 					lastPrice := resp.List[0].Price
+					hint += fmt.Sprintf("\n%s: %.2f, 阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64())
+					logs.Info(code, lastPrice)
 					if config.Greater && lastPrice <= config.Price {
 						notice.DefaultWindows.Publish(&notice.Message{
-							Content: fmt.Sprintf("代码[%s],[%.2f]大于阈值[%.2f]", code, lastPrice.Float64(), config.Price.Float64()),
+							Content: fmt.Sprintf("代码[%s],[%.2f]大于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
 						})
 					} else if !config.Greater && resp.List[0].Price >= config.Price {
 						notice.DefaultWindows.Publish(&notice.Message{
-							Content: fmt.Sprintf("代码[%s],[%.2f]小于阈值[%.2f]", code, lastPrice.Float64(), config.Price.Float64()),
+							Content: fmt.Sprintf("代码[%s],[%.2f]小于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
 						})
 					}
 
