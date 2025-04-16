@@ -59,6 +59,7 @@ func main() {
 		tray.WithIco(Ico),
 		tray.WithHint("监听价格"),
 		tray.WithShow(func(m *tray.Menu) { gui(mon) }),
+		tray.WithButton("刷新", func(m *tray.Menu) { mon.Refresh() }),
 		tray.WithStartup(),
 		tray.WithSeparator(),
 		tray.WithExit(),
@@ -96,7 +97,12 @@ type monitor struct {
 	interval time.Duration
 	codes    map[string]Config
 	getName  func(code string) string
+	hand     chan struct{}
 	refresh  bool
+}
+
+func (this *monitor) Refresh() {
+	this.refresh = true
 }
 
 func (this *monitor) setConfig(cfg any) {
@@ -123,61 +129,79 @@ func (this *monitor) setConfig(cfg any) {
 
 func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 	interval := time.Duration(0)
-	for i := 0; ; i++ {
-		if i > 0 {
-			interval = this.interval
+
+	f := func() {
+		if this.Client == nil {
+			return
 		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(interval):
-			if this.Client == nil {
+		now := time.Now()
+		hint := fmt.Sprintf("数据时间: %s", now.Format(time.TimeOnly))
+		defer func() {
+			this.refresh = false
+			s.SetHint(hint)
+		}()
+		if !this.refresh {
+			if now.Before(times.IntegerDay(now).Add(time.Hour*9 + time.Minute*30)) {
+				return
+			}
+			if now.After(times.IntegerDay(now).Add(time.Hour * 15)) {
+				return
+			}
+			if now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30)) &&
+				now.Before(times.IntegerDay(now).Add(time.Hour*13)) {
+				return
+			}
+		}
+		for code, config := range this.codes {
+			if !config.Enable {
 				continue
 			}
-
-			now := time.Now()
-			if !this.refresh {
-				if now.Before(times.IntegerDay(now).Add(time.Hour*9 + time.Minute*30)) {
-					continue
-				}
-				if now.After(times.IntegerDay(now).Add(time.Hour * 15)) {
-					continue
-				}
-				if now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30)) &&
-					now.Before(times.IntegerDay(now).Add(time.Hour*13)) {
-					continue
-				}
+			resp, err := this.Client.GetKlineDay(code, 0, 1)
+			if err != nil {
+				logs.Err(err)
+				continue
 			}
-
-			hint := fmt.Sprintf("数据时间: %s", now.Format(time.TimeOnly))
-			for code, config := range this.codes {
-				if !config.Enable {
-					continue
-				}
-				resp, err := this.Client.GetKlineDay(code, 0, 1)
-				if err != nil {
-					logs.Err(err)
-					continue
-				}
-				if len(resp.List) > 0 {
-					lastPrice := resp.List[0].Close
-					info := fmt.Sprintf("%s: %.2f", this.getName(code), lastPrice.Float64())
-					hint += "\n" + info
-					logs.Info(info)
-					if config.Greater && lastPrice <= config.Price {
+			if len(resp.List) > 0 {
+				lastPrice := resp.List[0].Close
+				info := fmt.Sprintf("%s: %.2f", this.getName(code), lastPrice.Float64())
+				hint += "\n" + info
+				logs.Info(info, "  大于阈值:", lastPrice >= config.Price)
+				if config.Greater && lastPrice >= config.Price {
+					if config.limit < 0 {
+						//向上突破阈值,发送通知
 						notice.DefaultWindows.Publish(&notice.Message{
 							Content: fmt.Sprintf("代码[%s],[%.2f]大于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
 						})
-					} else if !config.Greater && lastPrice >= config.Price {
+					}
+					config.limit = 1
+
+				} else if !config.Greater && lastPrice <= config.Price {
+					if config.limit > 0 {
+						//向下突破阈值,发送通知
 						notice.DefaultWindows.Publish(&notice.Message{
 							Content: fmt.Sprintf("代码[%s],[%.2f]小于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
 						})
 					}
+					config.limit = -1
 
 				}
+
 			}
-			s.SetHint(hint + "\n123")
-			this.refresh = false
+		}
+	}
+
+	for i := 0; ; i++ {
+		if i > 0 {
+			interval = this.interval
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-this.hand:
+			f()
+		case <-time.After(interval):
+			f()
 		}
 	}
 }
@@ -187,6 +211,7 @@ type Config struct {
 	Price   protocol.Price
 	Greater bool
 	Enable  bool
+	limit   int8 //相对阈值状态 -1(阈值下),0,1(阈值上)
 }
 
 /*
