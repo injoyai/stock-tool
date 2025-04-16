@@ -30,7 +30,7 @@ func init() {
 }
 
 func main() {
-	mon := &monitor{}
+	mon := &monitor{hand: make(chan struct{}, 1)}
 	tray.Run(
 		func(s *tray.Tray) {
 
@@ -52,6 +52,7 @@ func main() {
 				}
 				bs, _ := os.ReadFile(filename)
 				mon.setConfig(bs)
+				mon.hand <- struct{}{}
 				mon.Run(context.Background(), s)
 			}()
 
@@ -128,7 +129,6 @@ func (this *monitor) setConfig(cfg any) {
 }
 
 func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
-	interval := time.Duration(0)
 
 	f := func() {
 		if this.Client == nil {
@@ -136,10 +136,6 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 		}
 		now := time.Now()
 		hint := fmt.Sprintf("数据时间: %s", now.Format(time.TimeOnly))
-		defer func() {
-			this.refresh = false
-			s.SetHint(hint)
-		}()
 		if !this.refresh {
 			if now.Before(times.IntegerDay(now).Add(time.Hour*9 + time.Minute*30)) {
 				return
@@ -152,6 +148,7 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 				return
 			}
 		}
+		this.refresh = false
 		for code, config := range this.codes {
 			if !config.Enable {
 				continue
@@ -185,22 +182,20 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 					config.limit = -1
 
 				}
-
 			}
+			s.SetHint(hint)
 		}
 	}
 
 	for i := 0; ; i++ {
-		if i > 0 {
-			interval = this.interval
-		}
-
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-this.hand:
+			logs.Debug("手动刷新")
 			f()
-		case <-time.After(interval):
+		case <-time.After(this.interval):
+			logs.Debug("定时刷新")
 			f()
 		}
 	}
