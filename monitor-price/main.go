@@ -195,7 +195,6 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 			logs.Debug("手动刷新")
 			f()
 		case <-time.After(this.interval):
-			logs.Debug("定时刷新")
 			f()
 		}
 	}
