@@ -1,25 +1,27 @@
-package strategy
+package main
 
 import (
 	"context"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/extend"
 	"path/filepath"
+	"time"
 )
 
-func Pull() error {
-	pull := extend.NewPullKline(
-		nil,
-		[]string{extend.Day, extend.Month},
-		filepath.Join(tdx.DefaultDatabaseDir, "daykline"),
-		1,
-	)
+func Pull(tables []string) (*tdx.Manage, error) {
+	pull := extend.NewPullKline(extend.PullKlineConfig{
+		Codes:   nil,
+		Tables:  tables,
+		Dir:     filepath.Join(tdx.DefaultDatabaseDir, "daykline"),
+		Limit:   1,
+		StartAt: time.Time{},
+	})
 
 	m, err := tdx.NewManage(&tdx.ManageConfig{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = pull.Run(context.Background(), m)
-	return err
+	return m, err
 }
