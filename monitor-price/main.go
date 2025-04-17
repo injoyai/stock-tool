@@ -30,7 +30,7 @@ func init() {
 }
 
 func main() {
-	mon := &monitor{}
+	mon := &monitor{hand: make(chan struct{}, 1)}
 	tray.Run(
 		func(s *tray.Tray) {
 
@@ -43,22 +43,31 @@ func main() {
 					}
 					logs.Err(err)
 				}
+				codes, _ := tdx.NewCodes(mon.Client, oss.UserInjoyDir("/monitor-price/codes.db"))
+				mon.getName = func(code string) string {
+					if codes == nil {
+						return code
+					}
+					return codes.GetName(code)
+				}
 				bs, _ := os.ReadFile(filename)
 				mon.setConfig(bs)
+				mon.hand <- struct{}{}
 				mon.Run(context.Background(), s)
 			}()
 
 		},
 		tray.WithIco(Ico),
 		tray.WithHint("监听价格"),
-		tray.WithShow(func(m *tray.Menu) { gui() }),
+		tray.WithShow(func(m *tray.Menu) { gui(mon) }),
+		tray.WithButton("刷新", func(m *tray.Menu) { mon.Refresh() }),
 		tray.WithStartup(),
 		tray.WithSeparator(),
 		tray.WithExit(),
 	)
 }
 
-func gui() {
+func gui(mon *monitor) {
 	lorca.Run(&lorca.Config{
 		Width:  900,
 		Height: 640,
@@ -73,6 +82,7 @@ func gui() {
 		})
 
 		app.Bind("setConfig", func(cfg any) {
+			mon.setConfig(cfg)
 			oss.New(filename, cfg)
 		})
 
@@ -87,6 +97,13 @@ type monitor struct {
 	*tdx.Client
 	interval time.Duration
 	codes    map[string]Config
+	getName  func(code string) string
+	hand     chan struct{}
+	refresh  bool
+}
+
+func (this *monitor) Refresh() {
+	this.refresh = true
 }
 
 func (this *monitor) setConfig(cfg any) {
@@ -95,6 +112,7 @@ func (this *monitor) setConfig(cfg any) {
 	if this.interval < time.Second {
 		this.interval = time.Second * 10
 	}
+	this.refresh = true
 	this.codes = func() map[string]Config {
 		result := make(map[string]Config)
 		for _, v := range m.GetInterfaces("rule") {
@@ -111,55 +129,73 @@ func (this *monitor) setConfig(cfg any) {
 }
 
 func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
-	interval := time.Duration(0)
-	for i := 0; ; i++ {
-		if i > 0 {
-			interval = this.interval
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(interval):
-			now := time.Now()
-			if i > 0 && now.Before(times.IntegerDay(now).Add(time.Hour*9+time.Minute*30)) {
-				continue
-			}
-			if i > 0 && now.After(times.IntegerDay(now).Add(time.Hour*15)) {
-				continue
-			}
-			if i > 0 && now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30)) &&
-				now.Before(times.IntegerDay(now).Add(time.Hour*13)) {
-				continue
-			}
 
-			//logs.Debug("codes:", this.codes)
-			hint := fmt.Sprintf("最新价格: %s\n", now.Format(time.TimeOnly))
-			for code, config := range this.codes {
-				if !config.Enable {
-					continue
-				}
-				resp, err := this.Client.GetMinuteTrade(code, 0, 1)
-				if err != nil {
-					logs.Err(err)
-					continue
-				}
-				if len(resp.List) > 0 {
-					hint += fmt.Sprintf("%s: %.2f\n", code, resp.List[0].Price.Float64())
-					logs.Info(code, resp.List[0].Price)
-					lastPrice := resp.List[0].Price
-					if config.Greater && lastPrice <= config.Price {
+	f := func() {
+		if this.Client == nil {
+			return
+		}
+		now := time.Now()
+		hint := fmt.Sprintf("数据时间: %s", now.Format(time.TimeOnly))
+		if !this.refresh {
+			if now.Before(times.IntegerDay(now).Add(time.Hour*9 + time.Minute*30)) {
+				return
+			}
+			if now.After(times.IntegerDay(now).Add(time.Hour * 15)) {
+				return
+			}
+			if now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30)) &&
+				now.Before(times.IntegerDay(now).Add(time.Hour*13)) {
+				return
+			}
+		}
+		this.refresh = false
+		for code, config := range this.codes {
+			if !config.Enable {
+				continue
+			}
+			resp, err := this.Client.GetKlineDay(code, 0, 1)
+			if err != nil {
+				logs.Err(err)
+				continue
+			}
+			if len(resp.List) > 0 {
+				lastPrice := resp.List[0].Close
+				info := fmt.Sprintf("%s: %.2f", this.getName(code), lastPrice.Float64())
+				hint += "\n" + info
+				logs.Info(info, "  大于阈值:", lastPrice >= config.Price)
+				if config.Greater && lastPrice >= config.Price {
+					if config.limit < 0 {
+						//向上突破阈值,发送通知
 						notice.DefaultWindows.Publish(&notice.Message{
-							Content: fmt.Sprintf("代码[%s],[%.2f]大于阈值[%.2f]", code, lastPrice.Float64(), config.Price.Float64()),
-						})
-					} else if !config.Greater && resp.List[0].Price >= config.Price {
-						notice.DefaultWindows.Publish(&notice.Message{
-							Content: fmt.Sprintf("代码[%s],[%.2f]小于阈值[%.2f]", code, lastPrice.Float64(), config.Price.Float64()),
+							Content: fmt.Sprintf("代码[%s],[%.2f]大于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
 						})
 					}
+					config.limit = 1
+
+				} else if !config.Greater && lastPrice <= config.Price {
+					if config.limit > 0 {
+						//向下突破阈值,发送通知
+						notice.DefaultWindows.Publish(&notice.Message{
+							Content: fmt.Sprintf("代码[%s],[%.2f]小于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
+						})
+					}
+					config.limit = -1
 
 				}
 			}
 			s.SetHint(hint)
+		}
+	}
+
+	for i := 0; ; i++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-this.hand:
+			logs.Debug("手动刷新")
+			f()
+		case <-time.After(this.interval):
+			f()
 		}
 	}
 }
@@ -169,6 +205,7 @@ type Config struct {
 	Price   protocol.Price
 	Greater bool
 	Enable  bool
+	limit   int8 //相对阈值状态 -1(阈值下),0,1(阈值上)
 }
 
 /*

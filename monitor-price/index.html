@@ -168,7 +168,7 @@
         }
 
         // 添加规则的函数
-        function addRule(code = "", price = 0, greater = false, enable = true) {
+        function addRule(code = "", price = 0, greater = true, enable = true) {
             const ruleDiv = document.createElement('div');
             ruleDiv.className = 'rule';
             ruleDiv.innerHTML = `
