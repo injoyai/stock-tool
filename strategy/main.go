@@ -21,7 +21,8 @@ func main() {
 
 	endAt := time.Now().AddDate(0, 0, 0)
 	offset := 10
-	number := 50
+	number := 80
+	windowSize := 8
 	codes := []string{
 		//"sz000001",
 	}
@@ -33,7 +34,7 @@ func main() {
 	}
 	tables := []string{"DayKline"}
 	strategies := []strategy.Strategy{
-		strategy.NewUpBand(5, false),
+		strategy.NewUpBand(windowSize, false),
 	}
 
 	/*
