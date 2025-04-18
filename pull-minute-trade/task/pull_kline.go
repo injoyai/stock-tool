@@ -68,6 +68,8 @@ func (this *PullKline) Run(ctx context.Context, m *tdx.Manage) error {
 		go func(code string) {
 			defer limit.Done()
 
+			logs.Tracef("处理: %s\n", code)
+
 			tables := []*model.KlineTable{
 				model.NewKlineTable("MinuteKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineMinuteUntil }),
 				model.NewKlineTable("Minute5Kline", func(c *tdx.Client) model.KlineHandler { return c.GetKline5MinuteUntil }),
