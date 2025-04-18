@@ -31,8 +31,8 @@ var (
 
 var (
 	tasks = []task.Tasker{
-		//task.NewPullKline(codes, filepath.Join(dirDatabase, "kline"), disks),//拉取数据
-		//task.NewExportKline(codes, filepath.Join(dirDatabase, "kline"), filepath.Join(dirExport, "k线"), filepath.Join(dirUpload, "k线"), disks, task.AllTables), //导出数据
+		task.NewPullKline(codes, filepath.Join(dirDatabase, "kline"), disks),                                                                                   //拉取数据
+		task.NewExportKline(codes, filepath.Join(dirDatabase, "kline"), filepath.Join(dirExport, "k线"), filepath.Join(dirUpload, "k线"), disks, task.AllTables), //导出数据
 		task.NewPullIndex(filepath.Join(dirUpload, "指数"), nil),
 	}
 )
