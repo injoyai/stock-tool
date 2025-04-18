@@ -1,4 +1,4 @@
-package strategy
+package main
 
 import (
 	"context"
@@ -8,10 +8,10 @@ import (
 	"time"
 )
 
-func Pull() error {
+func Pull(tables []string) (*tdx.Manage, error) {
 	pull := extend.NewPullKline(extend.PullKlineConfig{
 		Codes:   nil,
-		Tables:  []string{extend.Day, extend.Month},
+		Tables:  tables,
 		Dir:     filepath.Join(tdx.DefaultDatabaseDir, "daykline"),
 		Limit:   1,
 		StartAt: time.Time{},
@@ -19,9 +19,9 @@ func Pull() error {
 
 	m, err := tdx.NewManage(&tdx.ManageConfig{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = pull.Run(context.Background(), m)
-	return err
+	return m, err
 }
