@@ -95,7 +95,7 @@ func (this *ExportMinuteKlineAll) Run(ctx context.Context, m *tdx.Manage) error 
 				}
 
 				logs.Debug("导出:", model.ToTime(date, 0).Format("20060102"), code, date, len(minuteKlines))
-				err = klineToCsv(code, minuteKlines, filepath.Join(this.OutputDir, code, model.ToTime(date, 0).Format("20060102")+".csv"), m.Codes.GetName)
+				err = klineToCsv2(code, minuteKlines, filepath.Join(this.OutputDir, code, model.ToTime(date, 0).Format("20060102")+".csv"), m.Codes.GetName)
 				logs.PrintErr(err)
 
 			}

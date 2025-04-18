@@ -39,6 +39,7 @@ func (this *IndexDayKline) TableName() string {
 type Kline struct {
 	Code   string `json:"code" xorm:"-"`         //代码
 	Date   int64  `json:"date"`                  //时间节点 2006-01-02 15:00
+	Last   Price  `json:"last"`                  //昨收
 	Open   Price  `json:"open"`                  //开盘价
 	High   Price  `json:"high"`                  //最高价
 	Low    Price  `json:"low"`                   //最低价
@@ -126,4 +127,22 @@ func (this Klines) Merge(n int) Klines {
 		}
 	}
 	return ks
+}
+
+func ToKlins(code string, ks []*protocol.Kline) Klines {
+	res := Klines{}
+	for _, v := range ks {
+		res = append(res, &Kline{
+			Code:   code,
+			Date:   v.Time.Unix(),
+			Last:   v.Last,
+			Open:   v.Open,
+			High:   v.High,
+			Low:    v.Low,
+			Close:  v.Close,
+			Volume: v.Volume,
+			Amount: v.Amount,
+		})
+	}
+	return res
 }

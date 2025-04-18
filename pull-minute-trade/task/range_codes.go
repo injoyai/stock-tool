@@ -3,28 +3,34 @@ package task
 import (
 	"context"
 	"github.com/injoyai/base/chans"
+	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 )
 
 type Range struct {
-	Codes  []string
-	Append []string
-	limit  int
-	m      *tdx.Manage
+	Codes   []string
+	Append  []string
+	Limit   int
+	Handler func(code string) error
 }
 
-func (this *Range) Run(ctx context.Context, f func(code string)) error {
+func (this *Range) Run(ctx context.Context, m *tdx.Manage) error {
 
 	//1. 获取所有股票代码
 	codes := this.Codes
 	if len(codes) == 0 {
-		codes = this.m.Codes.GetStocks()
+		codes = m.Codes.GetStocks()
 	}
 	codes = append(codes, this.Append...)
 
-	limit := chans.NewWaitLimit(uint(this.limit))
+	if this.Limit <= 0 {
+		this.Limit = 1
+	}
+	limit := chans.NewWaitLimit(uint(this.Limit))
 
+	logs.Trace("处理数量:", len(codes))
 	for _, code := range codes {
+		logs.Tracef("处理: %s\n", code)
 
 		select {
 		case <-ctx.Done():
@@ -34,9 +40,9 @@ func (this *Range) Run(ctx context.Context, f func(code string)) error {
 			limit.Add()
 			go func(code string) {
 				defer limit.Done()
-				f(code)
+				err := this.Handler(code)
+				logs.PrintErr(err)
 			}(code)
-
 		}
 
 	}
