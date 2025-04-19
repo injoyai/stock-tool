@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/injoyai/logs"
-	"pull-minute-trade/db"
-	"pull-minute-trade/model"
+	"pull-tdx/db"
+	"pull-tdx/model"
 )
 
 /*

@@ -7,8 +7,8 @@ import (
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
 	"path/filepath"
-	"pull-minute-trade/db"
-	"pull-minute-trade/model"
+	"pull-tdx/db"
+	"pull-tdx/model"
 	"time"
 	"xorm.io/xorm"
 )

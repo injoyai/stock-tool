@@ -1,4 +1,4 @@
-module pull-minute-trade
+module pull-tdx
 
 go 1.20
 

@@ -10,7 +10,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"log"
 	"path/filepath"
-	"pull-minute-trade/task"
+	"pull-tdx/task"
 )
 
 const (
@@ -22,8 +22,9 @@ var (
 	dirDatabase = filepath.Join(dirBase, cfg.GetString("dir.database", "database"))
 	dirExport   = filepath.Join(dirBase, cfg.GetString("dir.export", "export"))
 	dirUpload   = filepath.Join(dirBase, cfg.GetString("dir.upload", "upload"))
-	config      = &tdx.ManageConfig{Number: cfg.GetInt("number", 2)}
-	disks       = cfg.GetInt("disks", 1)
+	clients     = cfg.GetInt("number", 10)
+	config      = &tdx.ManageConfig{Number: clients}
+	disks       = cfg.GetInt("disks", 100)
 	spec        = cfg.GetString("spec", "0 1 15 * * *")
 	codes       = cfg.GetStrings("codes")
 	startup     = cfg.GetBool("startup")
@@ -42,7 +43,7 @@ func init() {
 	//logs.SetFormatter(logs.TimeFormatter)
 
 	logs.Info("版本:", Version)
-	logs.Debug("连接客户端数量:", cfg.GetInt("number", 2))
+	logs.Debug("连接客户端数量:", clients)
 	logs.Debug("释放协程数量:", disks)
 	logs.Debug("配置的股票代码:", codes)
 	fmt.Println("================================================================")

@@ -8,8 +8,8 @@ import (
 	"github.com/injoyai/tdx"
 	"os"
 	"path/filepath"
-	"pull-minute-trade/db"
-	"pull-minute-trade/model"
+	"pull-tdx/db"
+	"pull-tdx/model"
 	"time"
 )
 

@@ -4,7 +4,7 @@ import (
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/tdx/protocol"
-	"pull-minute-trade/model"
+	"pull-tdx/model"
 	"time"
 )
 
