@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="205eb151-5bc8-4cdc-95ee-a41d592b9a0e" name="更改" comment="开发中">
+    <list default="true" id="205eb151-5bc8-4cdc-95ee-a41d592b9a0e" name="更改" comment="优化">
       <change afterPath="$PROJECT_DIR$/config/config.yaml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/task/pull_kline_day.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
@@ -190,7 +190,8 @@
     <MESSAGE value="修改名称" />
     <MESSAGE value="写好分时成交转分K线,待验证" />
     <MESSAGE value="开发中" />
-    <option name="LAST_COMMIT_MESSAGE" value="开发中" />
+    <MESSAGE value="优化" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>

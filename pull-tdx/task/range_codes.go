@@ -34,7 +34,6 @@ func (this *Range) Run(ctx context.Context, m *tdx.Manage) error {
 	limit := chans.NewWaitLimit(uint(this.Limit))
 
 	total := int64(len(codes))
-	//current := uint32(0)
 	taskName := this.Handler.Name()
 	logs.Tracef("[%s] 处理数量: %d\n", taskName, total)
 	b := bar.New(total)
