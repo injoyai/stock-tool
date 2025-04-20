@@ -8,6 +8,7 @@ LABEL maintainer="injoy"
 
 # 设置固定的项目路径
 ENV WORKDIR /root
+ENV TZ=Asia/Shanghai
 
 # 添加应用可执行文件，并设置执行权限
 ADD ./bin/pull-tdx   $WORKDIR/main

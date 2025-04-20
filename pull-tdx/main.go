@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/injoyai/base/chans"
 	"github.com/injoyai/conv/cfg/v2"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
@@ -14,7 +13,7 @@ import (
 )
 
 const (
-	Version = "v0.1"
+	Version = "v0.2"
 )
 
 var (
@@ -22,25 +21,44 @@ var (
 	dirDatabase = filepath.Join(dirBase, cfg.GetString("dir.database", "database"))
 	dirExport   = filepath.Join(dirBase, cfg.GetString("dir.export", "export"))
 	dirUpload   = filepath.Join(dirBase, cfg.GetString("dir.upload", "upload"))
-	clients     = cfg.GetInt("number", 10)
+	clients     = cfg.GetInt("clients", 10)
 	config      = &tdx.ManageConfig{Number: clients}
-	disks       = cfg.GetInt("disks", 100)
+	disks       = cfg.GetInt("disks", 200)
 	spec        = cfg.GetString("spec", "0 1 15 * * *")
 	codes       = cfg.GetStrings("codes")
 	startup     = cfg.GetBool("startup")
 )
 
 var (
+	dirDatabaseKline  = filepath.Join(dirDatabase, "kline")
+	dirExportKline    = filepath.Join(dirExport, "k线")
+	dirUploadKline    = filepath.Join(dirUpload, "k线")
+	dirUploadIndex    = filepath.Join(dirExport, "指数")
+	dirIncrementKline = filepath.Join(dirUpload, "增量")
+)
+
+var (
 	tasks = []task.Tasker{
-		task.NewPullKline(codes, filepath.Join(dirDatabase, "kline"), disks),                                                                                   //拉取数据
-		task.NewExportKline(codes, filepath.Join(dirDatabase, "kline"), filepath.Join(dirExport, "k线"), filepath.Join(dirUpload, "k线"), disks, task.AllTables), //导出数据
-		task.NewPullIndex(filepath.Join(dirUpload, "指数"), nil),
+
+		//指数
+		task.NewPullIndex(dirUploadIndex, nil),
+
+		//增量
+		task.NewPullKlineDay(codes, dirIncrementKline),
+
+		//k线
+		task.Group("k线",
+			task.NewPullKline(codes, dirDatabaseKline, disks),                                   //拉取数据
+			task.NewExportKline(codes, dirDatabaseKline, dirExportKline, disks, task.AllTables), //导出数据
+			task.NewCompressKline(dirExportKline, dirUploadKline, task.AllTables),               //压缩文件
+		),
 	}
 )
 
 func init() {
 	logs.DefaultFormatter.SetFlag(log.Ltime | log.Lshortfile)
-	//logs.SetFormatter(logs.TimeFormatter)
+	logs.SetFormatter(logs.TimeFormatter)
+	logs.SetShowColor(false)
 
 	logs.Info("版本:", Version)
 	logs.Debug("连接客户端数量:", clients)
@@ -65,19 +83,18 @@ func run() {
 
 	 */
 
-	//2. 初始化
-	queue := chans.NewLimit(1)
+	//2. 任务内容
 	f := func() {
+		if !m.Workday.TodayIs() && !startup {
+			logs.Err("今天不是工作日")
+			return
+		}
 		fmt.Println("================================================================")
 		logs.Debug("开始执行...")
-		queue.Add()
-		defer queue.Done()
-
 		ctx := context.Background()
-
 		err = task.Run(ctx, m, tasks...)
 		logs.PrintErr(err)
-
+		logs.Debug("执行完成")
 	}
 
 	//3. 设置定时
