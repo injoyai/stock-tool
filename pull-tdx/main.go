@@ -23,7 +23,7 @@ var (
 	dirUpload   = filepath.Join(dirBase, cfg.GetString("dir.upload", "upload"))
 	clients     = cfg.GetInt("clients", 10)
 	config      = &tdx.ManageConfig{Number: clients}
-	disks       = cfg.GetInt("disks", 200)
+	disks       = cfg.GetInt("disks", 150)
 	spec        = cfg.GetString("spec", "0 1 15 * * *")
 	codes       = cfg.GetStrings("codes")
 	startup     = cfg.GetBool("startup")

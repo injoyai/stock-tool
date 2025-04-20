@@ -5,21 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="205eb151-5bc8-4cdc-95ee-a41d592b9a0e" name="更改" comment="优化">
-      <change afterPath="$PROJECT_DIR$/config/config.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/task/pull_kline_day.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/model_kline.go" beforeDir="false" afterPath="$PROJECT_DIR$/model/model_kline.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/task/common.go" beforeDir="false" afterPath="$PROJECT_DIR$/task/common.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/task/compress_kline.go" beforeDir="false" afterPath="$PROJECT_DIR$/task/compress_kline.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/task/export_kline.go" beforeDir="false" afterPath="$PROJECT_DIR$/task/export_kline.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/task/group.go" beforeDir="false" afterPath="$PROJECT_DIR$/task/group.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/task/interface.go" beforeDir="false" afterPath="$PROJECT_DIR$/task/interface.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/task/pull_kline.go" beforeDir="false" afterPath="$PROJECT_DIR$/task/pull_kline.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/task/range_codes.go" beforeDir="false" afterPath="$PROJECT_DIR$/task/range_codes.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
