@@ -34,7 +34,7 @@ var (
 	dirDatabaseKline  = filepath.Join(dirDatabase, "kline")
 	dirExportKline    = filepath.Join(dirExport, "k线")
 	dirUploadKline    = filepath.Join(dirUpload, "k线")
-	dirUploadIndex    = filepath.Join(dirExport, "指数")
+	dirUploadIndex    = filepath.Join(dirUpload, "指数")
 	dirIncrementKline = filepath.Join(dirUpload, "增量")
 )
 
@@ -49,9 +49,9 @@ var (
 
 		//k线
 		task.Group("k线",
-			task.NewPullKline(codes, dirDatabaseKline, disks),                                   //拉取数据
-			task.NewExportKline(codes, dirDatabaseKline, dirExportKline, disks, task.AllTables), //导出数据
-			task.NewCompressKline(dirExportKline, dirUploadKline, task.AllTables),               //压缩文件
+			task.NewPullKline(codes, dirDatabaseKline, disks),                                   //拉取
+			task.NewExportKline(codes, dirDatabaseKline, dirExportKline, disks, task.AllTables), //导出
+			task.NewCompressKline(dirExportKline, dirUploadKline, task.AllTables),               //压缩
 		),
 	}
 )
