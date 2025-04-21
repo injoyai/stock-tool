@@ -17,7 +17,7 @@ func klineToCsv2(code string, ks model.Klines, filename string, getName func(cod
 	for _, v := range ks {
 		t := time.Unix(v.Date, 0)
 		ls = append(ls, []any{
-			t.Format(time.DateTime),
+			t.Format(time.DateOnly),
 			t.Format("15:04"),
 			code,
 			getName(code),
@@ -42,7 +42,7 @@ func klineToCsv(code string, ks []*protocol.Kline, filename string, getName func
 	ls := [][]any{title}
 	for _, v := range ks {
 		ls = append(ls, []any{
-			v.Time.Format(time.DateTime),
+			v.Time.Format(time.DateOnly),
 			v.Time.Format("15:04"),
 			code,
 			getName(code),
