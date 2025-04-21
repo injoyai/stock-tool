@@ -10,6 +10,7 @@ import (
 	"log"
 	"path/filepath"
 	"pull-tdx/task"
+	"runtime"
 )
 
 const (
@@ -58,9 +59,10 @@ var (
 func init() {
 	logs.DefaultFormatter.SetFlag(log.Ltime | log.Lshortfile)
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.SetShowColor(false)
+	logs.SetShowColor(runtime.GOOS != "windows")
 
 	logs.Info("版本:", Version)
+	logs.Debug("启动立马执行:", startup)
 	logs.Debug("连接客户端数量:", clients)
 	logs.Debug("释放协程数量:", disks)
 	logs.Debug("配置的股票代码:", codes)
