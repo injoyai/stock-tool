@@ -2,16 +2,21 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"github.com/injoyai/base/chans"
+	"github.com/injoyai/goutil/g"
+	"github.com/injoyai/goutil/str/bar"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"time"
 )
 
 type Range struct {
 	Codes   []string
 	Append  []string
 	Limit   int
-	Handler func(code string) error
+	Retry   int
+	Handler Handler
 }
 
 func (this *Range) Run(ctx context.Context, m *tdx.Manage) error {
@@ -28,10 +33,24 @@ func (this *Range) Run(ctx context.Context, m *tdx.Manage) error {
 	}
 	limit := chans.NewWaitLimit(uint(this.Limit))
 
-	logs.Trace("处理数量:", len(codes))
+	total := int64(len(codes))
+	taskName := this.Handler.Name()
+	logs.Tracef("[%s] 处理数量: %d\n", taskName, total)
+	b := bar.New(total)
+	b.AddOption(func(f *bar.Format) {
+		f.Entity.SetFormatter(func(e *bar.Format) string {
+			return fmt.Sprintf("\r%s [%s] %s  %s  %s  %-10s",
+				time.Now().Format(time.TimeOnly),
+				taskName,
+				e.Bar,
+				e.RateSize,
+				e.Speed,
+				e.Used,
+			)
+		})
+	})
+	b.Add(0).Flush()
 	for _, code := range codes {
-		logs.Tracef("处理: %s\n", code)
-
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -40,14 +59,18 @@ func (this *Range) Run(ctx context.Context, m *tdx.Manage) error {
 			limit.Add()
 			go func(code string) {
 				defer limit.Done()
-				err := this.Handler(code)
-				logs.PrintErr(err)
+				defer func() {
+					b.Add(1).Flush()
+				}()
+				err := g.Retry(func() error { return this.Handler.Handler(ctx, m, code) }, this.Retry)
+				if err != nil {
+					logs.Errf("[%s] 处理: %s, 失败: %v\n", taskName, code, err)
+				}
 			}(code)
-		}
 
+		}
 	}
 
 	limit.Wait()
-
 	return nil
 }

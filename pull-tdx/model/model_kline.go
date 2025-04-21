@@ -51,12 +51,18 @@ type Kline struct {
 
 // RisePrice 涨跌
 func (this *Kline) RisePrice() Price {
+	if this.Last > 0 {
+		return this.Close - this.Last
+	}
 	return this.Close - this.Open
 }
 
 // RiseRate 涨跌幅
 func (this *Kline) RiseRate() float64 {
-	return float64(this.Close-this.Open) * 100 / float64(this.Open)
+	if this.Last == 0 {
+		return float64(this.Close-this.Open) / float64(this.Open) * 100
+	}
+	return float64(this.Close-this.Last) / float64(this.Last) * 100
 }
 
 // Amplitude 振幅

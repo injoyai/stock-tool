@@ -4,7 +4,7 @@ import (
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/tdx/protocol"
-	"pull-minute-trade/model"
+	"pull-tdx/model"
 	"time"
 )
 
@@ -15,9 +15,10 @@ var (
 func klineToCsv2(code string, ks model.Klines, filename string, getName func(code string) string) error {
 	ls := [][]any{title}
 	for _, v := range ks {
+		t := time.Unix(v.Date, 0)
 		ls = append(ls, []any{
-			time.Unix(v.Date, 0).Format(time.DateTime),
-			time.Unix(v.Date, 0).Format("15:04"),
+			t.Format(time.DateTime),
+			t.Format("15:04"),
 			code,
 			getName(code),
 			v.Open.Float64(),

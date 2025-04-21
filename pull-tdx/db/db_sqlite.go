@@ -3,7 +3,7 @@ package db
 import (
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/database/xorms"
-	"pull-minute-trade/model"
+	"pull-tdx/model"
 )
 
 type Sqlite struct {

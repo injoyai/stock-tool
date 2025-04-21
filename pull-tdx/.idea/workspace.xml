@@ -4,42 +4,8 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="205eb151-5bc8-4cdc-95ee-a41d592b9a0e" name="更改" comment="开发中">
-      <change beforePath="$PROJECT_DIR$/../pull-daykline-once/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/../pull-daykline-once/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/build.sh" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/config/config.yaml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/db/db_influxdb.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/db/db_mysql.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/db/db_sqlite.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/dockerpush.sh" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/docs/sz000001-1minute-20250227.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/docs/sz000001-1minute-20250305-1.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/docs/sz000001-1minute-20250305-2.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/docs/sz000001-5minute-20250227.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/go.mod" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/go.sum" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/ico.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/main.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/model/model.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/model/model_kline.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/model/model_trade.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/model/util.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/model/util_test.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/common.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/compress_kline.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/export_index.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/export_kline.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/export_minute_kline.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/export_minute_kline_more.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/group.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/interface.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/pull_index.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/pull_kline.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/pull_trade.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/task/range_codes.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/tdx.service" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/testdata/test_export_kline.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pull-minute-trade/testdata/test_pull_daykline.go" beforeDir="false" />
+    <list default="true" id="205eb151-5bc8-4cdc-95ee-a41d592b9a0e" name="更改" comment="优化">
+      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -77,6 +43,9 @@
   <component name="GoLibraries">
     <option name="indexEntireGoPath" value="true" />
   </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8
 }</component>
@@ -86,32 +55,34 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultGoTemplateProperty": "Go File",
-    "Go 构建.go build pull-minute-trade.executor": "Run",
-    "Go 构建.go build pull-minute-trade/testdata (1).executor": "Run",
-    "Go 构建.go build pull-minute-trade/testdata (2).executor": "Run",
-    "Go 构建.go build pull-minute-trade/testdata.executor": "Run",
-    "Go 测试.TestToTime in pull-minute-trade/model.executor": "Run",
-    "Go 测试.pull-minute-trade/model 中的 TestFromTime.executor": "Run",
-    "Go 测试.pull-minute-trade/model 中的 TestToTime.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.go.formatter.settings.were.checked": "true",
-    "RunOnceActivity.go.migrated.go.modules.settings": "true",
-    "RunOnceActivity.go.modules.automatic.dependencies.download": "true",
-    "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
-    "com.codeium.enabled": "true",
-    "git-widget-placeholder": "main",
-    "go.import.settings.migrated": "true",
-    "go.sdk.automatically.set": "true",
-    "last_opened_file_path": "C:/Users/QL1211",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "go.sdk"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultGoTemplateProperty&quot;: &quot;Go File&quot;,
+    &quot;Go 构建.go build pull-minute-trade.executor&quot;: &quot;Run&quot;,
+    &quot;Go 构建.go build pull-minute-trade/testdata (1).executor&quot;: &quot;Run&quot;,
+    &quot;Go 构建.go build pull-minute-trade/testdata (2).executor&quot;: &quot;Run&quot;,
+    &quot;Go 构建.go build pull-minute-trade/testdata.executor&quot;: &quot;Run&quot;,
+    &quot;Go 测试.TestToTime in pull-minute-trade/model.executor&quot;: &quot;Run&quot;,
+    &quot;Go 测试.pull-minute-trade/model 中的 TestFromTime.executor&quot;: &quot;Run&quot;,
+    &quot;Go 测试.pull-minute-trade/model 中的 TestToTime.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.modules.automatic.dependencies.download&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.modules.go.list.on.any.changes.was.set&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;com.codeium.enabled&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
+    &quot;go.sdk.automatically.set&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/injoy&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;go.sdk&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="E:\GOPATH\src\github.com\injoyai\stock-tool\pull-minute-trade\task" />
@@ -119,7 +90,7 @@
       <recent name="E:\GOPATH\src\github.com\injoyai\stock-tool\pull-minute-trade\data\database\tdx" />
     </key>
   </component>
-  <component name="RunManager" selected="Go 构建.go build pull-minute-trade">
+  <component name="RunManager" selected="Go 构建.go build pull-tdx">
     <configuration name="go build pull-minute-trade" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
       <module name="pull-minute-trade" />
       <working_directory value="$PROJECT_DIR$" />
@@ -129,13 +100,13 @@
       <filePath value="$PROJECT_DIR$/main.go" />
       <method v="2" />
     </configuration>
-    <configuration name="go build pull-minute-trade/testdata (2)" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
-      <module name="pull-minute-trade" />
+    <configuration name="go build pull-tdx" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="pull-tdx" />
       <working_directory value="$PROJECT_DIR$" />
-      <kind value="FILE" />
-      <package value="pull-minute-trade/testdata" />
+      <kind value="PACKAGE" />
+      <package value="pull-tdx" />
       <directory value="$PROJECT_DIR$" />
-      <filePath value="$PROJECT_DIR$/testdata/export_kline.go" />
+      <filePath value="$PROJECT_DIR$/main.go" />
       <method v="2" />
     </configuration>
     <configuration name="TestToTime in pull-minute-trade/model" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
@@ -176,11 +147,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Go 构建.go build pull-tdx" />
         <item itemvalue="Go 构建.go build pull-minute-trade" />
         <item itemvalue="Go 测试.TestToTime in pull-minute-trade/model" />
         <item itemvalue="Go 测试.pull-minute-trade/model 中的 TestFromTime" />
         <item itemvalue="Go 测试.pull-minute-trade/model 中的 TestToTime" />
-        <item itemvalue="Go 构建.go build pull-minute-trade/testdata (2)" />
       </list>
     </recent_temporary>
   </component>
@@ -205,7 +176,8 @@
     <MESSAGE value="修改名称" />
     <MESSAGE value="写好分时成交转分K线,待验证" />
     <MESSAGE value="开发中" />
-    <option name="LAST_COMMIT_MESSAGE" value="开发中" />
+    <MESSAGE value="优化" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>

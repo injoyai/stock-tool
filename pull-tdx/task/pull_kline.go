@@ -2,13 +2,11 @@ package task
 
 import (
 	"context"
-	"github.com/injoyai/base/chans"
-	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
 	"path/filepath"
-	"pull-minute-trade/db"
-	"pull-minute-trade/model"
+	"pull-tdx/db"
+	"pull-tdx/model"
 	"time"
 	"xorm.io/xorm"
 )
@@ -28,6 +26,18 @@ var (
 		"QuarterKline":  "季线",
 		"YearKline":     "年线",
 	}
+	PullKlineTables = []*model.KlineTable{
+		model.NewKlineTable("MinuteKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineMinuteUntil }),
+		model.NewKlineTable("Minute5Kline", func(c *tdx.Client) model.KlineHandler { return c.GetKline5MinuteUntil }),
+		model.NewKlineTable("Minute15Kline", func(c *tdx.Client) model.KlineHandler { return c.GetKline15MinuteUntil }),
+		model.NewKlineTable("Minute30Kline", func(c *tdx.Client) model.KlineHandler { return c.GetKline30MinuteUntil }),
+		model.NewKlineTable("HourKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineHourUntil }),
+		model.NewKlineTable("DayKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineDayUntil }),
+		model.NewKlineTable("WeekKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineWeekUntil }),
+		model.NewKlineTable("MonthKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineMonthUntil }),
+		model.NewKlineTable("QuarterKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineQuarterUntil }),
+		model.NewKlineTable("YearKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineYearUntil }),
+	}
 )
 
 func NewPullKline(codes []string, dir string, limit int) *PullKline {
@@ -45,99 +55,70 @@ type PullKline struct {
 }
 
 func (this *PullKline) Name() string {
-	return "更新k线数据"
+	return "更新k线"
 }
 
 func (this *PullKline) Run(ctx context.Context, m *tdx.Manage) error {
-	limit := chans.NewWaitLimit(uint(this.limit))
-
-	//1. 获取所有股票代码
-	codes := this.Codes
-	if len(codes) == 0 {
-		codes = m.Codes.GetStocks()
+	r := &Range{
+		Codes:   this.Codes,
+		Limit:   this.limit,
+		Retry:   3,
+		Handler: this,
 	}
+	return r.Run(ctx, m)
+}
 
-	for _, v := range codes {
+func (this *PullKline) Handler(ctx context.Context, m *tdx.Manage, code string) error {
+	//1. 打开数据库
+	b, err := db.Open(filepath.Join(this.Dir, code+".db"))
+	if err != nil {
+		return err
+	}
+	defer b.Close()
+	for _, table := range PullKlineTables {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 		}
 
-		limit.Add()
-		go func(code string) {
-			defer limit.Done()
+		b.Sync2(table)
 
-			logs.Tracef("处理: %s\n", code)
+		//2. 获取最后一条数据
+		last, err := b.GetLastKline(table)
+		if err != nil {
+			return err
+		}
 
-			tables := []*model.KlineTable{
-				model.NewKlineTable("MinuteKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineMinuteUntil }),
-				model.NewKlineTable("Minute5Kline", func(c *tdx.Client) model.KlineHandler { return c.GetKline5MinuteUntil }),
-				model.NewKlineTable("Minute15Kline", func(c *tdx.Client) model.KlineHandler { return c.GetKline15MinuteUntil }),
-				model.NewKlineTable("Minute30Kline", func(c *tdx.Client) model.KlineHandler { return c.GetKline30MinuteUntil }),
-				model.NewKlineTable("HourKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineHourUntil }),
-				model.NewKlineTable("DayKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineDayUntil }),
-				model.NewKlineTable("WeekKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineWeekUntil }),
-				model.NewKlineTable("MonthKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineMonthUntil }),
-				model.NewKlineTable("QuarterKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineQuarterUntil }),
-				model.NewKlineTable("YearKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineYearUntil }),
-			}
+		//3. 从服务器获取数据
+		insert := model.Klines{}
+		err = m.Do(func(c *tdx.Client) error {
+			insert, err = this.pull(code, last.Date, table.Handler(c))
+			return err
+		})
+		if err != nil {
+			return err
+		}
 
-			//1. 打开数据库
-			b, err := db.Open(filepath.Join(this.Dir, code+".db"))
-			if err != nil {
-				logs.Err(err)
-				return
-			}
-			defer b.Close()
-			for _, table := range tables {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
-
-				b.Sync2(table)
-
-				//2. 获取最后一条数据
-				last, err := b.GetLastKline(table)
-				if err != nil {
-					logs.Err(err)
-					return
-				}
-
-				//3. 从服务器获取数据
-				insert := model.Klines{}
-				err = m.Do(func(c *tdx.Client) error {
-					insert, err = this.pull(code, last.Date, table.Handler(c))
-					return err
-				})
-				if err != nil {
-					logs.Err(err)
-					return
-				}
-
-				//4. 插入数据库
-				err = b.SessionFunc(func(session *xorm.Session) error {
-					for i, v := range insert {
-						if i == 0 {
-							if _, err := session.Table(table).Where("Date >= ?", v.Date).Delete(); err != nil {
-								return err
-							}
-						}
-						if _, err := session.Table(table).Insert(v); err != nil {
-							return err
-						}
+		//4. 插入数据库
+		err = b.SessionFunc(func(session *xorm.Session) error {
+			for i, v := range insert {
+				if i == 0 {
+					if _, err := session.Table(table).Where("Date >= ?", v.Date).Delete(); err != nil {
+						return err
 					}
-					return nil
-				})
-				logs.PrintErr(err)
-
+				}
+				if _, err := session.Table(table).Insert(v); err != nil {
+					return err
+				}
 			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 
-		}(v)
 	}
-	limit.Wait()
 	return nil
 }
 
@@ -159,6 +140,7 @@ func (this *PullKline) pull(code string, lastDate int64, f func(code string, f f
 		ks = append(ks, &model.Kline{
 			Code:   code,
 			Date:   v.Time.Unix(),
+			Last:   v.Last,
 			Open:   v.Open,
 			High:   v.High,
 			Low:    v.Low,
