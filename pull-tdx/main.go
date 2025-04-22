@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"pull-tdx/task"
 	"runtime"
+	"time"
 )
 
 const (
@@ -62,6 +63,7 @@ func init() {
 	logs.SetShowColor(runtime.GOOS != "windows")
 
 	logs.Info("版本:", Version)
+	logs.Info("日期:", time.Now().Format(time.DateOnly))
 	logs.Debug("启动立马执行:", startup)
 	logs.Debug("连接客户端数量:", clients)
 	logs.Debug("释放协程数量:", disks)
