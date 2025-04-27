@@ -19,21 +19,21 @@ func main() {
 	m, err := tdx.NewManage(nil, tdx.WithRedial())
 	logs.PanicErr(err)
 
-	//{
-	//	do2(m, m.Codes.GetStocks(), time.Now().AddDate(0, 0, -800), time.Now())
-	//	return
-	//}
+	{
+		doHistory(m, m.Codes.GetStocks(), time.Date(1990, 1, 1, 0, 0, 0, 0, time.Local), time.Now())
+		return
+	}
 
-	err = do(m, m.Codes.GetStocks())
+	err = doToday(m, m.Codes.GetStocks())
 	logs.PrintErr(err)
 
 	cr := cron.New(cron.WithSeconds())
-	cr.AddFunc("0 10 15 * * *", func() { do(m, m.Codes.GetStocks()) })
+	cr.AddFunc("0 10 15 * * *", func() { doToday(m, m.Codes.GetStocks()) })
 	cr.Start()
 	select {}
 }
 
-func do(m *tdx.Manage, codes []string) error {
+func doToday(m *tdx.Manage, codes []string) error {
 	logs.Debug("开始执行...")
 
 	if !m.Workday.TodayIs() {
@@ -88,14 +88,14 @@ func do(m *tdx.Manage, codes []string) error {
 	return oss.New("./data/增量/日线/"+time.Now().Format("2006/2006-01-02")+".csv", buf)
 }
 
-func do2(m *tdx.Manage, codes []string, start, end time.Time) error {
+func doHistory(m *tdx.Manage, codes []string, start, end time.Time) error {
 
 	all := make(map[string][]*Kline)
 
 	for _, code := range codes {
 		logs.Debug("开始执行:", code)
 		err := m.Do(func(c *tdx.Client) error {
-			resp, err := c.GetKlineDay(code, 0, 800)
+			resp, err := c.GetKlineDayAll(code)
 			if err != nil {
 				return err
 			}
