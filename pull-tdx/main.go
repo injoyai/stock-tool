@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	Version = "v0.2"
+	Version = "v0.3"
+	Details = "增加重命名任务,以适配自动同步的问题"
 )
 
 var (
@@ -66,6 +67,7 @@ func init() {
 
 	logs.Info("版本:", Version)
 	logs.Info("日期:", time.Now().Format(time.DateOnly))
+	logs.Info("说明:", Details)
 	logs.Debug("启动立马执行:", startup)
 	logs.Debug("连接客户端数量:", clients)
 	logs.Debug("释放协程数量:", disks)
