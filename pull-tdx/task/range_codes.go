@@ -11,21 +11,21 @@ import (
 	"time"
 )
 
-type Range struct {
-	Codes   []string
-	Append  []string
+type Range[T any] struct {
+	Codes   []T
+	Append  []T
 	Limit   int
 	Retry   int
-	Handler Handler
+	Handler Handler[T]
 }
 
-func (this *Range) Run(ctx context.Context, m *tdx.Manage) error {
+func (this *Range[T]) Run(ctx context.Context, m *tdx.Manage) error {
 
 	//1. 获取所有股票代码
 	codes := this.Codes
-	if len(codes) == 0 {
-		codes = m.Codes.GetStocks()
-	}
+	//if len(codes) == 0 {
+	//	codes = m.Codes.GetStocks()
+	//}
 	codes = append(codes, this.Append...)
 
 	if this.Limit <= 0 {
@@ -57,7 +57,7 @@ func (this *Range) Run(ctx context.Context, m *tdx.Manage) error {
 
 		default:
 			limit.Add()
-			go func(code string) {
+			go func(code T) {
 				defer limit.Done()
 				defer func() {
 					b.Add(1).Flush()

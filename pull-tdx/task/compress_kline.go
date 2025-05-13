@@ -29,7 +29,7 @@ func (this *CompressKline) Name() string {
 func (this *CompressKline) Run(ctx context.Context, m *tdx.Manage) error {
 	//生成压缩文件
 	os.MkdirAll(this.UploadDir, 0777)
-	r := &Range{
+	r := &Range[string]{
 		Codes: func() []string {
 			ls := []string(nil)
 			for _, tableName := range this.Tables {

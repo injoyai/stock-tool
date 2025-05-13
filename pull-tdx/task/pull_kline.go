@@ -59,8 +59,8 @@ func (this *PullKline) Name() string {
 }
 
 func (this *PullKline) Run(ctx context.Context, m *tdx.Manage) error {
-	r := &Range{
-		Codes:   this.Codes,
+	r := &Range[string]{
+		Codes:   GetCodes(m, this.Codes),
 		Limit:   this.limit,
 		Retry:   3,
 		Handler: this,

@@ -31,8 +31,8 @@ func (this *ExportKline) Name() string {
 }
 
 func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
-	r := &Range{
-		Codes:   this.Codes,
+	r := &Range[string]{
+		Codes:   GetCodes(m, this.Codes),
 		Limit:   this.Limit,
 		Retry:   3,
 		Handler: this,
