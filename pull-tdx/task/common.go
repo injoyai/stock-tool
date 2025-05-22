@@ -70,3 +70,7 @@ func GetCodes(m *tdx.Manage, codes []string) []string {
 	}
 	return codes
 }
+
+const (
+	DefaultRetry = 3
+)

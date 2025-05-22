@@ -12,11 +12,11 @@ import (
 )
 
 type Range[T any] struct {
-	Codes   []T
-	Append  []T
-	Limit   int
-	Retry   int
-	Handler Handler[T]
+	Codes   []T        //股票代码
+	Append  []T        //附加代码
+	Limit   int        //并发数量
+	Retry   int        //重试次数
+	Handler Handler[T] //处理函数
 }
 
 func (this *Range[T]) Run(ctx context.Context, m *tdx.Manage) error {

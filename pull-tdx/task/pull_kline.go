@@ -62,7 +62,7 @@ func (this *PullKline) Run(ctx context.Context, m *tdx.Manage) error {
 	r := &Range[string]{
 		Codes:   GetCodes(m, this.Codes),
 		Limit:   this.limit,
-		Retry:   3,
+		Retry:   DefaultRetry,
 		Handler: this,
 	}
 	return r.Run(ctx, m)
