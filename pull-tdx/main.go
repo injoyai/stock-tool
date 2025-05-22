@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	Version = "v0.3"
-	Details = "增加重命名任务,以适配自动同步的问题"
+	Version = "v0.4"
+	Details = "增加Server酱通知"
 )
 
 var (
@@ -56,6 +56,12 @@ var (
 			task.NewExportKline(codes, dirDatabaseKline, dirExportKline, disks, task.AllTables), //导出
 			task.NewCompressKline(dirExportKline, dirExportCompressKline, task.AllTables),       //压缩
 			task.NewRename(dirExportCompressKline, dirUploadKline),                              //移动
+		),
+
+		//通知
+		task.NewNoticeServerChan(
+			cfg.GetString("notice.serverChan.sendKey"),
+			cfg.GetString("notice.serverChan.message"),
 		),
 	}
 )

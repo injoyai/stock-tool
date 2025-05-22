@@ -1075,6 +1075,8 @@ github.com/injoyai/ios v0.0.6/go.mod h1:9HemWSJTmhyJCnr+kH+lRfmvrEdABi1rkCBVsbqV
 github.com/injoyai/logs v1.0.7/go.mod h1:CLchJCGhb39Obyrci816R+KMtbxZhgPs0FuikhyixK4=
 github.com/injoyai/logs v1.0.9 h1:Wq7rCVIQKcPx+z+lzKQb2qyDK4TML/cgmaSZN9tx33c=
 github.com/injoyai/logs v1.0.9/go.mod h1:CLchJCGhb39Obyrci816R+KMtbxZhgPs0FuikhyixK4=
+github.com/injoyai/notice v0.0.2 h1:NfCu5X/j5kuvABwOgeahV6JWgP64hFIgObOyv+DtPNQ=
+github.com/injoyai/notice v0.0.2/go.mod h1:AgpVGO0p8Kyx3NWBCpxG1OFgHVgDRKMobssRLNCFj1c=
 github.com/injoyai/tdx v0.0.17 h1:b0Ak0iU7lbWLo31PsUOep9tavpawQJ5cqfb70fKaw+g=
 github.com/injoyai/tdx v0.0.17/go.mod h1:sJ46xwTu7fCyBJy3KSJIZB0crnYYSV5kE8lQ5EpxAhU=
 github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07/go.mod h1:co9pwDoBCm1kGxawmb4sPq0cSIOOWNPT4KnHotMP1Zg=
