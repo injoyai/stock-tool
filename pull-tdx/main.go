@@ -34,34 +34,43 @@ var (
 
 var (
 	dirDatabaseKline       = filepath.Join(dirDatabase, "kline")
+	dirDatabaseTrade       = filepath.Join(dirDatabase, "trade")
 	dirExportKline         = filepath.Join(dirExport, "k线")
 	dirExportCompressKline = filepath.Join(dirExport, "压缩/k线")
 	dirUploadKline         = filepath.Join(dirUpload, "k线")
 	dirUploadIndex         = filepath.Join(dirUpload, "指数")
 	dirIncrementKline      = filepath.Join(dirUpload, "增量")
+	dirUploadTrade         = filepath.Join(dirUpload, "分时成交")
 )
 
 var (
 	tasks = []task.Tasker{
 
-		//指数
-		task.NewPullIndex(dirUploadIndex, nil),
+		////指数
+		//task.NewPullIndex(dirUploadIndex, nil),
+		//
+		////增量
+		//task.NewPullKlineDay(codes, dirIncrementKline),
+		//
+		////k线
+		//task.Group("k线",
+		//	task.NewPullKline(codes, dirDatabaseKline, disks),                                   //拉取
+		//	task.NewExportKline(codes, dirDatabaseKline, dirExportKline, disks, task.AllTables), //导出
+		//	task.NewCompressKline(dirExportKline, dirExportCompressKline, task.AllTables),       //压缩
+		//	task.NewRename(dirExportCompressKline, dirUploadKline),                              //移动
+		//	task.NewNoticeServerChan(
+		//		cfg.GetString("notice.serverChan.sendKey"),
+		//		"k线同步完成",
+		//	),
+		//),
 
-		//增量
-		task.NewPullKlineDay(codes, dirIncrementKline),
-
-		//k线
-		task.Group("k线",
-			task.NewPullKline(codes, dirDatabaseKline, disks),                                   //拉取
-			task.NewExportKline(codes, dirDatabaseKline, dirExportKline, disks, task.AllTables), //导出
-			task.NewCompressKline(dirExportKline, dirExportCompressKline, task.AllTables),       //压缩
-			task.NewRename(dirExportCompressKline, dirUploadKline),                              //移动
-		),
-
-		//通知
-		task.NewNoticeServerChan(
-			cfg.GetString("notice.serverChan.sendKey"),
-			cfg.GetString("notice.serverChan.message"),
+		task.Group("分时成交",
+			task.NewPullTrade(codes, dirDatabaseTrade, disks), //拉取
+			task.NewExportTrade(codes, dirUploadTrade, disks), //导出
+			task.NewNoticeServerChan(
+				cfg.GetString("notice.serverChan.sendKey"),
+				"分时成交同步完成",
+			),
 		),
 	}
 )
