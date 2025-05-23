@@ -65,8 +65,8 @@ var (
 		//),
 
 		task.Group("分时成交",
-			task.NewPullTrade(codes, dirDatabaseTrade, disks), //拉取
-			task.NewExportTrade(codes, dirUploadTrade, disks), //导出
+			task.NewPullTrade(codes, dirDatabaseTrade, disks),                   //拉取
+			task.NewExportTrade(codes, dirDatabaseTrade, dirUploadTrade, disks), //导出
 			task.NewNoticeServerChan(
 				cfg.GetString("notice.serverChan.sendKey"),
 				"分时成交同步完成",

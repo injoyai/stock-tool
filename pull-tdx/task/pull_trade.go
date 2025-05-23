@@ -14,14 +14,14 @@ import (
 
 func NewPullTrade(codes []string, dir string, limit int) *PullTrade {
 	return &PullTrade{
-		Dir:   dir,
+		Dir:   tradeDir(dir),
 		Codes: codes,
 		limit: limit,
 	}
 }
 
 type PullTrade struct {
-	Dir   string   //数据保存目录
+	Dir   tradeDir //数据保存目录
 	Codes []string //用户指定操作的股票
 	limit int
 }
@@ -139,9 +139,8 @@ func (this *PullTrade) _range(code string, fn func(year int, filename string) er
 	now := time.Now().Year()
 	start := 2000
 	for i := start; i <= now; i++ {
-		filename := filepath.Join(this.Dir, code, code+"-"+conv.String(i+1)+".db")
-		if !oss.Exists(filename) {
-			if err := fn(i, filepath.Join(this.Dir, code, code+"-"+conv.String(i)+".db")); err != nil {
+		if !oss.Exists(this.Dir.filename(code, i+1)) {
+			if err := fn(i, this.Dir.filename(code, i)); err != nil {
 				return err
 			}
 		}
@@ -204,4 +203,38 @@ func (this *PullTrade) pullDay(c *tdx.Client, code string, start time.Time) ([]*
 	}
 
 	return insert, nil
+}
+
+type tradeDir string
+
+func (this tradeDir) filename(code string, year int) string {
+	return filepath.Join(string(this), code, code+"-"+conv.String(year)+".db")
+}
+
+// 遍历年份,返回未完成的年份和文件名称
+func (this tradeDir) rangeYear(code string, fn func(year int, filename string) (bool, error)) error {
+	now := time.Now().Year()
+	start := 2000
+	for i := start; i <= now; i++ {
+		filename := this.filename(code, i+1)
+		if !oss.Exists(filename) {
+			next, err := fn(i, this.filename(code, i))
+			if err != nil {
+				return err
+			}
+			if !next {
+				break
+			}
+		}
+	}
+	return nil
+}
+
+func (this tradeDir) lastYear(code string) (year int, filename string) {
+	this.rangeYear(code, func(_year int, _filename string) (bool, error) {
+		year = _year
+		filename = _filename
+		return false, nil
+	})
+	return
 }
