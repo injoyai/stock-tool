@@ -273,7 +273,7 @@ func (this *Client) PullMinuteTrade(ctx context.Context, plan func(cu, to int), 
 
 	total := len(codes)
 	plan(0, total)
-	lss := [][]any{{"代码", "日期", "925分"}}
+	lss := [][]any{{"代码", "日期"}}
 	for i := 930; i <= 945; i++ {
 		lss[0] = append(lss[0], fmt.Sprintf("%d分", i))
 	}
@@ -305,7 +305,7 @@ func (this *Client) PullMinuteTrade(ctx context.Context, plan func(cu, to int), 
 				xs := strings.Split(v.Time, ":")
 				if len(xs) == 2 {
 					x := conv.Int(xs[1]) - 30
-					if x >= 0 && x <= 14 {
+					if x >= 0 && x <= 15 {
 						m[x] += v.Volume
 					}
 				}
