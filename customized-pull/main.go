@@ -136,6 +136,16 @@ func main() {
 
 		app.Bind("_stop_download", stop)
 
+		app.Bind("_download_minute_trade", func() {
+			failCodes := []string(nil)
+			c.PullMinuteTrade(ctx, plan, func(code string, err error) {
+				failCodes = append(failCodes, code)
+			}, cfg.GetInt("Files", 6000))
+			if len(failCodes) > 0 {
+				oss.New("./失败代码.txt", strings.Join(failCodes, "\r\n"))
+			}
+		})
+
 		app.Bind("_get_config", func() string {
 			logs.Debug(cfg.GetString(""))
 			return cfg.GetString("")

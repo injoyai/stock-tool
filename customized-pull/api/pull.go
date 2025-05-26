@@ -12,6 +12,7 @@ import (
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -251,4 +252,83 @@ func klineToCsv(ks6 [6][]*protocol.Kline, filename string, lastDate time.Time, a
 		return err
 	}
 	return oss.New(filename, buf)
+}
+
+func (this *Client) PullMinuteTrade(ctx context.Context, plan func(cu, to int), dealErr func(code string, err error), limit int) error {
+
+	lastDate := time.Now()
+
+	codes, err := this.GetCodes()
+	if err != nil {
+		return err
+	}
+	//logs.Debug(codes)
+	//codes = []string{
+	//	"sz000001",
+	//}
+
+	if len(codes) > limit {
+		codes = codes[:limit]
+	}
+
+	total := len(codes)
+	plan(0, total)
+	lss := [][]any{{"代码", "日期", "925分"}}
+	for i := 930; i <= 945; i++ {
+		lss[0] = append(lss[0], fmt.Sprintf("%d分", i))
+	}
+	for i := range codes {
+		code := codes[i]
+		select {
+		case <-ctx.Done():
+			return errors.New("手动停止")
+		default:
+		}
+
+		err = this.Pool.Do(func(c *tdx.Client) error {
+
+			defer func() {
+				plan(i+1, total)
+			}()
+
+			resp, err := c.GetMinuteTradeAll(code)
+			if err != nil {
+				return err
+			}
+			_ = resp
+
+			m := [16]int{}
+			for _, v := range resp.List {
+				if v.Time > "09:45" {
+					break
+				}
+				xs := strings.Split(v.Time, ":")
+				if len(xs) == 2 {
+					x := conv.Int(xs[1]) - 30
+					if x >= 0 && x <= 14 {
+						m[x] += v.Volume
+					}
+				}
+			}
+
+			logs.Debug(code)
+			ls := []any{code, lastDate.Format("2006/01/02")}
+			for _, v := range m {
+				ls = append(ls, v)
+			}
+			lss = append(lss, ls)
+
+			return nil
+		})
+
+		dealErr(code, err)
+
+	}
+
+	buf, err := excel.ToCsv(lss)
+	if err != nil {
+		return err
+	}
+
+	return oss.New(filepath.Join(this.Dir, lastDate.Format("2006-01-02"), "成交量.csv"), buf)
 }

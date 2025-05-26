@@ -167,6 +167,7 @@
             <input type="date" id="last-date" placeholder="选择截止日期" />
         </div>
         <button id="stop">停止下载数据</button>
+        <button id="download-1minute-trade">下载早盘数据</button>
         <button id="config-button">配置</button>
         <div style="margin-top: 10px;">
             <label for="progress-bar" id="progress-label">进度: 0/100</label>
@@ -282,6 +283,11 @@
             _stop_download();
         };
 
+        document.getElementById('download-1minute-trade').onclick = function() {
+            log('下载早盘数据');
+            _download_minute_trade();
+        };
+
         document.getElementById('config-button').onclick = function() {
             document.getElementById('config-panel').style.display = 'block';
             document.getElementById('overlay').style.display = 'block';
@@ -349,6 +355,7 @@
 
         function _download_history(lastDate) {}
         function _stop_download() {}
+        function _download_minute_trade(){}
         function _get_config() {}
         function _save_config(clientConnections, diskOperations, timeout, savePath, stockCodes, useTextCode, autoRefresh, interval, startTime1, endTime1, startTime2, endTime2) {}
 
