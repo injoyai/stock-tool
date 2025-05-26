@@ -13,6 +13,7 @@ import (
 	"github.com/injoyai/tdx/protocol"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -273,10 +274,30 @@ func (this *Client) PullMinuteTrade(ctx context.Context, plan func(cu, to int), 
 
 	total := len(codes)
 	plan(0, total)
-	lss := [][]any{{"代码", "日期"}}
+	lss := [][]any{{"代码", "日期", "925分"}}
 	for i := 930; i <= 945; i++ {
 		lss[0] = append(lss[0], fmt.Sprintf("%d分", i))
 	}
+
+	ch := make(chan []any, 10)
+	wg := sync.WaitGroup{}
+
+	go func() {
+		for {
+			ls, ok := <-ch
+			if !ok {
+				break
+			}
+			lss = append(lss, ls)
+		}
+		buf, err := excel.ToCsv(lss)
+		if err != nil {
+			logs.Err(err)
+			return
+		}
+		oss.New(filepath.Join(this.Dir, lastDate.Format("2006-01-02"), "成交量.csv"), buf)
+	}()
+
 	for i := range codes {
 		code := codes[i]
 		select {
@@ -285,50 +306,58 @@ func (this *Client) PullMinuteTrade(ctx context.Context, plan func(cu, to int), 
 		default:
 		}
 
-		err = this.Pool.Do(func(c *tdx.Client) error {
+		wg.Add(1)
+		this.Pool.Go(func(c *tdx.Client) {
 
 			defer func() {
+				wg.Done()
 				plan(i+1, total)
 			}()
 
 			resp, err := c.GetMinuteTradeAll(code)
 			if err != nil {
-				return err
+				dealErr(code, err)
+				return
 			}
 			_ = resp
 
-			m := [16]int{}
+			m := [17]int{}
 			for _, v := range resp.List {
+				if v.Time == "09:25" {
+					m[0] = v.Volume
+				}
 				if v.Time > "09:45" {
 					break
 				}
 				xs := strings.Split(v.Time, ":")
 				if len(xs) == 2 {
-					x := conv.Int(xs[1]) - 30
-					if x >= 0 && x <= 15 {
+					x := conv.Int(xs[1]) - 29
+					if x > 0 && x <= 16 {
 						m[x] += v.Volume
 					}
 				}
 			}
 
-			logs.Debug(code)
 			ls := []any{code, lastDate.Format("2006/01/02")}
 			for _, v := range m {
 				ls = append(ls, v)
 			}
-			lss = append(lss, ls)
 
-			return nil
+			ch <- ls
+
 		})
 
-		dealErr(code, err)
-
 	}
 
-	buf, err := excel.ToCsv(lss)
-	if err != nil {
-		return err
-	}
+	wg.Wait()
+	close(ch)
 
-	return oss.New(filepath.Join(this.Dir, lastDate.Format("2006-01-02"), "成交量.csv"), buf)
+	return nil
+
+	//buf, err := excel.ToCsv(lss)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//return oss.New(filepath.Join(this.Dir, lastDate.Format("2006-01-02"), "成交量.csv"), buf)
 }
