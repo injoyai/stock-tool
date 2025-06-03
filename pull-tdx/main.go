@@ -51,7 +51,7 @@ var (
 		//
 		////增量
 		//task.NewPullKlineDay(codes, dirIncrementKline),
-		//
+
 		////k线
 		//task.Group("k线",
 		//	task.NewPullKline(codes, dirDatabaseKline, disks),                                   //拉取
@@ -72,6 +72,10 @@ var (
 				"分时成交同步完成",
 			),
 		),
+	}
+
+	tasks2 = []task.Tasker{
+		task.NewPullKlineFQ(codes, dirExportKline), //拉取复权数据
 	}
 )
 
@@ -107,27 +111,30 @@ func run() {
 	 */
 
 	//2. 任务内容
-	f := func() {
-		if !m.Workday.TodayIs() && !startup {
-			logs.Err("今天不是工作日")
-			return
+	f := func(tasks []task.Tasker) func() {
+		return func() {
+			if !m.Workday.TodayIs() && !startup {
+				logs.Err("今天不是工作日")
+				return
+			}
+			fmt.Println("================================================================")
+			logs.Debug("开始执行...")
+			ctx := context.Background()
+			err = task.Run(ctx, m, tasks...)
+			logs.PrintErr(err)
+			logs.Debug("执行完成")
 		}
-		fmt.Println("================================================================")
-		logs.Debug("开始执行...")
-		ctx := context.Background()
-		err = task.Run(ctx, m, tasks...)
-		logs.PrintErr(err)
-		logs.Debug("执行完成")
 	}
 
 	//3. 设置定时
 	cr := cron.New(cron.WithSeconds())
-	cr.AddFunc(spec, f)
+	cr.AddFunc(spec, f(tasks))
+	cr.AddFunc("0 0 0 * * *", f(tasks2))
 	cr.Start()
 
 	//4. 启动便执行
 	if startup {
-		go f()
+		go f(tasks)
 	}
 
 	select {}
