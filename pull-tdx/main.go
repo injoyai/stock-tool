@@ -28,6 +28,7 @@ var (
 	config      = &tdx.ManageConfig{Number: clients}
 	disks       = cfg.GetInt("disks", 150)
 	spec        = cfg.GetString("spec", "0 1 15 * * *")
+	specFQ      = "0 0 8 * * *"
 	codes       = cfg.GetStrings("codes")
 	startup     = cfg.GetBool("startup")
 )
@@ -74,7 +75,7 @@ var (
 		),
 	}
 
-	tasks2 = []task.Tasker{
+	tasksFQ = []task.Tasker{
 		task.NewPullKlineFQ(codes, dirExportKline), //拉取复权数据
 	}
 )
@@ -129,12 +130,13 @@ func run() {
 	//3. 设置定时
 	cr := cron.New(cron.WithSeconds())
 	cr.AddFunc(spec, f(tasks))
-	cr.AddFunc("0 0 0 * * *", f(tasks2))
+	cr.AddFunc(specFQ, f(tasksFQ))
 	cr.Start()
 
 	//4. 启动便执行
 	if startup {
-		go f(tasks)
+		f(tasks)
+		f(tasksFQ)
 	}
 
 	select {}
