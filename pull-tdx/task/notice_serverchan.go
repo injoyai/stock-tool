@@ -24,7 +24,7 @@ func (this *NoticeServerChan) Name() string {
 }
 
 func (this *NoticeServerChan) Run(ctx context.Context, m *tdx.Manage) error {
-	if len(this.SendKey) == 0 {
+	if len(this.DefaultSendKey) == 0 {
 		return nil
 	}
 	return this.ServerChan.Push(&push.Message{

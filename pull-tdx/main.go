@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/injoyai/conv/cfg/v2"
+	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
@@ -42,6 +42,7 @@ var (
 	dirUploadIndex         = filepath.Join(dirUpload, "指数")
 	dirIncrementKline      = filepath.Join(dirUpload, "增量")
 	dirUploadTrade         = filepath.Join(dirUpload, "分时成交")
+	dirExportTrade         = filepath.Join(dirExport, "分时成交")
 )
 
 var (
@@ -66,8 +67,9 @@ var (
 		//),
 
 		task.Group("分时成交",
-			task.NewPullTrade(codes, dirDatabaseTrade, disks),                   //拉取
-			task.NewExportTrade(codes, dirDatabaseTrade, dirUploadTrade, disks), //导出
+			task.NewPullTradeHistory(codes, dirExportTrade, disks), //拉取
+			//task.NewPullTrade(codes, dirDatabaseTrade, disks),                   //拉取
+			//task.NewExportTrade(codes, dirDatabaseTrade, dirUploadTrade, disks), //导出
 			task.NewNoticeServerChan(
 				cfg.GetString("notice.serverChan.sendKey"),
 				"分时成交同步完成",
@@ -76,7 +78,7 @@ var (
 	}
 
 	tasksFQ = []task.Tasker{
-		task.NewPullKlineFQ(codes, dirExportKline), //拉取复权数据
+		//task.NewPullKlineFQ(codes, dirExportKline), //拉取复权数据
 	}
 )
 
@@ -135,8 +137,8 @@ func run() {
 
 	//4. 启动便执行
 	if startup {
-		f(tasks)
-		f(tasksFQ)
+		f(tasks)()
+		f(tasksFQ)()
 	}
 
 	select {}

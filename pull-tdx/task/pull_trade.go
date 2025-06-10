@@ -30,14 +30,6 @@ func (this *PullTrade) Name() string {
 	return "更新交易数据"
 }
 
-func (this *PullTrade) Running() bool {
-	return false
-}
-
-func (this *PullTrade) RunInfo() string {
-	return ""
-}
-
 func (this *PullTrade) Run(ctx context.Context, m *tdx.Manage) error {
 	r := &Range[string]{
 		Codes:   GetCodes(m, this.Codes),
@@ -185,11 +177,7 @@ func (this *PullTrade) pullDay(c *tdx.Client, code string, start time.Time) ([]*
 			return nil, err
 		}
 		for _, v := range resp.List {
-			t, err := time.ParseInLocation("15:04", v.Time, time.Local)
-			if err != nil {
-				return nil, err
-			}
-			_, minute := model.FromTime(t)
+			_, minute := model.FromTime(v.Time)
 			insert = append(insert, &model.Trade{
 				Date:   date,
 				Time:   minute,
