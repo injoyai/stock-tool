@@ -66,19 +66,19 @@ var (
 		//	),
 		//),
 
-		task.Group("分时成交",
-			task.NewPullTradeHistory(codes, dirExportTrade, disks), //拉取
-			//task.NewPullTrade(codes, dirDatabaseTrade, disks),                   //拉取
-			//task.NewExportTrade(codes, dirDatabaseTrade, dirUploadTrade, disks), //导出
-			task.NewNoticeServerChan(
-				cfg.GetString("notice.serverChan.sendKey"),
-				"分时成交同步完成",
-			),
-		),
+		//task.Group("分时成交",
+		//	task.NewPullTradeHistory(codes, dirExportTrade, disks), //拉取
+		//	//task.NewPullTrade(codes, dirDatabaseTrade, disks),                   //拉取
+		//	//task.NewExportTrade(codes, dirDatabaseTrade, dirUploadTrade, disks), //导出
+		//	task.NewNoticeServerChan(
+		//		cfg.GetString("notice.serverChan.sendKey"),
+		//		"分时成交同步完成",
+		//	),
+		//),
 	}
 
 	tasksFQ = []task.Tasker{
-		//task.NewPullKlineFQ(codes, dirExportKline), //拉取复权数据
+		task.NewPullKlineFQ(codes, dirExportKline), //拉取复权数据
 	}
 )
 
