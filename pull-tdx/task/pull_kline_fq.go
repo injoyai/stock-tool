@@ -148,6 +148,10 @@ func (this *PullKlineFQ) GetTHSDayKline(code string, _type uint8) ([]*model.Klin
 		return nil, err
 	}
 
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("http status %s", resp.Status)
+	}
+
 	defer resp.Body.Close()
 	bs, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -155,7 +159,9 @@ func (this *PullKlineFQ) GetTHSDayKline(code string, _type uint8) ([]*model.Klin
 	}
 
 	n := bytes.IndexByte(bs, '(')
-	bs = bs[n+1 : len(bs)-1]
+	if len(bs) > 1 {
+		bs = bs[n+1 : len(bs)-1]
+	}
 
 	m := map[string]any{}
 	err = json.Unmarshal(bs, &m)
