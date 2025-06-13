@@ -2,51 +2,51 @@ package model
 
 import (
 	"errors"
+	"github.com/injoyai/tdx/protocol"
 	"time"
 )
 
 // Trade 成交数据
 type Trade struct {
-	Date   uint16 `xorm:"index"` //日期
-	Time   uint16 //时间 `xorm:"index"` //时间
-	Price  int64  //成交价格,单位厘
-	Volume int    //交易量
-	Order  int    //订单数
-	Status int    //买或者卖
+	Date   uint16         `xorm:"index"` //日期
+	Time   uint16         //时间 `xorm:"index"` //时间
+	Price  protocol.Price //成交价格,单位厘
+	Volume int            //交易量
+	Order  int            //订单数
+	Status int            //买或者卖
+}
+
+func (this *Trade) ToTime() time.Time {
+	return ToTime(this.Date, this.Time)
+}
+
+func (this *Trade) Amount() protocol.Price {
+	return protocol.Price(this.Volume) * 100 * this.Price
 }
 
 type Trades []*Trade
 
-func (this Trades) Minute1Klines() (Klines, error) {
-	return this.MinuteKlines()
-}
-
-func (this Trades) Minute5Klines() (Klines, error) {
-	ks, err := this.MinuteKlines()
+func (this Trades) Klines5() (Klines, error) {
+	ks, err := this.Klines1()
 	return ks.Merge(5), err
 }
 
-func (this Trades) Minute15Klines() (Klines, error) {
-	ks, err := this.MinuteKlines()
+func (this Trades) Klines15() (Klines, error) {
+	ks, err := this.Klines1()
 	return ks.Merge(15), err
 }
 
-func (this Trades) Minute30Klines() (Klines, error) {
-	ks, err := this.MinuteKlines()
+func (this Trades) Klines90() (Klines, error) {
+	ks, err := this.Klines1()
 	return ks.Merge(30), err
 }
 
-func (this Trades) HourKlines() (Klines, error) {
-	ks, err := this.MinuteKlines()
+func (this Trades) Klines60() (Klines, error) {
+	ks, err := this.Klines1()
 	return ks.Merge(60), err
 }
 
-func (this Trades) DayKlines() (Klines, error) {
-	ks, err := this.MinuteKlines()
-	return ks.Merge(len(ks)), err
-}
-
-func (this Trades) MinuteKlines() (Klines, error) {
+func (this Trades) Klines1() (Klines, error) {
 
 	if len(this) == 0 {
 		return nil, errors.New("无效的数据源: 为空")
@@ -100,18 +100,18 @@ func (this Trades) MinuteKlines() (Klines, error) {
 	for _, minute := range minutes {
 		t := ToTime(date, minute)
 		k := m[minute].Kline(price, t.Unix())
-		price = k.Close.Int64()
+		price = k.Close
 		klines = append(klines, k)
 	}
 
 	return klines, nil
 }
 
-func (this Trades) Kline(last int64, date int64) *Kline {
+func (this Trades) Kline(last protocol.Price, date int64) *Kline {
 
 	open, high, low, _close := last, last, last, last
 	volume := int64(0)
-	amount := int64(0)
+	amount := protocol.Price(0)
 	for i, v := range this {
 		switch i {
 		case 0:
@@ -129,16 +129,16 @@ func (this Trades) Kline(last int64, date int64) *Kline {
 			low = v.Price
 		}
 		volume += int64(v.Volume)
-		amount += int64(v.Volume) * 100 * v.Price
+		amount += v.Amount()
 	}
 
 	return &Kline{
 		Date:   date,
-		Open:   Price(open),
-		High:   Price(high),
-		Low:    Price(low),
-		Close:  Price(_close),
+		Open:   open,
+		High:   high,
+		Low:    low,
+		Close:  _close,
 		Volume: volume,
-		Amount: Price(amount),
+		Amount: amount,
 	}
 }

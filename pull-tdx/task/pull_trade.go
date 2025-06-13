@@ -47,28 +47,29 @@ func (this *PullTrade) Handler(ctx context.Context, m *tdx.Manage, code string) 
 	if err != nil {
 		return err
 	}
-	return this._range(code, func(year int, filename string) error {
+
+	return this.Dir.rangeYear(code, func(year int, filename string) (bool, error) {
 		if year < firstYear {
-			return nil
+			return true, nil
 		}
 
 		//1. 打开数据库
 		b, err := db.Open(filename)
 		if err != nil {
-			return err
+			return false, err
 		}
 		defer b.Close()
 		b.Sync2(new(model.Trade))
 
 		last, err := b.GetLastTrade()
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		if last.Time != 0 && last.Time != 900 {
 			//如果最后时间不是15:00,说明数据不全,删除这天的数据
 			if _, err := b.Where("Date=?", last.Date).Delete(&model.Trade{}); err != nil {
-				return err
+				return false, err
 			}
 			last.Date -= 1
 		}
@@ -83,11 +84,11 @@ func (this *PullTrade) Handler(ctx context.Context, m *tdx.Manage, code string) 
 		yearLast := time.Date(year, 12, 31, 23, 0, 0, 0, time.Local)
 		t := model.ToTime(last.Date, 0)
 
-		//遍历时间,并加入数据库
-		for start := t.Add(time.Hour * 24); start.Before(yearLast) && start.Before(now); start = start.Add(time.Hour * 24) {
+		//遍历时间,拉取数据并加入数据库
+		for date := t.Add(time.Hour * 24); date.Before(yearLast) && date.Before(now); date = date.Add(time.Hour * 24) {
 
 			//排除休息日
-			if !m.Workday.Is(start) {
+			if !m.Workday.Is(date) {
 				continue
 			}
 
@@ -95,11 +96,11 @@ func (this *PullTrade) Handler(ctx context.Context, m *tdx.Manage, code string) 
 			var insert []*model.Trade
 			err = m.Do(func(c *tdx.Client) error {
 				//拉取数据
-				insert, err = this.pullDay(c, code, start)
+				insert, err = this.pullDay(c, code, date)
 				return err
 			})
 			if err != nil {
-				return err
+				return false, err
 			}
 
 			//排除数据为0的,可能这天停牌了啥的
@@ -116,28 +117,14 @@ func (this *PullTrade) Handler(ctx context.Context, m *tdx.Manage, code string) 
 				return nil
 			})
 			if err != nil {
-				return err
+				return false, err
 			}
 
 		}
 
-		return nil
+		return true, nil
 	})
 
-}
-
-// 遍历年份
-func (this *PullTrade) _range(code string, fn func(year int, filename string) error) error {
-	now := time.Now().Year()
-	start := 2000
-	for i := start; i <= now; i++ {
-		if !oss.Exists(this.Dir.filename(code, i+1)) {
-			if err := fn(i, this.Dir.filename(code, i)); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // 获取上市年月
@@ -166,13 +153,15 @@ func (this *PullTrade) pullDay(c *tdx.Client, code string, start time.Time) ([]*
 
 	date, _ := model.FromTime(start)
 
+	nowDate, _ := model.FromTime(time.Now())
+
 	switch date {
 	case 0:
-		//
+	//
 
-	default:
-		//获取历史数据
-		resp, err := c.GetHistoryMinuteTradeAll(start.Format("20060102"), code)
+	case nowDate:
+		//获取当天数据
+		resp, err := c.GetTradeAll(code)
 		if err != nil {
 			return nil, err
 		}
@@ -181,7 +170,25 @@ func (this *PullTrade) pullDay(c *tdx.Client, code string, start time.Time) ([]*
 			insert = append(insert, &model.Trade{
 				Date:   date,
 				Time:   minute,
-				Price:  v.Price.Int64(),
+				Price:  v.Price,
+				Volume: v.Volume,
+				Order:  v.Number,
+				Status: v.Status,
+			})
+		}
+
+	default:
+		//获取历史数据
+		resp, err := c.GetHistoryTradeAll(start.Format("20060102"), code)
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range resp.List {
+			_, minute := model.FromTime(v.Time)
+			insert = append(insert, &model.Trade{
+				Date:   date,
+				Time:   minute,
+				Price:  v.Price,
 				Volume: v.Volume,
 				Order:  0,
 				Status: v.Status,
@@ -222,7 +229,7 @@ func (this tradeDir) lastYear(code string) (year int, filename string) {
 	this.rangeYear(code, func(_year int, _filename string) (bool, error) {
 		year = _year
 		filename = _filename
-		return false, nil
+		return true, nil
 	})
 	return
 }

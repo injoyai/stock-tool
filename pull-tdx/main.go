@@ -66,19 +66,19 @@ var (
 		//	),
 		//),
 
-		//task.Group("分时成交",
-		//	task.NewPullTradeHistory(codes, dirExportTrade, disks), //拉取
-		//	//task.NewPullTrade(codes, dirDatabaseTrade, disks),                   //拉取
-		//	//task.NewExportTrade(codes, dirDatabaseTrade, dirUploadTrade, disks), //导出
-		//	task.NewNoticeServerChan(
-		//		cfg.GetString("notice.serverChan.sendKey"),
-		//		"分时成交同步完成",
-		//	),
-		//),
+		task.Group("分时成交",
+			//task.NewPullTradeHistory(codes, dirExportTrade, disks), //拉取
+			task.NewPullTrade(codes, dirDatabaseTrade, disks),                   //拉取
+			task.NewExportTrade(codes, dirDatabaseTrade, dirUploadTrade, disks), //导出
+			task.NewNoticeServerChan(
+				cfg.GetString("notice.serverChan.sendKey"),
+				"分时成交同步完成",
+			),
+		),
 	}
 
 	tasksFQ = []task.Tasker{
-		task.NewPullKlineFQ(codes, dirExportKline), //拉取复权数据
+		//task.NewPullKlineFQ(codes, dirExportKline), //拉取复权数据
 	}
 )
 
@@ -114,7 +114,7 @@ func run() {
 	 */
 
 	//2. 任务内容
-	f := func(tasks []task.Tasker) func() {
+	f := func(tasks ...[]task.Tasker) func() {
 		return func() {
 			if !m.Workday.TodayIs() && !startup {
 				logs.Err("今天不是工作日")
@@ -123,8 +123,10 @@ func run() {
 			fmt.Println("================================================================")
 			logs.Debug("开始执行...")
 			ctx := context.Background()
-			err = task.Run(ctx, m, tasks...)
-			logs.PrintErr(err)
+			for _, v := range tasks {
+				err = task.Run(ctx, m, v...)
+				logs.PrintErr(err)
+			}
 			logs.Debug("执行完成")
 		}
 	}
@@ -137,8 +139,7 @@ func run() {
 
 	//4. 启动便执行
 	if startup {
-		f(tasks)()
-		f(tasksFQ)()
+		f(tasks, tasksFQ)()
 	}
 
 	select {}
