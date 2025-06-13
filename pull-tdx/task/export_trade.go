@@ -55,29 +55,12 @@ func (this *ExportTrade) Handler(ctx context.Context, m *tdx.Manage, code string
 	defer b.Close()
 
 	all := model.Trades{}
-	err = b.Find(all)
+	err = b.Find(&all)
 	if err != nil {
 		return err
 	}
 
-	data := [][]any(nil)
-	for _, v := range all {
-		data = append(data, []any{
-			v.Date,
-			v.Time,
-			v.Price,
-			v.Volume,
-			v.Status,
-		})
-	}
-
-	buf, err := csv.Export(data)
-	if err != nil {
-		return err
-	}
-
-	filename = filepath.Join(this.ExportDir, code+"-"+conv.String(year)+".csv")
-	return oss.New(filename, buf)
+	return this.export(code, m.Codes.GetName(code), year, all)
 }
 
 func (this *ExportTrade) export(code, name string, year int, tss model.Trades) (err error) {
