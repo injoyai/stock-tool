@@ -18,16 +18,16 @@ import (
 	"time"
 )
 
-func NewPullKlineFQ(codes []string, dir string) *PullKlineFQ {
+func NewPullKlineFQ(codes []string, exportDir string) *PullKlineFQ {
 	return &PullKlineFQ{
-		Dir:   dir,
-		Codes: codes,
+		ExportDir: exportDir,
+		Codes:     codes,
 	}
 }
 
 type PullKlineFQ struct {
-	Dir   string
-	Codes []string //指定的代码
+	ExportDir string
+	Codes     []string //指定的代码
 }
 
 func (this *PullKlineFQ) Name() string {
@@ -63,7 +63,7 @@ func (this *PullKlineFQ) Handler(ctx context.Context, m *tdx.Manage, code string
 		if err != nil {
 			return err
 		}
-		filename := filepath.Join(this.Dir, "日线_前复权", code+".csv")
+		filename := filepath.Join(this.ExportDir, "日线_前复权", code+".csv")
 		err = this.save(filename, code, m.Codes.GetName(code), ls, mAmount)
 		if err != nil {
 			return err
@@ -75,7 +75,7 @@ func (this *PullKlineFQ) Handler(ctx context.Context, m *tdx.Manage, code string
 		if err != nil {
 			return err
 		}
-		filename := filepath.Join(this.Dir, "日线_后复权", code+".csv")
+		filename := filepath.Join(this.ExportDir, "日线_后复权", code+".csv")
 		return this.save(filename, code, m.Codes.GetName(code), ls, mAmount)
 	}
 

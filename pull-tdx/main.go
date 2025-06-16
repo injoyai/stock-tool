@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	Version = "v0.4"
-	Details = "增加Server酱通知"
+	Version = "v0.5"
+	Details = "增加复权数据"
 )
 
 var (
@@ -25,10 +25,11 @@ var (
 	dirExport   = filepath.Join(dirBase, cfg.GetString("dir.export", "export"))
 	dirUpload   = filepath.Join(dirBase, cfg.GetString("dir.upload", "upload"))
 	clients     = cfg.GetInt("clients", 10)
+	sendKey     = cfg.GetString("notice.serverChan.sendKey")
 	config      = &tdx.ManageConfig{Number: clients}
 	disks       = cfg.GetInt("disks", 150)
 	spec        = cfg.GetString("spec", "0 1 15 * * *")
-	specFQ      = "0 0 8 * * *"
+	specFQ      = "0 0 6 * * *"
 	codes       = cfg.GetStrings("codes")
 	startup     = cfg.GetBool("startup")
 )
@@ -54,31 +55,27 @@ var (
 		////增量
 		//task.NewPullKlineDay(codes, dirIncrementKline),
 
-		////k线
-		//task.Group("k线",
-		//	task.NewPullKline(codes, dirDatabaseKline, disks),                                   //拉取
-		//	task.NewExportKline(codes, dirDatabaseKline, dirExportKline, disks, task.AllTables), //导出
-		//	task.NewCompressKline(dirExportKline, dirExportCompressKline, task.AllTables),       //压缩
-		//	task.NewRename(dirExportCompressKline, dirUploadKline),                              //移动
-		//	task.NewNoticeServerChan(
-		//		cfg.GetString("notice.serverChan.sendKey"),
-		//		"k线同步完成",
-		//	),
-		//),
+		//k线
+		task.Group("k线",
+			task.NewPullKline(codes, dirDatabaseKline, disks),                                   //拉取
+			task.NewExportKline(codes, dirDatabaseKline, dirExportKline, disks, task.AllTables), //导出
+			task.NewCompressKline(dirExportKline, dirExportCompressKline, task.AllTables),       //压缩
+			task.NewRename(dirExportCompressKline, dirUploadKline),                              //移动
+			task.NewNoticeServerChan(sendKey, "k线同步完成"),
+		),
 
 		task.Group("分时成交",
 			//task.NewPullTradeHistory(codes, dirExportTrade, disks), //拉取
 			task.NewPullTrade(codes, dirDatabaseTrade, disks),                   //拉取
 			task.NewExportTrade(codes, dirDatabaseTrade, dirUploadTrade, disks), //导出
-			task.NewNoticeServerChan(
-				cfg.GetString("notice.serverChan.sendKey"),
-				"分时成交同步完成",
-			),
+			task.NewNoticeServerChan(sendKey, "分时成交同步完成"),
 		),
 	}
 
 	tasksFQ = []task.Tasker{
-		//task.NewPullKlineFQ(codes, dirExportKline), //拉取复权数据
+		task.NewPullKlineFQ(codes, dirExportKline),                                    //拉取复权数据
+		task.NewExportKlineFQ(dirExportKline, dirExportCompressKline, dirUploadKline), //压缩移动
+		task.NewNoticeServerChan(sendKey, "复权数据同步完成"),
 	}
 )
 
@@ -98,10 +95,6 @@ func init() {
 }
 
 func main() {
-	run()
-}
-
-func run() {
 
 	//1. 连接服务器
 	m, err := tdx.NewManage(config, tdx.WithRedial())
@@ -121,13 +114,13 @@ func run() {
 				return
 			}
 			fmt.Println("================================================================")
-			logs.Debug("开始执行...")
+			logs.Info("开始执行...")
 			ctx := context.Background()
 			for _, v := range tasks {
 				err = task.Run(ctx, m, v...)
 				logs.PrintErr(err)
 			}
-			logs.Debug("执行完成")
+			logs.Info("执行完成")
 		}
 	}
 

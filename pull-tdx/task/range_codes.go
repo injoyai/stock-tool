@@ -23,9 +23,6 @@ func (this *Range[T]) Run(ctx context.Context, m *tdx.Manage) error {
 
 	//1. 获取所有股票代码
 	codes := this.Codes
-	//if len(codes) == 0 {
-	//	codes = m.Codes.GetStocks()
-	//}
 	codes = append(codes, this.Append...)
 
 	if this.Limit <= 0 {
@@ -35,7 +32,7 @@ func (this *Range[T]) Run(ctx context.Context, m *tdx.Manage) error {
 
 	total := int64(len(codes))
 	taskName := this.Handler.Name()
-	logs.Tracef("[%s] 处理数量: %d\n", taskName, total)
+	//logs.Tracef("[%s] 处理数量: %d\n", taskName, total)
 	b := bar.New(total)
 	b.AddOption(func(f *bar.Format) {
 		f.Entity.SetFormatter(func(e *bar.Format) string {
