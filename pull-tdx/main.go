@@ -55,27 +55,27 @@ var (
 		////增量
 		//task.NewPullKlineDay(codes, dirIncrementKline),
 
-		//k线
-		task.Group("k线",
-			task.NewPullKline(codes, dirDatabaseKline, disks),                                   //拉取
-			task.NewExportKline(codes, dirDatabaseKline, dirExportKline, disks, task.AllTables), //导出
-			task.NewCompressKline(dirExportKline, dirExportCompressKline, task.AllTables),       //压缩
-			task.NewRename(dirExportCompressKline, dirUploadKline),                              //移动
-			task.NewNoticeServerChan(sendKey, "k线同步完成"),
-		),
+		////k线
+		//task.Group("k线",
+		//	task.NewPullKline(codes, dirDatabaseKline, disks),                                   //拉取
+		//	task.NewExportKline(codes, dirDatabaseKline, dirExportKline, disks, task.AllTables), //导出
+		//	task.NewCompressKline(dirExportKline, dirExportCompressKline, task.AllTables),       //压缩
+		//	task.NewRename(dirExportCompressKline, dirUploadKline),                              //移动
+		//	task.NewNoticeServerChan(sendKey, "k线同步完成"),
+		//),
 
 		task.Group("分时成交",
 			//task.NewPullTradeHistory(codes, dirExportTrade, disks), //拉取
-			task.NewPullTrade(codes, dirDatabaseTrade, disks),                   //拉取
-			task.NewExportTrade(codes, dirDatabaseTrade, dirUploadTrade, disks), //导出
+			task.NewPullTrade(codes, dirDatabaseTrade, disks), //拉取
+			//task.NewExportTrade(codes, dirDatabaseTrade, dirUploadTrade, disks), //导出
 			task.NewNoticeServerChan(sendKey, "分时成交同步完成"),
 		),
 	}
 
 	tasksFQ = []task.Tasker{
-		task.NewPullKlineFQ(codes, dirExportKline),                                    //拉取复权数据
-		task.NewExportKlineFQ(dirExportKline, dirExportCompressKline, dirUploadKline), //压缩移动
-		task.NewNoticeServerChan(sendKey, "复权数据同步完成"),
+		//task.NewPullKlineFQ(codes, dirExportKline),                                    //拉取复权数据
+		//task.NewExportKlineFQ(dirExportKline, dirExportCompressKline, dirUploadKline), //压缩移动
+		//task.NewNoticeServerChan(sendKey, "复权数据同步完成"),
 	}
 )
 

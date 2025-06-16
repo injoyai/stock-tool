@@ -42,6 +42,8 @@ func (this *PullTrade) Run(ctx context.Context, m *tdx.Manage) error {
 }
 
 func (this *PullTrade) Handler(ctx context.Context, m *tdx.Manage, code string) error {
+	//logs.Debug(code)
+
 	//查询月K线,获取实际上市年份
 	firstYear, firstMonth, err := this.getPublic(ctx, m, code)
 	if err != nil {
@@ -76,8 +78,10 @@ func (this *PullTrade) Handler(ctx context.Context, m *tdx.Manage, code string) 
 
 		if last.Date == 0 {
 			//说明数据不存在,取该股上市月初为起始时间
-			last.Date, _ = model.FromTime(time.Date(year, firstMonth, 1, 0, 0, 0, 0, time.Local))
+			month := conv.Select(year == firstYear, firstMonth, 1)
+			last.Date, _ = model.FromTime(time.Date(year, month, 1, 0, 0, 0, 0, time.Local))
 		}
+		//logs.Debug("开始日期:", model.ToTime(last.Date, 0).Format("2006-01-02"))
 
 		//解析日期
 		now := time.Now()
@@ -86,6 +90,11 @@ func (this *PullTrade) Handler(ctx context.Context, m *tdx.Manage, code string) 
 
 		//遍历时间,拉取数据并加入数据库
 		for date := t.Add(time.Hour * 24); date.Before(yearLast) && date.Before(now); date = date.Add(time.Hour * 24) {
+
+			//最早日期为2000-06-09
+			if date.Before(time.Date(2000, 6, 9, 0, 0, 0, 0, time.Local)) {
+				continue
+			}
 
 			//排除休息日
 			if !m.Workday.Is(date) {
