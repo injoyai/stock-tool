@@ -4,10 +4,15 @@ import (
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/database/xorms"
 	"pull-tdx/model"
+	"xorm.io/xorm"
 )
 
 type Sqlite struct {
 	*xorms.Engine
+}
+
+func (this *Sqlite) NewSession() *xorm.Session {
+	return this.Engine.Engine.NewSession()
 }
 
 // GetLastTrade 获取最后一条分时数据
