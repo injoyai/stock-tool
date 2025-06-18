@@ -1,2 +1,2 @@
 database:
-  dsn: "root:password@tcp(localhost:3306)/db?charset=utf8mb4&parseTime=True&loc=Local"
+  dsn: "root:root@tcp(localhost:3306)/trde?charset=utf8mb4&parseTime=True&loc=Local"

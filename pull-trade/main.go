@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/injoyai/base/chans"
 	"github.com/injoyai/conv/cfg"
+	"github.com/injoyai/goutil/database/mysql"
 	"github.com/injoyai/goutil/database/xorms"
 	"github.com/injoyai/goutil/str/bar"
 	"github.com/injoyai/logs"
@@ -22,13 +23,18 @@ var (
 
 func init() {
 	var err error
-	DB, err = xorms.NewMysql(cfg.GetString("database.dsn"))
+	DB, err = mysql.NewXorm(cfg.GetString("database.dsn"))
 	logs.PanicErr(err)
-	Manage, err = tdx.NewManage(nil)
-	logs.PanicErr(err)
+	DB.Ping()
 }
 
 func main() {
+
+	return
+
+	var err error
+	Manage, err = tdx.NewManage(nil)
+	logs.PanicErr(err)
 
 	limit := chans.NewWaitLimit(100)
 	codes := Manage.Codes.GetStocks()
