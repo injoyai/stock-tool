@@ -29,7 +29,7 @@ var (
 	config      = &tdx.ManageConfig{Number: clients}
 	disks       = cfg.GetInt("disks", 150)
 	spec        = cfg.GetString("spec", "0 1 15 * * *")
-	specFQ      = "0 0 6 * * *"
+	specFQ      = cfg.GetString("specFQ", "0 0 6 * * *")
 	codes       = cfg.GetStrings("codes")
 	startup     = cfg.GetBool("startup")
 )
