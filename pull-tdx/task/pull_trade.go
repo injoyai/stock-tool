@@ -3,15 +3,16 @@ package task
 import (
 	"context"
 	"github.com/injoyai/base/chans"
-	"github.com/injoyai/base/types"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"os"
 	"path/filepath"
 	"pull-tdx/db"
 	"pull-tdx/model"
+	"sync"
 	"time"
 )
 
@@ -39,13 +40,14 @@ func (this *PullTrade) Name() string {
 
 func (this *PullTrade) Run(ctx context.Context, m *tdx.Manage) error {
 
-	codes := types.List[string](GetCodes(m, this.Codes))
+	codes := GetCodes(m, this.Codes)
 	dbs := make(chan *tradeDB, 1000)
 	readDone := make(chan struct{}, 1)
 	pullDone := make(chan struct{}, 1)
 
 	go func() {
 		limit := chans.NewLimit(this.limit)
+		logs.Debug("limit:", this.limit)
 		for {
 			select {
 			case <-ctx.Done():
@@ -62,6 +64,7 @@ func (this *PullTrade) Run(ctx context.Context, m *tdx.Manage) error {
 			default:
 				select {
 				case <-readDone:
+					logs.Debug("read done")
 					close(pullDone)
 					return
 				default:
@@ -71,40 +74,64 @@ func (this *PullTrade) Run(ctx context.Context, m *tdx.Manage) error {
 	}()
 
 	limit := 800
+	var cs []string
 	for offset := 0; ; offset += limit {
-		cs := codes.Cut(offset, limit)
-		this.readAll(ctx, m, cs, dbs)
-		if len(cs) == 0 {
+		if offset >= len(codes) {
 			close(readDone)
 			break
 		}
-		this.commit(ctx, pullDone)
+		if offset+limit > len(codes) {
+			cs = codes[offset:]
+		} else {
+			cs = codes[offset : offset+limit]
+		}
+		logs.Debug("readAll")
+		ls := this.readAll(ctx, m, cs)
+		for _, v := range ls {
+			dbs <- v
+		}
+		logs.Debug("commit")
+		this.commit(ctx, len(ls), pullDone)
 	}
 
 	return nil
 }
 
-func (this *PullTrade) readAll(ctx context.Context, m *tdx.Manage, codes []string, ch chan *tradeDB) {
-	limit := chans.NewLimit(this.limit)
+func (this *PullTrade) readAll(ctx context.Context, m *tdx.Manage, codes []string) []*tradeDB {
+	lss := []*tradeDB(nil)
+	limit := chans.NewWaitLimit(uint(this.limit))
+	mu := sync.Mutex{}
 	for _, v := range codes {
 		limit.Add()
 		go func(v string) {
 			defer limit.Done()
-			err := g.Retry(func() error { return this.readOne(ctx, m, v, ch) }, DefaultRetry)
+			err := g.Retry(func() error {
+				ls, err := this.readOne(ctx, m, v)
+				if err != nil {
+					return err
+				}
+				mu.Lock()
+				defer mu.Unlock()
+				lss = append(lss, ls...)
+				return nil
+			}, DefaultRetry)
 			logs.PrintErr(err)
 		}(v)
 	}
+	limit.Wait()
+	return lss
 }
 
-func (this *PullTrade) readOne(ctx context.Context, m *tdx.Manage, code string, ch chan *tradeDB) error {
+func (this *PullTrade) readOne(ctx context.Context, m *tdx.Manage, code string) ([]*tradeDB, error) {
 	//查询月K线,获取实际上市年份
 	publicYear, publicMonth, err := this.getPublic(ctx, m, code)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	ls := []*tradeDB(nil)
 	now := time.Now()
-	return this.Dir.rangeYearAll(code, func(year int, filename string, exist, hasNext bool) (bool, error) {
+	err = this.Dir.rangeYearAll(code, func(year int, filename string, exist, hasNext bool) (bool, error) {
 		//存在,并且不是今年,今年存在并需要实时更新
 		if exist && year < now.Year() && !hasNext {
 			return true, nil
@@ -119,22 +146,26 @@ func (this *PullTrade) readOne(ctx context.Context, m *tdx.Manage, code string, 
 		if err != nil {
 			return true, err
 		}
-		ch <- x
+		ls = append(ls, x)
 		return true, nil
 	})
+	return ls, err
 }
 
-func (this *PullTrade) commit(ctx context.Context, done chan struct{}) error {
-	for {
+func (this *PullTrade) commit(ctx context.Context, num int, done chan struct{}) error {
+	for i := 0; i < num; i++ {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 
 		case fn, ok := <-this.Chan:
+
 			if !ok {
 				return nil
 			}
+			now := time.Now()
 			fn()
+			logs.Debugf("序号: %d 排队: %d 耗时: %s\n", i, len(this.Chan), time.Since(now))
 
 		case <-done:
 			for {
@@ -145,54 +176,62 @@ func (this *PullTrade) commit(ctx context.Context, done chan struct{}) error {
 					}
 					fn()
 				default:
+					logs.Debug("commit done")
 					return nil
 				}
 			}
 
 		}
 	}
+	return nil
 }
 
-func (this *PullTrade) pull(ctx context.Context, b *tradeDB, m *tdx.Manage) error {
+func (this *PullTrade) pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err error) {
+	defer b.CloseWithErr(err)
+
 	now := time.Now()
+
+	defer func() {
+		logs.Debugf("%s-%d加入队列,耗时: %s\n", b.Code, b.Year, time.Since(now))
+	}()
+
 	yearLast := time.Date(b.Year, 12, 31, 23, 0, 0, 0, time.Local)
 	t := model.ToTime(b.Last.Date, 0)
 
 	var insert []*model.Trade
 
-	//遍历时间,拉取数据并加入数据库
-	for date := t.Add(time.Hour * 24); date.Before(yearLast) && date.Before(now); date = date.Add(time.Hour * 24) {
+	m.Do(func(c *tdx.Client) error {
+		//遍历时间,拉取数据并加入数据库
+		for date := t.Add(time.Hour * 24); date.Before(yearLast) && date.Before(now); date = date.Add(time.Hour * 24) {
 
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
 
-		//最早日期为2000-06-09
-		if date.Before(this.StartDate) {
-			continue
-		}
+			//最早日期为2000-06-09
+			if date.Before(this.StartDate) {
+				continue
+			}
 
-		//排除休息日
-		if !m.Workday.Is(date) {
-			continue
-		}
+			//排除休息日
+			if !m.Workday.Is(date) {
+				continue
+			}
 
-		//3. 获取数据
-		err := m.Do(func(c *tdx.Client) error {
-			//拉取数据
+			//3. 获取数据
 			item, err := this.pullDay(c, b.Code, date)
 			if err != nil {
 				return err
 			}
 			insert = append(insert, item...)
-			return nil
-		})
-		if err != nil {
-			return err
-		}
 
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	session := b.DB.NewSession()
@@ -469,6 +508,7 @@ func newTradeDB(filename, code string, year, publicYear int, publicMonth time.Mo
 	}
 	return &tradeDB{
 		Code:        code,
+		Filename:    filename,
 		DB:          b,
 		Last:        last,
 		Year:        year,
@@ -479,6 +519,7 @@ func newTradeDB(filename, code string, year, publicYear int, publicMonth time.Mo
 
 type tradeDB struct {
 	Code        string
+	Filename    string
 	DB          *db.Sqlite
 	Last        *model.Trade
 	Year        int
@@ -488,4 +529,12 @@ type tradeDB struct {
 
 func (this *tradeDB) Close() {
 	this.DB.Close()
+}
+
+func (this *tradeDB) CloseWithErr(err error) error {
+	if err == nil {
+		return nil
+	}
+	this.DB.Close()
+	return os.Remove(this.Filename)
 }
