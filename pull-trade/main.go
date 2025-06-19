@@ -10,6 +10,7 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"time"
+	"xorm.io/xorm"
 )
 
 var (
@@ -19,27 +20,32 @@ var (
 var (
 	DB     *xorms.Engine
 	Manage *tdx.Manage
+	Codes  = []string{
+		"sz000001",
+		//"sh600000",
+	}
 )
 
 func init() {
 	var err error
 	DB, err = mysql.NewXorm(cfg.GetString("database.dsn"))
 	logs.PanicErr(err)
-	DB.Ping()
+	logs.PanicErr(DB.Ping())
+	DB.Sync2(new(Trade))
 }
 
 func main() {
 
-	return
-
 	var err error
-	Manage, err = tdx.NewManage(nil)
+	Manage, err = tdx.NewManage(&tdx.ManageConfig{Number: 4})
 	logs.PanicErr(err)
 
 	limit := chans.NewWaitLimit(100)
-	codes := Manage.Codes.GetStocks()
+	if len(Codes) == 0 {
+		Codes = Manage.Codes.GetStocks()
+	}
 
-	b := bar.New(int64(len(codes) * (time.Now().Year() - StartDate.Year() + 1)))
+	b := bar.New(int64(len(Codes) * (time.Now().Year() - StartDate.Year() + 1)))
 	b.AddOption(func(f *bar.Format) {
 		f.Entity.SetFormatter(func(e *bar.Format) string {
 			return fmt.Sprintf("\r%s [%s] %s  %s  %s  %-10s",
@@ -54,7 +60,7 @@ func main() {
 	})
 	b.Add(0).Flush()
 
-	for _, code := range codes {
+	for _, code := range Codes {
 		limit.Add()
 		go func(code string) {
 			defer limit.Done()
@@ -62,7 +68,7 @@ func main() {
 			logs.PrintErr(err)
 		}(code)
 	}
-
+	limit.Wait()
 }
 
 func update(code string, add func(n int)) error {
@@ -74,9 +80,12 @@ func update(code string, add func(n int)) error {
 	lastTime := ToTime(last.Date, 0)
 	add(lastTime.Year() - StartDate.Year())
 	now := time.Now()
-	insert := []*StockTrade(nil)
+
 	for date := lastTime; date.Before(now); date = date.Add(time.Hour * 24) {
+		logs.Debug(date)
+		trades := []*Trade(nil)
 		err = Manage.Do(func(c *tdx.Client) error {
+
 			//最早日期为2000-06-09
 			if date.Before(StartDate) {
 				return nil
@@ -88,42 +97,53 @@ func update(code string, add func(n int)) error {
 			}
 
 			//3. 获取数据
-			item, err := pullDay(c, code, date)
+			trades, err = pullDay(c, code, date)
 			if err != nil {
 				return err
 			}
-			insert = append(insert, item...)
+			logs.Debug(3)
+			//trades = append(trades, item...)
+			//logs.Debug(4)
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		if len(insert) > 1000 {
-			_, err = DB.Insert(insert)
-			if err != nil {
-				return err
-			}
-		}
-		add(1)
-	}
-	if len(insert) > 0 {
-		_, err = DB.Insert(insert)
+		logs.Debug(5)
+		logs.Debug(len(trades))
+		err = insert(trades)
 		if err != nil {
+			logs.Err(err)
 			return err
 		}
+		add(1)
 	}
 	return nil
 }
 
-func pullDay(c *tdx.Client, code string, start time.Time) ([]*StockTrade, error) {
+func insert(ls []*Trade) error {
+	return DB.SessionFunc(func(session *xorm.Session) error {
+		for _, v := range ls {
+			_, err := session.Insert(v)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
 
-	insert := []*StockTrade(nil)
+func pullDay(c *tdx.Client, code string, start time.Time) ([]*Trade, error) {
 
-	date, _ := FromTime(start)
+	logs.Spend(code + start.Format("-20060102") + "耗时")()
+
+	trades := []*Trade(nil)
+
+	startDate, _ := FromTime(start)
 
 	nowDate, _ := FromTime(time.Now())
 
-	switch date {
+	switch startDate {
 	case 0:
 	//
 
@@ -134,11 +154,11 @@ func pullDay(c *tdx.Client, code string, start time.Time) ([]*StockTrade, error)
 			return nil, err
 		}
 		for _, v := range resp.List {
-			_, minute := FromTime(v.Time)
-			insert = append(insert, &StockTrade{
+			date, minute := FromTime(v.Time)
+			trades = append(trades, &Trade{
 				Exchange: code[:2],
 				Code:     code[2:],
-				Show:     start.Format(time.DateTime),
+				Show:     v.Time.Format(time.DateTime),
 				Date:     date,
 				Time:     minute,
 				Price:    v.Price,
@@ -155,11 +175,11 @@ func pullDay(c *tdx.Client, code string, start time.Time) ([]*StockTrade, error)
 			return nil, err
 		}
 		for _, v := range resp.List {
-			_, minute := FromTime(v.Time)
-			insert = append(insert, &StockTrade{
+			date, minute := FromTime(v.Time)
+			trades = append(trades, &Trade{
 				Exchange: code[:2],
 				Code:     code[2:],
-				Show:     start.Format(time.DateTime),
+				Show:     v.Time.Format("2006-01-02 15:04"),
 				Date:     date,
 				Time:     minute,
 				Price:    v.Price,
@@ -171,13 +191,13 @@ func pullDay(c *tdx.Client, code string, start time.Time) ([]*StockTrade, error)
 
 	}
 
-	return insert, nil
+	return trades, nil
 }
 
-func getLast(code string) (*StockTrade, error) {
+func getLast(code string) (*Trade, error) {
 	//查询数据库最后的数据
-	last := new(StockTrade)
-	has, err := DB.Where("Code=?", code).Desc("Date").Desc("Data", "Time").Get(last)
+	last := new(Trade)
+	has, err := DB.Where("Code=?", code).Desc("Date").Desc("Date", "Time").Get(last)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -185,11 +205,15 @@ func getLast(code string) (*StockTrade, error) {
 		if err != nil {
 			return nil, err
 		}
+		date := time.Date(year, month, 1, 0, 0, 0, 0, time.Local)
+		if date.Before(StartDate) {
+			date = StartDate
+		}
 		//说明数据不存在,取该股上市月初为起始时间
-		last.Date, _ = FromTime(time.Date(year, month, 1, 0, 0, 0, 0, time.Local))
+		last.Date, _ = FromTime(date)
 	} else if last.Time != 900 {
 		//如果最后时间不是15:00,说明数据不全,删除这天的数据
-		if _, err := DB.Where("Code=?", code).And("Date=?", last.Date).Delete(&StockTrade{}); err != nil {
+		if _, err := DB.Where("Code=?", code).And("Date=?", last.Date).Delete(&Trade{}); err != nil {
 			return nil, err
 		}
 		//减去一天

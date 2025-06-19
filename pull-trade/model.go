@@ -2,7 +2,7 @@ package main
 
 import "github.com/injoyai/tdx/protocol"
 
-type StockTrade struct {
+type Trade struct {
 	ID       int64
 	Exchange string         //交易所
 	Code     string         `xorm:"index"` //代码
