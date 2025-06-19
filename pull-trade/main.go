@@ -201,7 +201,7 @@ func pullDay(c *tdx.Client, code string, start time.Time) ([]*Trade, error) {
 func getLast(code string) (*Trade, error) {
 	//查询数据库最后的数据
 	last := new(Trade)
-	has, err := DB.Where("Code=?", code).Desc("Date").Desc("Date", "Time").Get(last)
+	has, err := DB.Where("Code=?", code).Desc("Date", "Time").Get(last)
 	logs.Debug()
 	logs.Debug(code)
 	logs.Debug(has, err)
