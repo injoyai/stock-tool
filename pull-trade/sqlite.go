@@ -230,7 +230,7 @@ func (this *Sqlite) pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err er
 	if err != nil {
 		return err
 	}
-	logs.Debugf("[%s-%d] 拉取耗时: %s\n 数量: %d\n", b.Code, b.Year, time.Since(now), len(insert))
+	logs.Debugf("[%s-%d] 拉取耗时: %s 数量: %d\n", b.Code, b.Year, time.Since(now), len(insert))
 	session := b.DB.Engine.NewSession()
 	if err := session.Begin(); err != nil {
 		session.Close()
