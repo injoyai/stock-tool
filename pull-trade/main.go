@@ -9,6 +9,7 @@ import (
 	"github.com/injoyai/goutil/str/bar"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/protocol"
 	"time"
 	"xorm.io/xorm"
 )
@@ -72,7 +73,9 @@ func main() {
 }
 
 func update(code string, add func(n int)) error {
-	last, err := getLast(code)
+	code = protocol.AddPrefix(code)
+
+	last, err := getLast(code[2:])
 	if err != nil {
 		return err
 	}
@@ -194,10 +197,15 @@ func pullDay(c *tdx.Client, code string, start time.Time) ([]*Trade, error) {
 	return trades, nil
 }
 
+// 获取最后的数据,code已经处理前缀
 func getLast(code string) (*Trade, error) {
 	//查询数据库最后的数据
 	last := new(Trade)
 	has, err := DB.Where("Code=?", code).Desc("Date").Desc("Date", "Time").Get(last)
+	logs.Debug()
+	logs.Debug(code)
+	logs.Debug(has, err)
+	logs.Debug(last)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -212,6 +220,7 @@ func getLast(code string) (*Trade, error) {
 		//说明数据不存在,取该股上市月初为起始时间
 		last.Date, _ = FromTime(date)
 	} else if last.Time != 900 {
+		logs.Debug("删除")
 		//如果最后时间不是15:00,说明数据不全,删除这天的数据
 		if _, err := DB.Where("Code=?", code).And("Date=?", last.Date).Delete(&Trade{}); err != nil {
 			return nil, err
