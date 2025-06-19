@@ -1,12 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"github.com/injoyai/base/chans"
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/goutil/database/mysql"
 	"github.com/injoyai/goutil/database/xorms"
-	"github.com/injoyai/goutil/str/bar"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
@@ -22,57 +20,64 @@ var (
 	DB     *xorms.Engine
 	Manage *tdx.Manage
 	Codes  = []string{
-		"sz000001",
+		//"sz000001",
 		//"sh600000",
 	}
+
+	Clients = cfg.GetInt("clients", 4)
+	Disks   = cfg.GetInt("disks", 100)
+	DSN     = cfg.GetString("database.dsn")
 )
 
 func init() {
 	var err error
-	DB, err = mysql.NewXorm(cfg.GetString("database.dsn"))
+	DB, err = mysql.NewXorm(DSN)
 	logs.PanicErr(err)
 	logs.PanicErr(DB.Ping())
 	DB.Sync2(new(Trade))
+	Manage, err = tdx.NewManage(&tdx.ManageConfig{Number: Clients})
+	logs.PanicErr(err)
 }
 
 func main() {
+	//t := task.New()
+	run()
+}
 
-	var err error
-	Manage, err = tdx.NewManage(&tdx.ManageConfig{Number: 4})
-	logs.PanicErr(err)
+func run() {
 
-	limit := chans.NewWaitLimit(100)
+	limit := chans.NewWaitLimit(Disks)
 	if len(Codes) == 0 {
 		Codes = Manage.Codes.GetStocks()
 	}
 
-	b := bar.New(int64(len(Codes) * (time.Now().Year() - StartDate.Year() + 1)))
-	b.AddOption(func(f *bar.Format) {
-		f.Entity.SetFormatter(func(e *bar.Format) string {
-			return fmt.Sprintf("\r%s [%s] %s  %s  %s  %-10s",
-				time.Now().Format(time.TimeOnly),
-				"进度",
-				e.Bar,
-				e.RateSize,
-				e.Speed,
-				e.Used,
-			)
-		})
-	})
-	b.Add(0).Flush()
+	//b := bar.New(int64(len(Codes)))
+	//b.AddOption(func(f *bar.Format) {
+	//	f.Entity.SetFormatter(func(e *bar.Format) string {
+	//		return fmt.Sprintf("\r%s [%s] %s  %s  %s  %-10s",
+	//			time.Now().Format(time.TimeOnly),
+	//			"进度",
+	//			e.Bar,
+	//			e.RateSize,
+	//			e.Speed,
+	//			e.Used,
+	//		)
+	//	})
+	//})
+	//b.Add(0).Flush()
 
 	for _, code := range Codes {
 		limit.Add()
 		go func(code string) {
 			defer limit.Done()
-			err := update(code, func(n int) { b.Add(int64(n)).Flush() })
+			err := update(code)
 			logs.PrintErr(err)
 		}(code)
 	}
 	limit.Wait()
 }
 
-func update(code string, add func(n int)) error {
+func update(code string) error {
 	code = protocol.AddPrefix(code)
 
 	last, err := getLast(code[2:])
@@ -81,45 +86,36 @@ func update(code string, add func(n int)) error {
 	}
 
 	lastTime := ToTime(last.Date, 0)
-	add(lastTime.Year() - StartDate.Year())
 	now := time.Now()
 
 	for date := lastTime; date.Before(now); date = date.Add(time.Hour * 24) {
-		logs.Debug(date)
 		trades := []*Trade(nil)
 		err = Manage.Do(func(c *tdx.Client) error {
-
 			//最早日期为2000-06-09
 			if date.Before(StartDate) {
 				return nil
 			}
-
 			//排除休息日
 			if !Manage.Workday.Is(date) {
 				return nil
 			}
-
 			//3. 获取数据
 			trades, err = pullDay(c, code, date)
 			if err != nil {
 				return err
 			}
-			logs.Debug(3)
-			//trades = append(trades, item...)
-			//logs.Debug(4)
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		logs.Debug(5)
-		logs.Debug(len(trades))
+
+		logs.Debugf("%s %s %d\n", code, date.Format("2006-01-02"), len(trades))
 		err = insert(trades)
 		if err != nil {
 			logs.Err(err)
 			return err
 		}
-		add(1)
 	}
 	return nil
 }
@@ -138,12 +134,11 @@ func insert(ls []*Trade) error {
 
 func pullDay(c *tdx.Client, code string, start time.Time) ([]*Trade, error) {
 
-	logs.Spend(code + start.Format("-20060102") + "耗时")()
-
 	trades := []*Trade(nil)
 
+	//获取数据的时间
 	startDate, _ := FromTime(start)
-
+	//当前时间,用于判断是否是当天
 	nowDate, _ := FromTime(time.Now())
 
 	switch startDate {
@@ -201,11 +196,10 @@ func pullDay(c *tdx.Client, code string, start time.Time) ([]*Trade, error) {
 func getLast(code string) (*Trade, error) {
 	//查询数据库最后的数据
 	last := new(Trade)
-	has, err := DB.Where("Code=?", code).Desc("Date").Desc("Date", "Time").Get(last)
-	logs.Debug()
-	logs.Debug(code)
-	logs.Debug(has, err)
+	has, err := DB.Where("Code=?", code).Desc("Date", "Time", "ID").Get(last)
+
 	logs.Debug(last)
+
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -220,9 +214,8 @@ func getLast(code string) (*Trade, error) {
 		//说明数据不存在,取该股上市月初为起始时间
 		last.Date, _ = FromTime(date)
 	} else if last.Time != 900 {
-		logs.Debug("删除")
 		//如果最后时间不是15:00,说明数据不全,删除这天的数据
-		if _, err := DB.Where("Code=?", code).And("Date=?", last.Date).Delete(&Trade{}); err != nil {
+		if _, err := DB.Where("Code=? and Date=?", code, last.Date).Delete(&Trade{}); err != nil {
 			return nil, err
 		}
 		//减去一天
