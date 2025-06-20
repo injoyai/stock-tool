@@ -47,7 +47,6 @@ func (this *Sqlite) Run(ctx context.Context, m *tdx.Manage) error {
 
 	go func() {
 		limit := chans.NewLimit(this.limit)
-		logs.Debug("limit:", this.limit)
 		for {
 			select {
 			case <-ctx.Done():
@@ -85,8 +84,9 @@ func (this *Sqlite) Run(ctx context.Context, m *tdx.Manage) error {
 		} else {
 			cs = codes[offset : offset+limit]
 		}
-		logs.Debug("readAll")
+		logs.Debug("1. 读取任务")
 		ls := this.readAll(ctx, m, cs)
+		logs.Debug("2. 任务数量:", len(ls))
 		for _, v := range ls {
 			dbs <- v
 		}
@@ -124,25 +124,39 @@ func (this *Sqlite) readAll(ctx context.Context, m *tdx.Manage, codes []string) 
 
 func (this *Sqlite) readOne(ctx context.Context, m *tdx.Manage, code string) ([]*tradeDB, error) {
 	//查询月K线,获取实际上市年份
-	publicYear, publicMonth, err := this.getPublic(ctx, m, code)
-	if err != nil {
-		return nil, err
-	}
+	//public, err := this.getPublic(m, code)
+	//if err != nil {
+	//	return nil, err
+	//}
+	var public time.Time
+	once := sync.Once{}
 
 	ls := []*tradeDB(nil)
 	now := time.Now()
-	err = this.Dir.rangeYearAll(code, func(year int, filename string, exist, hasNext bool) (bool, error) {
-		//存在,并且不是今年,今年存在并需要实时更新
+	err := this.Dir.rangeYear(code, func(year int, filename string, exist, hasNext bool) (bool, error) {
+
+		var err error
+		once.Do(func() {
+			//查询月K线,获取实际上市年份
+			public, err = this.getPublic(m, code)
+		})
+		if err != nil {
+			return false, err
+		}
+
+		//存在,并且不是今年,不需要更新
+		//如果是今年,则需要实时更新,
+		//例如跨年的时候,有可能需要补充去年的数据
 		if exist && year < now.Year() && !hasNext {
 			return true, nil
 		}
 
 		//年份小于上市年份,无效,跳过
-		if year < publicYear {
+		if year < public.Year() {
 			return true, nil
 		}
 
-		x, err := newTradeDB(filename, code, year, publicYear, publicMonth)
+		x, err := newTradeDB(filename, code, year, public)
 		if err != nil {
 			return true, err
 		}
@@ -163,9 +177,7 @@ func (this *Sqlite) commit(ctx context.Context, num int, done chan struct{}) err
 			if !ok {
 				return nil
 			}
-			now := time.Now()
 			fn()
-			logs.Debugf("序号: %d 排队: %d 耗时: %s\n", i, len(this.Chan), time.Since(now))
 
 		case <-done:
 			for {
@@ -196,7 +208,7 @@ func (this *Sqlite) pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err er
 	}()
 
 	yearLast := time.Date(b.Year, 12, 31, 23, 0, 0, 0, time.Local)
-	t := ToTime(b.Last.Date, 0)
+	t := ToTime(b.LastDate, 0)
 
 	var insert []*TradeSqlite
 	err = m.Do(func(c *tdx.Client) error {
@@ -230,7 +242,14 @@ func (this *Sqlite) pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err er
 	if err != nil {
 		return err
 	}
+
 	logs.Debugf("[%s-%d] 拉取耗时: %s 数量: %d\n", b.Code, b.Year, time.Since(now), len(insert))
+
+	if len(insert) == 0 {
+		return nil
+	}
+
+	b.init()
 	session := b.DB.Engine.NewSession()
 	if err := session.Begin(); err != nil {
 		session.Close()
@@ -255,9 +274,9 @@ func (this *Sqlite) pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err er
 }
 
 // 获取上市年月
-func (this *Sqlite) getPublic(ctx context.Context, m *tdx.Manage, code string) (year int, month time.Month, err error) {
-	year = 1990
-	month = 12
+func (this *Sqlite) getPublic(m *tdx.Manage, code string) (public time.Time, err error) {
+	year := 1990
+	month := time.Month(12)
 	err = m.Do(func(c *tdx.Client) error {
 		resp, err := c.GetKlineMonthAll(code)
 		if err != nil {
@@ -270,6 +289,7 @@ func (this *Sqlite) getPublic(ctx context.Context, m *tdx.Manage, code string) (
 		}
 		return nil
 	})
+	public = time.Date(year, month, 1, 0, 0, 0, 0, time.Local)
 	return
 }
 
@@ -333,27 +353,27 @@ func (this tradeDir) filename(code string, year int) string {
 	return filepath.Join(string(this), code, code+"-"+conv.String(year)+".db")
 }
 
-// 遍历年份,返回未完成的年份和文件名称
-func (this tradeDir) rangeYear(code string, fn func(year int, filename string) (bool, error)) error {
-	now := time.Now().Year()
-	start := 2000
-	for i := start; i <= now; i++ {
-		filename := this.filename(code, i+1)
-		if !oss.Exists(filename) {
-			next, err := fn(i, this.filename(code, i))
-			if err != nil {
-				return err
-			}
-			if !next {
-				break
-			}
-		}
-	}
-	return nil
-}
+//// 遍历年份,返回未完成的年份和文件名称
+//func (this tradeDir) rangeYear(code string, fn func(year int, filename string) (bool, error)) error {
+//	now := time.Now().Year()
+//	start := 2000
+//	for i := start; i <= now; i++ {
+//		filename := this.filename(code, i+1)
+//		if !oss.Exists(filename) {
+//			next, err := fn(i, this.filename(code, i))
+//			if err != nil {
+//				return err
+//			}
+//			if !next {
+//				break
+//			}
+//		}
+//	}
+//	return nil
+//}
 
 // 遍历年份,返回未完成的年份和文件名称
-func (this tradeDir) rangeYearAll(code string, fn func(year int, filename string, exist, hasNext bool) (bool, error)) error {
+func (this tradeDir) rangeYear(code string, fn func(year int, filename string, exist, hasNext bool) (bool, error)) error {
 	now := time.Now().Year()
 	start := 2000
 	for i := start; i <= now; i++ {
@@ -369,63 +389,78 @@ func (this tradeDir) rangeYearAll(code string, fn func(year int, filename string
 	return nil
 }
 
-func (this tradeDir) lastYear(code string) (year int, filename string) {
-	this.rangeYear(code, func(_year int, _filename string) (bool, error) {
-		year = _year
-		filename = _filename
-		return true, nil
-	})
-	return
-}
+//func (this tradeDir) lastYear(code string) (year int, filename string) {
+//	this.rangeYear(code, func(_year int, _filename string) (bool, error) {
+//		year = _year
+//		filename = _filename
+//		return true, nil
+//	})
+//	return
+//}
 
-func newTradeDB(filename, code string, year, publicYear int, publicMonth time.Month) (*tradeDB, error) {
-	b, err := sqlite.NewXorm(filename)
-	if err != nil {
-		return nil, err
+func newTradeDB(filename, code string, year int, public time.Time) (*tradeDB, error) {
+	t := &tradeDB{
+		Code:     code,
+		Filename: filename,
+		Year:     year,
+		Public:   public,
 	}
-	b.Sync2(new(TradeSqlite))
-
-	last := new(TradeSqlite)
-	_, err = b.Desc("Date", "Time").Get(last)
-	if err != nil {
-		return nil, err
+	//不存在该年的数据,时间从该年的1.1开始
+	t.LastDate, _ = FromTime(time.Date(year, 1, 1, 0, 0, 0, 0, time.Local))
+	if !oss.Exists(filename) {
+		return t, nil
 	}
-
-	if err != nil {
-		return nil, err
-	}
-	if last.Time != 0 && last.Time != 900 {
-		//如果最后时间不是15:00,说明数据不全,删除这天的数据
-		if _, err := b.Where("Date=?", last.Date).Delete(&TradeSqlite{}); err != nil {
-			return nil, err
-		}
-		last.Date -= 1
-	}
-
-	if last.Date == 0 {
-		//说明数据不存在,取该股上市月初为起始时间
-		month := conv.Select(year == publicYear, publicMonth, 1)
-		last.Date, _ = FromTime(time.Date(year, month, 1, 0, 0, 0, 0, time.Local))
-	}
-	return &tradeDB{
-		Code:        code,
-		Filename:    filename,
-		DB:          b,
-		Last:        last,
-		Year:        year,
-		PublicYear:  publicYear,
-		PublicMonth: publicMonth,
-	}, nil
+	err := t.init()
+	return t, err
 }
 
 type tradeDB struct {
-	Code        string
-	Filename    string
-	DB          *xorms.Engine
-	Last        *TradeSqlite
-	Year        int
-	PublicYear  int
-	PublicMonth time.Month
+	Code     string        //代码
+	Filename string        //文件名称
+	DB       *xorms.Engine //数据库实例
+
+	LastDate uint16    //最后数据日期
+	Year     int       //任务的年份
+	Public   time.Time //上市时间
+}
+
+func (this *tradeDB) init() (err error) {
+	if this.DB == nil {
+		exist := oss.Exists(this.Filename)
+
+		this.DB, err = sqlite.NewXorm(this.Filename)
+		if err != nil {
+			return err
+		}
+		if err = this.DB.Sync2(new(TradeSqlite)); err != nil {
+			return err
+		}
+
+		last := new(TradeSqlite)
+		if exist {
+			_, err = this.DB.Desc("Date", "Time").Get(last)
+			if err != nil {
+				return err
+			}
+		}
+
+		if last.Time != 0 && last.Time != 900 && last.Time != 899 {
+			//如果最后时间不是15:00/14:59(早期),说明数据不全,删除这天的数据
+			if _, err = this.DB.Where("Date=?", last.Date).Delete(&TradeSqlite{}); err != nil {
+				return err
+			}
+			last.Date -= 1
+		}
+
+		this.LastDate = last.Date
+		if this.LastDate == 0 {
+			//说明数据不存在,取该股上市月初为起始时间
+			month := conv.Select(this.Year == this.Public.Year(), this.Public.Month(), 1)
+			this.LastDate, _ = FromTime(time.Date(this.Year, month, 1, 0, 0, 0, 0, time.Local))
+		}
+
+	}
+	return
 }
 
 func (this *tradeDB) Close() {
