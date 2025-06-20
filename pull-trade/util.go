@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"github.com/injoyai/tdx"
+	"time"
+)
 
 // ToTime 转时间,最大支持170年,即1990+170=2160
 func ToTime(date, minute uint16) time.Time {
@@ -14,4 +17,29 @@ func ToTime(date, minute uint16) time.Time {
 // FromTime x
 func FromTime(t time.Time) (date uint16, minute uint16) {
 	return (uint16(t.Year()-1990)*12+uint16(t.Month()-1))<<5 + uint16(t.Day()), uint16(t.Hour()*60 + t.Minute())
+}
+
+func getPublic(m *tdx.Manage, code string) (year int, month time.Month, err error) {
+	year = 1990
+	month = 12
+	err = m.Do(func(c *tdx.Client) error {
+		resp, err := c.GetKlineMonthAll(code)
+		if err != nil {
+			return err
+		}
+		if len(resp.List) > 0 {
+			year = resp.List[0].Time.Year()
+			month = resp.List[0].Time.Month()
+			return nil
+		}
+		return nil
+	})
+	return
+}
+
+func GetCodes(m *tdx.Manage, codes []string) []string {
+	if len(codes) == 0 {
+		return m.Codes.GetStocks()
+	}
+	return codes
 }
