@@ -16,18 +16,18 @@ import (
 	"time"
 )
 
-func NewSqlite(codes []string, dir string, limit int) *Sqlite {
+func NewSqlite(codes []string, _dir string, limit int) *Sqlite {
 	return &Sqlite{
-		Dir:       tradeDir(dir),
+		Dir:       dir(_dir),
 		Codes:     codes,
 		limit:     limit,
-		Chan:      make(chan func(), 100),
+		Chan:      make(chan func(), limit+1),
 		StartDate: time.Date(2000, 6, 9, 0, 0, 0, 0, time.Local),
 	}
 }
 
 type Sqlite struct {
-	Dir       tradeDir    //数据保存目录
+	Dir       dir         //数据保存目录
 	Codes     []string    //用户指定操作的股票
 	limit     int         //最大并发,HHD推荐1
 	Chan      chan func() //队列插入
@@ -63,7 +63,7 @@ func (this *Sqlite) Run(ctx context.Context, m *tdx.Manage) error {
 			default:
 				select {
 				case <-readDone:
-					logs.Debug("read done")
+					logs.Debug("close pullDone")
 					close(pullDone)
 					return
 				default:
@@ -76,6 +76,7 @@ func (this *Sqlite) Run(ctx context.Context, m *tdx.Manage) error {
 	var cs []string
 	for offset := 0; ; offset += limit {
 		if offset >= len(codes) {
+			logs.Debug("close readDone")
 			close(readDone)
 			break
 		}
@@ -90,7 +91,7 @@ func (this *Sqlite) Run(ctx context.Context, m *tdx.Manage) error {
 		for _, v := range ls {
 			dbs <- v
 		}
-		logs.Debug("commit")
+		logs.Debug("3. 写入硬盘")
 		this.commit(ctx, len(ls), pullDone)
 	}
 
@@ -249,7 +250,10 @@ func (this *Sqlite) pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err er
 		return nil
 	}
 
-	b.init()
+	//初始化操作,例如新建文件,表等
+	if err = b.init(); err != nil {
+		return err
+	}
 	session := b.DB.Engine.NewSession()
 	if err := session.Begin(); err != nil {
 		session.Close()
@@ -263,9 +267,15 @@ func (this *Sqlite) pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err er
 		}
 	}
 
+	//写入硬盘,有单线程统一处理,顺序写入
 	this.Chan <- func() {
+		err = session.Commit()
+		if err != nil {
+			//发生错误,删除文件
+			b.CloseWithErr(err)
+		}
+		//无错误,是否资源
 		defer b.Close()
-		session.Commit()
 		session.Close()
 	}
 
@@ -347,33 +357,14 @@ func (this *Sqlite) pullDay(c *tdx.Client, code string, start time.Time) ([]*Tra
 	return insert, nil
 }
 
-type tradeDir string
+type dir string
 
-func (this tradeDir) filename(code string, year int) string {
+func (this dir) filename(code string, year int) string {
 	return filepath.Join(string(this), code, code+"-"+conv.String(year)+".db")
 }
 
-//// 遍历年份,返回未完成的年份和文件名称
-//func (this tradeDir) rangeYear(code string, fn func(year int, filename string) (bool, error)) error {
-//	now := time.Now().Year()
-//	start := 2000
-//	for i := start; i <= now; i++ {
-//		filename := this.filename(code, i+1)
-//		if !oss.Exists(filename) {
-//			next, err := fn(i, this.filename(code, i))
-//			if err != nil {
-//				return err
-//			}
-//			if !next {
-//				break
-//			}
-//		}
-//	}
-//	return nil
-//}
-
 // 遍历年份,返回未完成的年份和文件名称
-func (this tradeDir) rangeYear(code string, fn func(year int, filename string, exist, hasNext bool) (bool, error)) error {
+func (this dir) rangeYear(code string, fn func(year int, filename string, exist, hasNext bool) (bool, error)) error {
 	now := time.Now().Year()
 	start := 2000
 	for i := start; i <= now; i++ {
@@ -388,15 +379,6 @@ func (this tradeDir) rangeYear(code string, fn func(year int, filename string, e
 	}
 	return nil
 }
-
-//func (this tradeDir) lastYear(code string) (year int, filename string) {
-//	this.rangeYear(code, func(_year int, _filename string) (bool, error) {
-//		year = _year
-//		filename = _filename
-//		return true, nil
-//	})
-//	return
-//}
 
 func newTradeDB(filename, code string, year int, public time.Time) (*tradeDB, error) {
 	t := &tradeDB{
@@ -442,14 +424,13 @@ func (this *tradeDB) init() (err error) {
 			if err != nil {
 				return err
 			}
-		}
-
-		if last.Time != 0 && last.Time != 900 && last.Time != 899 {
-			//如果最后时间不是15:00/14:59(早期),说明数据不全,删除这天的数据
-			if _, err = this.DB.Where("Date=?", last.Date).Delete(&TradeSqlite{}); err != nil {
-				return err
+			if last.Time != 0 && last.Time != 900 && last.Time != 899 {
+				//如果最后时间不是15:00/14:59(早期),说明数据不全,删除这天的数据
+				if _, err = this.DB.Where("Date=?", last.Date).Delete(&TradeSqlite{}); err != nil {
+					return err
+				}
+				last.Date -= 1
 			}
-			last.Date -= 1
 		}
 
 		this.LastDate = last.Date
@@ -471,6 +452,8 @@ func (this *tradeDB) CloseWithErr(err error) error {
 	if err == nil {
 		return nil
 	}
-	this.DB.Close()
+	if this.DB != nil {
+		this.DB.Close()
+	}
 	return os.Remove(this.Filename)
 }
