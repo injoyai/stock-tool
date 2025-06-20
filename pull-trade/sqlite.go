@@ -40,44 +40,39 @@ func (this *Sqlite) Name() string {
 
 func (this *Sqlite) Run(ctx context.Context, m *tdx.Manage) error {
 
+	//go func() {
+	//	limit := chans.NewLimit(this.limit)
+	//	for {
+	//		select {
+	//		case <-ctx.Done():
+	//			return
+	//		case <-readDone:
+	//		case b := <-dbs:
+	//			limit.Add()
+	//			go func(b *tradeDB) {
+	//				defer limit.Done()
+	//				err := g.Retry(func() error { return this._pull(ctx, b, m) }, DefaultRetry)
+	//				logs.PrintErr(err)
+	//			}(b)
+	//
+	//		default:
+	//			select {
+	//			case <-readDone:
+	//				logs.Debug("close pullDone")
+	//				close(pullDone)
+	//				return
+	//			default:
+	//			}
+	//		}
+	//	}
+	//}()
+
 	codes := GetCodes(m, this.Codes)
-	dbs := make(chan *tradeDB, 1000)
-	readDone := make(chan struct{}, 1)
-	pullDone := make(chan struct{}, 1)
-
-	go func() {
-		limit := chans.NewLimit(this.limit)
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-readDone:
-			case b := <-dbs:
-				limit.Add()
-				go func(b *tradeDB) {
-					defer limit.Done()
-					err := g.Retry(func() error { return this.pull(ctx, b, m) }, DefaultRetry)
-					logs.PrintErr(err)
-				}(b)
-
-			default:
-				select {
-				case <-readDone:
-					logs.Debug("close pullDone")
-					close(pullDone)
-					return
-				default:
-				}
-			}
-		}
-	}()
-
-	limit := 800
+	limit := 2
 	var cs []string
 	for offset := 0; ; offset += limit {
 		if offset >= len(codes) {
-			logs.Debug("close readDone")
-			close(readDone)
+			logs.Debug("read done")
 			break
 		}
 		if offset+limit > len(codes) {
@@ -85,17 +80,36 @@ func (this *Sqlite) Run(ctx context.Context, m *tdx.Manage) error {
 		} else {
 			cs = codes[offset : offset+limit]
 		}
+
 		logs.Debug("1. 读取任务")
 		ls := this.readAll(ctx, m, cs)
 		logs.Debug("2. 任务数量:", len(ls))
-		for _, v := range ls {
-			dbs <- v
-		}
+
+		//此次任务结束信号
+		pullDone := make(chan struct{}, 1)
+		go this.pull(ctx, m, ls, pullDone)
+
 		logs.Debug("3. 写入硬盘")
 		this.commit(ctx, len(ls), pullDone)
 	}
 
 	return nil
+}
+
+func (this *Sqlite) pull(ctx context.Context, m *tdx.Manage, dbs []*tradeDB, pullDone chan struct{}) {
+	limit := chans.NewWaitLimit(this.limit)
+	for _, b := range dbs {
+		limit.Add()
+		go func(b *tradeDB) {
+			defer limit.Done()
+			err := g.Retry(func() error { return this._pull(ctx, b, m) }, DefaultRetry)
+			logs.PrintErr(err)
+		}(b)
+	}
+	go func() {
+		limit.Wait()
+		close(pullDone)
+	}()
 }
 
 func (this *Sqlite) readAll(ctx context.Context, m *tdx.Manage, codes []string) []*tradeDB {
@@ -194,7 +208,7 @@ func (this *Sqlite) commit(ctx context.Context, num int, done chan struct{}) err
 	return nil
 }
 
-func (this *Sqlite) pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err error) {
+func (this *Sqlite) _pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err error) {
 	defer b.CloseWithErr(err)
 
 	now := time.Now()
@@ -364,6 +378,19 @@ func (this dir) rangeYear(code string, fn func(year int, filename string, exist,
 	start := 2000
 	for i := start; i <= now; i++ {
 		filename := this.filename(code, i)
+		if oss.Exists(filename + "-journal") {
+			//说明这个文件的数据不全
+			logs.Trace("删除:", filename)
+			if err := os.Remove(filename); err != nil {
+				return err
+			}
+			logs.Trace(oss.Exists(filename))
+			logs.Trace("删除:", filename+"-journal")
+			if err := os.Remove(filename + "-journal"); err != nil {
+				return err
+			}
+			logs.Trace(oss.Exists(filename + "-journal"))
+		}
 		next, err := fn(i, filename, oss.Exists(filename), oss.Exists(this.filename(code, i+1)))
 		if err != nil {
 			return err

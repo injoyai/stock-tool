@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
@@ -24,6 +25,7 @@ func init() {
 	logs.SetFormatter(logs.TimeFormatter)
 	logs.Info("版本:", "v1.0")
 	logs.Info("说明:", "第一版")
+	fmt.Println("=====================================================")
 }
 
 func main() {
@@ -32,7 +34,7 @@ func main() {
 	logs.PanicErr(err)
 
 	s := NewSqlite(
-		[]string{},
+		[]string{"sz000001", "sh600000"},
 		filepath.Join(tdx.DefaultDatabaseDir, "trade"),
 		Coroutines,
 	)
