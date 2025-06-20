@@ -124,11 +124,6 @@ func (this *Sqlite) readAll(ctx context.Context, m *tdx.Manage, codes []string) 
 }
 
 func (this *Sqlite) readOne(ctx context.Context, m *tdx.Manage, code string) ([]*tradeDB, error) {
-	//查询月K线,获取实际上市年份
-	//public, err := this.getPublic(m, code)
-	//if err != nil {
-	//	return nil, err
-	//}
 	var public time.Time
 	once := sync.Once{}
 

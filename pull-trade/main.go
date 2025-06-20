@@ -15,9 +15,9 @@ var (
 )
 
 var (
-	Clients = cfg.GetInt("clients", 4)
-	Disks   = cfg.GetInt("disks", 10)
-	DSN     = cfg.GetString("database")
+	Clients    = cfg.GetInt("clients", 4)
+	Coroutines = cfg.GetInt("coroutines", 10)
+	DSN        = cfg.GetString("database")
 )
 
 func main() {
@@ -26,11 +26,9 @@ func main() {
 	logs.PanicErr(err)
 
 	s := NewSqlite(
-		[]string{
-			"sz000001", "sh600000",
-		},
+		[]string{},
 		filepath.Join(tdx.DefaultDatabaseDir, "trade"),
-		Disks,
+		Coroutines,
 	)
 
 	s.Run(context.Background(), m)
