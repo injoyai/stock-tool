@@ -19,12 +19,13 @@ var (
 	Clients    = cfg.GetInt("clients", 4)
 	Coroutines = cfg.GetInt("coroutines", 10)
 	DSN        = cfg.GetString("database")
+	Codes      = cfg.GetStrings("codes")
 )
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
 	logs.Info("版本:", "v0.1")
-	logs.Info("说明:", "优化任务")
+	logs.Info("说明:", "可以自定义代码")
 	fmt.Println("=====================================================")
 }
 
@@ -34,7 +35,7 @@ func main() {
 	logs.PanicErr(err)
 
 	s := NewSqlite(
-		[]string{"sz000001", "sh600000"},
+		Codes,
 		filepath.Join(tdx.DefaultDatabaseDir, "trade"),
 		Coroutines,
 	)
