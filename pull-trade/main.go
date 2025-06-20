@@ -23,8 +23,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v1.0")
-	logs.Info("说明:", "第一版")
+	logs.Info("版本:", "v0.1")
+	logs.Info("说明:", "优化任务")
 	fmt.Println("=====================================================")
 }
 
