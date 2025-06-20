@@ -20,6 +20,12 @@ var (
 	DSN        = cfg.GetString("database")
 )
 
+func init() {
+	logs.SetFormatter(logs.TimeFormatter)
+	logs.Info("版本:", "v1.0")
+	logs.Info("说明:", "第一版")
+}
+
 func main() {
 
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
