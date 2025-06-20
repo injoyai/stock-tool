@@ -384,12 +384,10 @@ func (this dir) rangeYear(code string, fn func(year int, filename string, exist,
 			if err := os.Remove(filename); err != nil {
 				return err
 			}
-			logs.Trace(oss.Exists(filename))
 			logs.Trace("删除:", filename+"-journal")
 			if err := os.Remove(filename + "-journal"); err != nil {
 				return err
 			}
-			logs.Trace(oss.Exists(filename + "-journal"))
 		}
 		next, err := fn(i, filename, oss.Exists(filename), oss.Exists(this.filename(code, i+1)))
 		if err != nil {
