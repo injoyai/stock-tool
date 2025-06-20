@@ -12,7 +12,7 @@ import (
 	"xorm.io/xorm"
 )
 
-func NewMysql(dsn string, clients, disks int) (*Mysql, error) {
+func NewMysql(dsn string, clients, coroutines int) (*Mysql, error) {
 	db, err := mysql.NewXorm(DSN)
 	if err != nil {
 		return nil, err
@@ -29,17 +29,22 @@ func NewMysql(dsn string, clients, disks int) (*Mysql, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Mysql{DB: db, Manage: m}, nil
+	return &Mysql{
+		DB:         db,
+		Manage:     m,
+		Coroutines: coroutines,
+	}, nil
 }
 
 type Mysql struct {
-	DB     *xorms.Engine
-	Manage *tdx.Manage
-	Codes  []string
+	DB         *xorms.Engine
+	Manage     *tdx.Manage
+	Codes      []string
+	Coroutines int
 }
 
 func (this *Mysql) Run() {
-	limit := chans.NewWaitLimit(Disks)
+	limit := chans.NewWaitLimit(this.Coroutines)
 	if len(this.Codes) == 0 {
 		this.Codes = this.Manage.Codes.GetStocks()
 	}
