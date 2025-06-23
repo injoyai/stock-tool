@@ -6,6 +6,7 @@ import (
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"github.com/robfig/cron/v3"
 	"path/filepath"
 	"time"
 )
@@ -20,13 +21,14 @@ var (
 	Coroutines = cfg.GetInt("coroutines", 10)
 	Tasks      = cfg.GetInt("tasks", 2)
 	DSN        = cfg.GetString("database")
+	Spec       = cfg.GetString("spec", "0 1 19 * * *")
 	Codes      = cfg.GetStrings("codes")
 )
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2.1")
-	logs.Info("说明:", "增加自定义任务数量")
+	logs.Info("版本:", "v0.2.2")
+	logs.Info("说明:", "增加定时任务")
 	fmt.Println("=====================================================")
 }
 
@@ -42,5 +44,8 @@ func main() {
 		Tasks,
 	)
 
-	s.Run(context.Background(), m)
+	t := cron.New(cron.WithSeconds())
+	t.AddFunc(Spec, func() { s.Run(context.Background(), m) })
+	t.Run()
+
 }
