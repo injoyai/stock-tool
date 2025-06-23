@@ -16,11 +16,13 @@ import (
 	"time"
 )
 
-func NewSqlite(codes []string, _dir string, limit int) *Sqlite {
+func NewSqlite(codes []string, _dir string, limit, tasks int) *Sqlite {
+	tasks = conv.Select(tasks < 1, 2, tasks)
 	return &Sqlite{
 		Dir:       dir(_dir),
 		Codes:     codes,
 		limit:     limit,
+		tasks:     tasks,
 		Chan:      make(chan func(), limit+1),
 		StartDate: time.Date(2000, 6, 9, 0, 0, 0, 0, time.Local),
 	}
@@ -29,7 +31,8 @@ func NewSqlite(codes []string, _dir string, limit int) *Sqlite {
 type Sqlite struct {
 	Dir       dir         //数据保存目录
 	Codes     []string    //用户指定操作的股票
-	limit     int         //最大并发,HHD推荐1
+	limit     int         //协程数量
+	tasks     int         //Tasks 每次任务数量
 	Chan      chan func() //队列插入
 	StartDate time.Time   //最早日期
 }
@@ -39,49 +42,21 @@ func (this *Sqlite) Name() string {
 }
 
 func (this *Sqlite) Run(ctx context.Context, m *tdx.Manage) error {
-
-	//go func() {
-	//	limit := chans.NewLimit(this.limit)
-	//	for {
-	//		select {
-	//		case <-ctx.Done():
-	//			return
-	//		case <-readDone:
-	//		case b := <-dbs:
-	//			limit.Add()
-	//			go func(b *tradeDB) {
-	//				defer limit.Done()
-	//				err := g.Retry(func() error { return this._pull(ctx, b, m) }, DefaultRetry)
-	//				logs.PrintErr(err)
-	//			}(b)
-	//
-	//		default:
-	//			select {
-	//			case <-readDone:
-	//				logs.Debug("close pullDone")
-	//				close(pullDone)
-	//				return
-	//			default:
-	//			}
-	//		}
-	//	}
-	//}()
-
 	codes := GetCodes(m, this.Codes)
-	limit := 2
+	tasks := this.tasks
 	var cs []string
-	for offset := 0; ; offset += limit {
+	for offset := 0; ; offset += tasks {
 		if offset >= len(codes) {
 			logs.Debug("read done")
 			break
 		}
-		if offset+limit > len(codes) {
+		if offset+tasks > len(codes) {
 			cs = codes[offset:]
 		} else {
-			cs = codes[offset : offset+limit]
+			cs = codes[offset : offset+tasks]
 		}
 
-		logs.Debug("1. 读取任务")
+		logs.Debugf("1. 读取任务: %d*year\n", tasks)
 		ls := this.readAll(ctx, m, cs)
 		logs.Debug("2. 任务数量:", len(ls))
 
@@ -145,6 +120,13 @@ func (this *Sqlite) readOne(ctx context.Context, m *tdx.Manage, code string) ([]
 	now := time.Now()
 	err := this.Dir.rangeYear(code, func(year int, filename string, exist, hasNext bool) (bool, error) {
 
+		//存在,并且不是今年,不需要更新
+		//如果是今年,则需要实时更新,
+		//例如跨年的时候,有可能需要补充去年的数据
+		if exist && year < now.Year() && hasNext {
+			return true, nil
+		}
+
 		var err error
 		once.Do(func() {
 			//查询月K线,获取实际上市年份
@@ -152,13 +134,6 @@ func (this *Sqlite) readOne(ctx context.Context, m *tdx.Manage, code string) ([]
 		})
 		if err != nil {
 			return false, err
-		}
-
-		//存在,并且不是今年,不需要更新
-		//如果是今年,则需要实时更新,
-		//例如跨年的时候,有可能需要补充去年的数据
-		if exist && year < now.Year() && !hasNext {
-			return true, nil
 		}
 
 		//年份小于上市年份,无效,跳过
