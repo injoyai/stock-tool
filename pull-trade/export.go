@@ -158,7 +158,8 @@ func (this Klines) Merge(n int) Klines {
 			break
 		}
 		last := ls[len(ls)-1]
-		ls.Kline(last.Time, ls[0].Open)
+		k := ls.Kline(last.Time, ls[0].Open)
+		ks = append(ks, k)
 	}
 	return ks
 }
