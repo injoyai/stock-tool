@@ -33,7 +33,6 @@ func (this *Convert) Run(ctx context.Context, m *tdx.Manage) error {
 	if len(codes) == 0 {
 		codes = m.Codes.GetStocks()
 	}
-	logs.Debug(len(codes))
 	for _, code := range codes {
 		err := this.Database.rangeYear(code, func(year int, filename string, exist, hasNext bool) (bool, error) {
 			//从23年开始存数据库,之前的直接导出
@@ -53,6 +52,7 @@ func (this *Convert) Run(ctx context.Context, m *tdx.Manage) error {
 			end := time.Date(year, 12, 31, 0, 0, 0, 0, time.Local).Add(1)
 			last := conv.Select(this.Last.IsZero(), time.Now(), this.Last).Add(1)
 			lastPrice := 0.
+
 			kss := []*Kline(nil)
 			for i := start; i.Before(end) && i.Before(last); i = i.Add(time.Hour * 24) {
 				//排除非工作日
@@ -67,11 +67,11 @@ func (this *Convert) Run(ctx context.Context, m *tdx.Manage) error {
 					return false, err
 				}
 
+				//1分钟
 				ks := data.Kline1(date, lastPrice)
-
 				kss = append(kss, ks...)
 			}
-			err = this.save(code, kss, year)
+			err = this.Save(code, kss, year)
 			return true, err
 		})
 		logs.PrintErr(err)
@@ -79,33 +79,53 @@ func (this *Convert) Run(ctx context.Context, m *tdx.Manage) error {
 	return nil
 }
 
+func (this *Convert) Save(code string, kss Klines, year int) error {
+	if err := this.save(code, kss.Merge(1), new(KlineMinute1), year); err != nil {
+		return err
+	}
+	if err := this.save(code, kss.Merge(5), new(KlineMinute5), year); err != nil {
+		return err
+	}
+	if err := this.save(code, kss.Merge(15), new(KlineMinute15), year); err != nil {
+		return err
+	}
+	if err := this.save(code, kss.Merge(15), new(KlineMinute15), year); err != nil {
+		return err
+	}
+	if err := this.save(code, kss.Merge(30), new(KlineMinute30), year); err != nil {
+		return err
+	}
+	if err := this.save(code, kss.Merge(60), new(KlineMinute60), year); err != nil {
+		return err
+	}
+	return nil
+}
+
 // save 保存数据,kss是一整年的数据
-func (this *Convert) save(code string, kss Klines, year int) error {
+func (this *Convert) save(code string, kss Klines, table any, year int) error {
 	db, err := this.open(code)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	db.Sync2(new(KlineMinute1))
+	db.Sync2(table)
 	return db.SessionFunc(func(session *xorm.Session) error {
-		if _, err = session.Where("Year=?", year).Delete(&KlineMinute1{}); err != nil {
+		if _, err = session.Where("Year=?", year).Delete(table); err != nil {
 			return err
 		}
 		for _, v := range kss {
-			_, err = session.Insert(&KlineMinute1{
-				KlineBase: KlineBase{
-					Year:   v.Time.Year(),
-					Month:  int(v.Time.Month()),
-					Day:    v.Time.Day(),
-					Hour:   v.Time.Hour(),
-					Minute: v.Time.Minute(),
-					Open:   v.Open,
-					High:   v.High,
-					Low:    v.Low,
-					Close:  v.Close,
-					Volume: v.Volume,
-					Amount: v.Amount,
-				},
+			_, err = session.Table(table).Insert(&KlineBase{
+				Year:   v.Time.Year(),
+				Month:  int(v.Time.Month()),
+				Day:    v.Time.Day(),
+				Hour:   v.Time.Hour(),
+				Minute: v.Time.Minute(),
+				Open:   v.Open,
+				High:   v.High,
+				Low:    v.Low,
+				Close:  v.Close,
+				Volume: v.Volume,
+				Amount: v.Amount,
 			})
 			if err != nil {
 				return err

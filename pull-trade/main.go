@@ -40,24 +40,24 @@ func main() {
 func convert() {
 	m, err := tdx.NewManage(nil)
 	logs.PanicErr(err)
-	convert := NewConvert(
+	c := NewConvert(
 		[]string{}, //"sz000001"},
 		filepath.Join(DatabaseDir, "trade"),
 		filepath.Join(DatabaseDir, "kline"),
 		time.Date(2025, 6, 20, 0, 0, 0, 0, time.Local),
 	)
-	convert.Run(context.Background(), m)
+	c.Run(context.Background(), m)
 }
 
 func export() {
 	m, err := tdx.NewManage(nil)
 	logs.PanicErr(err)
-	export := NewExport(
+	e := NewExport(
 		[]string{"sz000001"},
 		filepath.Join(DatabaseDir, "trade"),
 		ExportDir,
 	)
-	export.Run(context.Background(), m)
+	e.Run(context.Background(), m)
 }
 
 func pull() {

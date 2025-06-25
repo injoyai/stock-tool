@@ -55,7 +55,7 @@ func (this TradeSqlite) TableName() string {
 
 type Trades []*TradeSqlite
 
-func (this Trades) Kline1(date uint16, last float64) []*Kline {
+func (this Trades) Kline1(date uint16, last float64) Klines {
 	_930 := uint16(570)
 	_1130 := uint16(690)
 	_1300 := uint16(780)

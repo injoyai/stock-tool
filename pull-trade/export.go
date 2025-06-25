@@ -110,7 +110,55 @@ type Kline struct {
 
 type Klines []*Kline
 
-func (this Klines) Merge(n int) []*Kline {
+func (this Klines) Kline(t time.Time, last float64) *Kline {
+	k := &Kline{
+		Time:   t,
+		Open:   last,
+		High:   last,
+		Low:    last,
+		Close:  last,
+		Volume: 0,
+		Amount: 0,
+	}
+	for i, v := range this {
+		switch i {
+		case 0:
+			k.Open = v.Open
+			k.High = v.High
+			k.Low = v.Low
+			k.Close = v.Close
+		default:
+			k.High = conv.Select(k.High < v.High, v.High, k.High)
+			k.Low = conv.Select(k.Low > v.Low, v.Low, k.Low)
+		}
+		k.Close = v.Close
+		k.Volume += v.Volume
+		k.Amount += v.Amount
+	}
+	return k
+}
 
-	return this
+// Merge 合并成其他类型的K线
+func (this Klines) Merge(n int) Klines {
+	if n <= 1 {
+		return this
+	}
+	ks := Klines(nil)
+	ls := Klines(nil)
+	for i := 0; ; i++ {
+		if len(this) <= i*n {
+			break
+		}
+		if len(this) < (i+1)*n {
+			ls = this[i*n:]
+		} else {
+			ls = this[i*n : (i+1)*n]
+		}
+		if len(ls) == 0 {
+			break
+		}
+		last := ls[len(ls)-1]
+		ls.Kline(last.Time, ls[0].Open)
+	}
+	return ks
 }
