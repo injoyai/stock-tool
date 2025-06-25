@@ -17,16 +17,25 @@ var (
 )
 
 var (
-	Clients     = cfg.GetInt("clients", 4)
-	Coroutines  = cfg.GetInt("coroutines", 10)
-	Tasks       = cfg.GetInt("tasks", 2)
-	DatabaseDir = cfg.GetString("database", "./data/database")
-	ExportDir   = cfg.GetString("export", "./data/export")
-	Spec        = cfg.GetString("spec", "0 1 19 * * *")
-	Codes       = cfg.GetStrings("codes")
+	Clients     int
+	Coroutines  int
+	Tasks       int
+	DatabaseDir string
+	ExportDir   string
+	Spec        string
+	Codes       []string
 )
 
 func init() {
+	cfg.Init(cfg.WithFile("./config/convert.config"))
+	Clients = cfg.GetInt("clients", 4)
+	Coroutines = cfg.GetInt("coroutines", 10)
+	Tasks = cfg.GetInt("tasks", 2)
+	DatabaseDir = cfg.GetString("database", "./data/database")
+	ExportDir = cfg.GetString("export", "./data/export")
+	Spec = cfg.GetString("spec", "0 1 19 * * *")
+	Codes = cfg.GetStrings("codes")
+
 	logs.SetFormatter(logs.TimeFormatter)
 	logs.Info("版本:", "v0.2.2")
 	logs.Info("说明:", "增加定时任务")
@@ -41,10 +50,10 @@ func convert() {
 	m, err := tdx.NewManage(nil)
 	logs.PanicErr(err)
 	c := NewConvert(
-		[]string{}, //"sz000001"},
+		Codes,
 		filepath.Join(DatabaseDir, "trade"),
 		filepath.Join(DatabaseDir, "kline"),
-		time.Date(2025, 6, 20, 0, 0, 0, 0, time.Local),
+		time.Date(2025, 6, 1, 0, 0, 0, 0, time.Local),
 	)
 	c.Run(context.Background(), m)
 }
