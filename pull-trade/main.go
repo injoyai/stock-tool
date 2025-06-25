@@ -17,12 +17,13 @@ var (
 )
 
 var (
-	Clients    = cfg.GetInt("clients", 4)
-	Coroutines = cfg.GetInt("coroutines", 10)
-	Tasks      = cfg.GetInt("tasks", 2)
-	DSN        = cfg.GetString("database")
-	Spec       = cfg.GetString("spec", "0 1 19 * * *")
-	Codes      = cfg.GetStrings("codes")
+	Clients     = cfg.GetInt("clients", 4)
+	Coroutines  = cfg.GetInt("coroutines", 10)
+	Tasks       = cfg.GetInt("tasks", 2)
+	DatabaseDir = cfg.GetString("database", "./data/database")
+	ExportDir   = cfg.GetString("export", "./data/export")
+	Spec        = cfg.GetString("spec", "0 1 19 * * *")
+	Codes       = cfg.GetStrings("codes")
 )
 
 func init() {
@@ -33,13 +34,39 @@ func init() {
 }
 
 func main() {
+	convert()
+}
 
+func convert() {
+	m, err := tdx.NewManage(nil)
+	logs.PanicErr(err)
+	convert := NewConvert(
+		[]string{}, //"sz000001"},
+		filepath.Join(DatabaseDir, "trade"),
+		filepath.Join(DatabaseDir, "kline"),
+		time.Date(2025, 6, 20, 0, 0, 0, 0, time.Local),
+	)
+	convert.Run(context.Background(), m)
+}
+
+func export() {
+	m, err := tdx.NewManage(nil)
+	logs.PanicErr(err)
+	export := NewExport(
+		[]string{"sz000001"},
+		filepath.Join(DatabaseDir, "trade"),
+		ExportDir,
+	)
+	export.Run(context.Background(), m)
+}
+
+func pull() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 
 	s := NewSqlite(
 		Codes,
-		filepath.Join(tdx.DefaultDatabaseDir, "trade"),
+		filepath.Join(DatabaseDir, "trade"),
 		Coroutines,
 		Tasks,
 	)
@@ -47,5 +74,4 @@ func main() {
 	t := cron.New(cron.WithSeconds())
 	t.AddFunc(Spec, func() { s.Run(context.Background(), m) })
 	t.Run()
-
 }

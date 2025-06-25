@@ -13,7 +13,7 @@ import (
 )
 
 func NewMysql(dsn string, clients, coroutines int) (*Mysql, error) {
-	db, err := mysql.NewXorm(DSN)
+	db, err := mysql.NewXorm(dsn)
 	if err != nil {
 		return nil, err
 	}
