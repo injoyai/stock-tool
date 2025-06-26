@@ -27,7 +27,7 @@ var (
 )
 
 func init() {
-	cfg.Init(cfg.WithFile("./config/convert.config"))
+	cfg.Init(cfg.WithFile("./config/convert.yaml"))
 	Clients = cfg.GetInt("clients", 4)
 	Coroutines = cfg.GetInt("coroutines", 10)
 	Tasks = cfg.GetInt("tasks", 2)
@@ -43,6 +43,7 @@ func init() {
 }
 
 func main() {
+	logs.Debug(Codes)
 	convert()
 }
 
@@ -52,8 +53,10 @@ func convert() {
 	c := NewConvert(
 		Codes,
 		filepath.Join(DatabaseDir, "trade"),
+		filepath.Join(DatabaseDir, "kline_append1"),
+		filepath.Join(DatabaseDir, "kline_append2"),
 		filepath.Join(DatabaseDir, "kline"),
-		time.Date(2025, 6, 1, 0, 0, 0, 0, time.Local),
+		time.Date(2024, 7, 21, 0, 0, 0, 0, time.Local),
 	)
 	c.Run(context.Background(), m)
 }
