@@ -52,6 +52,7 @@ func convert() {
 	logs.PanicErr(err)
 	c := NewConvert(
 		Codes,
+		"",
 		filepath.Join(DatabaseDir, "trade"),
 		filepath.Join(DatabaseDir, "kline_append1"),
 		filepath.Join(DatabaseDir, "kline_append2"),

@@ -15,13 +15,14 @@ import (
 	"xorm.io/xorm"
 )
 
-func NewConvert(codes []string, database, database1, database2, export string, last time.Time) *Convert {
+func NewConvert(codes []string, afterCode string, database, database1, database2, export string, last time.Time) *Convert {
 	return &Convert{
 		Database:  dir(database),
 		Database1: database1,
 		Database2: database2,
 		Export:    export,
 		Codes:     codes,
+		AfterCode: afterCode,
 		Last:      last,
 	}
 }
@@ -32,6 +33,7 @@ type Convert struct {
 	Database2 string //补充2
 	Export    string //导出位置 ./data/database/kline
 	Codes     []string
+	AfterCode string
 	Last      time.Time
 }
 
@@ -41,6 +43,9 @@ func (this *Convert) Run(ctx context.Context, m *tdx.Manage) error {
 		codes = m.Codes.GetStocks()
 	}
 	for _, code := range codes {
+		if code < this.AfterCode {
+			continue
+		}
 		err := this.Database.rangeYear(code, func(year int, filename string, exist, hasNext bool) (bool, error) {
 			//从23年开始存数据库,之前的直接导出
 			if year < 2022 {
