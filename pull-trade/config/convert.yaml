@@ -1,0 +1,8 @@
+# 数据库
+database: "./data/database/"
+
+# 连接服务器的客户端数量
+clients: 2
+
+# 释放协程数量
+disks: 10
