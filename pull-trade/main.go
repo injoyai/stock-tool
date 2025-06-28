@@ -24,10 +24,19 @@ var (
 	ExportDir   string
 	Spec        string
 	Codes       []string
+	Startup     bool
 )
 
 func init() {
-	cfg.Init(cfg.WithFile("./config/convert.yaml"))
+	logs.SetFormatter(logs.TimeFormatter)
+	logs.Info("版本:", "v0.2.2")
+	logs.Info("说明:", "增加定时任务")
+	fmt.Println("=====================================================")
+	initCfg("./config/config.yaml")
+}
+
+func initCfg(filename string) {
+	cfg.Init(cfg.WithFile(filename))
 	Clients = cfg.GetInt("clients", 4)
 	Coroutines = cfg.GetInt("coroutines", 10)
 	Tasks = cfg.GetInt("tasks", 2)
@@ -35,24 +44,21 @@ func init() {
 	ExportDir = cfg.GetString("export", "./data/export")
 	Spec = cfg.GetString("spec", "0 1 19 * * *")
 	Codes = cfg.GetStrings("codes")
-
-	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2.2")
-	logs.Info("说明:", "增加定时任务")
-	fmt.Println("=====================================================")
+	Startup = cfg.GetBool("startup")
 }
 
 func main() {
-	logs.Debug(Codes)
-	convert()
+	//pull()
+	export()
 }
 
 func convert() {
+	initCfg("./config/convert.yaml")
 	m, err := tdx.NewManage(nil)
 	logs.PanicErr(err)
 	c := NewConvert(
 		Codes,
-		"",
+		"sh603227",
 		filepath.Join(DatabaseDir, "trade"),
 		filepath.Join(DatabaseDir, "kline_append1"),
 		filepath.Join(DatabaseDir, "kline_append2"),
@@ -63,10 +69,12 @@ func convert() {
 }
 
 func export() {
+	initCfg("./config/export.yaml")
 	m, err := tdx.NewManage(nil)
 	logs.PanicErr(err)
 	e := NewExport(
 		[]string{"sz000001"},
+		[]int{2025},
 		filepath.Join(DatabaseDir, "trade"),
 		ExportDir,
 	)
@@ -74,6 +82,7 @@ func export() {
 }
 
 func pull() {
+	initCfg("./config/pull.yaml")
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 
@@ -86,5 +95,8 @@ func pull() {
 
 	t := cron.New(cron.WithSeconds())
 	t.AddFunc(Spec, func() { s.Run(context.Background(), m) })
+	if Startup {
+		s.Run(context.Background(), m)
+	}
 	t.Run()
 }

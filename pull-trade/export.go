@@ -1,12 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"github.com/injoyai/base/types"
 	"github.com/injoyai/conv"
+	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/oss"
+	"github.com/injoyai/goutil/other/csv"
+	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"path/filepath"
 	"time"
 )
 
@@ -16,7 +19,7 @@ func NewExport(codes []string, years []int, database, export string) *Export {
 		Codes:     codes,
 		Years:     years,
 		Export:    export,
-		ReadLimit: 10,
+		ReadSplit: 10,
 	}
 }
 
@@ -25,8 +28,7 @@ type Export struct {
 	Codes     types.List[string]
 	Years     []int
 	Export    string
-	ReadLimit int
-	HHD[any, any]
+	ReadSplit int
 }
 
 func (this *Export) Run(ctx context.Context, m *tdx.Manage) error {
@@ -35,95 +37,125 @@ func (this *Export) Run(ctx context.Context, m *tdx.Manage) error {
 		codes = m.Codes.GetStocks()
 	}
 
-	//for _, year := range this.Years {
-	//	for _, cs := range codes.Split(this.ReadLimit) {
-	//		this.HHD.Run(ctx)
-	//	}
-	//}
+	for _, year := range this.Years {
+		logs.Debugf("执行年份: %d\n", year)
+		for _, cs := range codes.Split(this.ReadSplit) {
+			tasks, err := this.Read(year, cs)
+			if err != nil {
+				logs.Err(err)
+				continue
+			}
+			for _, task := range tasks {
+				err := task.Save()
+				logs.PrintErr(err)
+			}
+		}
+	}
 	return nil
 }
 
-func (this *Export) read(year int, codes []string) ([]any, error) {
-	//for _, v := range codes {
-	//
-	//}
-	return nil, nil
-}
+func (this *Export) Read(year int, codes []string) ([]*exportTask, error) {
+	tasks := []*exportTask(nil)
+	for _, code := range codes {
+		err := func() error {
+			filename := this.Database.filename(code, year)
+			db, err := sqlite.NewXorm(filename)
+			if err != nil {
 
-func (this *Export) deal() {
-	//db, err := sqlite.NewXorm(filename)
-	//if err != nil {
-	//	return err
-	//}
-	//defer db.Close()
-	//start := time.Date(year, 1, 1, 0, 0, 0, 0, time.Local)
-	//end := time.Date(year, 12, 31, 0, 0, 0, 0, time.Local).Add(1)
-	//last := 0.
-	//kss := []*Kline(nil)
-	//for i := start; i.Before(end); i = i.Add(time.Hour * 24) {
-	//	if !m.Workday.Is(i) {
-	//		continue
-	//	}
-	//	date, _ := FromTime(i)
-	//	data := Trades{}
-	//	err = db.Where("Date=?", date).Find(&data)
-	//	if err != nil {
-	//		return false, err
-	//	}
-	//	ks := data.Kline1(date, last)
-	//	kss = append(kss, ks...)
-	//}
-	//xx := [][]any(nil)
-	//for _, v := range kss {
-	//	xx = append(xx, []any{
-	//		v.Time.Format(time.DateTime),
-	//		v.Open,
-	//		v.High,
-	//		v.Low,
-	//		v.Close,
-	//		v.Volume,
-	//		v.Amount,
-	//	})
-	//}
-	//buf, err := csv.Export(xx)
-	//if err != nil {
-	//	return false, err
-	//}
-	//oss.New(filepath.Join(this.Export, conv.String(year), "k线-1分钟", code+".csv"), buf)
-	//return true, nil
-}
+				return err
+			}
+			defer db.Close()
+			data := Trades(nil)
+			if err = db.Find(&data); err != nil {
+				return err
+			}
+			//按天分割
+			m := make(Map[uint16, Trades])
+			for _, v := range data {
+				m[v.Date] = append(m[v.Date], v)
+			}
+			mKline := Map[uint16, Klines]{}
+			for date, v := range m {
+				mKline[date] = v.Kline1(date, 0)
+			}
+			ls := mKline.Sort()
+			var k1 Klines
+			for _, v := range ls {
+				k1 = append(k1, v...)
+			}
+			t := &exportTask{
+				Code: code,
+				Dir:  filepath.Join(this.Export, conv.String(year)),
+				K1:   k1,
+				K5:   k1.Merge(5),
+				K15:  k1.Merge(15),
+				K30:  k1.Merge(30),
+				K60:  k1.Merge(60),
+			}
+			tasks = append(tasks, t)
 
-func (this *Export) save(t *exportTask) (err error) {
-	err = oss.New(t.Filename, t.K1)
-	if err != nil {
-		return err
+			return nil
+		}()
+		logs.PrintErr(err)
 	}
-	err = oss.New(t.Filename, t.K5)
-	if err != nil {
-		return err
-	}
-	err = oss.New(t.Filename, t.K15)
-	if err != nil {
-		return err
-	}
-	err = oss.New(t.Filename, t.K30)
-	if err != nil {
-		return err
-	}
-	err = oss.New(t.Filename, t.K60)
-	if err != nil {
-		return err
-	}
-	return
+
+	return tasks, nil
 }
 
 type exportTask struct {
-	Filename string
-	K1       *bytes.Buffer
-	K5       *bytes.Buffer
-	K15      *bytes.Buffer
-	K30      *bytes.Buffer
-	K60      *bytes.Buffer
+	Code string
+	Dir  string
+	K1   Klines
+	K5   Klines
+	K15  Klines
+	K30  Klines
+	K60  Klines
+}
+
+func (this *exportTask) Filename(typeName string) string {
+	return filepath.Join(this.Dir, typeName, this.Code+".csv")
+}
+
+func (this *exportTask) Save() error {
+	if err := this.save(this.K1, "1分钟"); err != nil {
+		return err
+	}
+	if err := this.save(this.K1, "5分钟"); err != nil {
+		return err
+	}
+	if err := this.save(this.K1, "15分钟"); err != nil {
+		return err
+	}
+	if err := this.save(this.K1, "30分钟"); err != nil {
+		return err
+	}
+	if err := this.save(this.K1, "60分钟"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (this *exportTask) save(ks Klines, typeName string) error {
+	data := [][]any{
+		{"日期", "时间", "开盘", "最高", "最低", "收盘", "成交量", "成交额"},
+	}
+	for _, v := range ks {
+		data = append(data, []any{
+			v.Time.Format(time.DateOnly),
+			v.Time.Format("15:04"),
+			v.Open,
+			v.High,
+			v.Low,
+			v.Close,
+			v.Volume,
+			v.Amount,
+		})
+	}
+	buf, err := csv.Export(data)
+	if err != nil {
+		return err
+	}
+	return oss.New(this.Filename(typeName), buf)
 }
 
 /*

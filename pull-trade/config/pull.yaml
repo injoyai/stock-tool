@@ -1,0 +1,8 @@
+database: ./data/database
+export: ./data/export
+
+codes:
+  - sh600000
+  - sz000001
+
+startup: true

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"github.com/injoyai/base/types"
 	"github.com/injoyai/tdx"
+	"sort"
 	"time"
 )
 
@@ -42,4 +44,29 @@ func GetCodes(m *tdx.Manage, codes []string) []string {
 		return m.Codes.GetStocks()
 	}
 	return codes
+}
+
+type Map[K types.Comparable, V any] map[K]V
+
+func (this Map[K, V]) Sort() []V {
+	items := make([]item[K, V], 0, len(this))
+	for k, v := range this {
+		items = append(items, item[K, V]{
+			K: k,
+			V: v,
+		})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].K < items[j].K
+	})
+	ret := make([]V, 0, len(items))
+	for _, item := range items {
+		ret = append(ret, item.V)
+	}
+	return ret
+}
+
+type item[K comparable, V any] struct {
+	K K
+	V V
 }
