@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/injoyai/conv/cfg"
+	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -48,17 +50,56 @@ func initCfg(filename string) {
 }
 
 func main() {
+	//initCfg("./config/pull.yaml")
+	//Codes = []string{"001979"}
+	//Startup = true
 	//pull()
 	export()
+	//initCfg("./config/convert.yaml")
+	//Codes = xxx()
+	//convert()
+	select {}
+}
+
+func xxx() []string {
+	//c, err := tdx.DialCodes("")
+	//logs.PanicErr(err)
+	//
+	//codes := c.GetStocks()
+	m := make(map[string]struct{})
+	//for _, code := range codes {
+	//	m[code] = struct{}{}
+	//}
+
+	err := oss.RangeFileInfo("./data/database/trade/", func(info *oss.FileInfo) (bool, error) {
+		//delete(m, strings.Split(info.Name(), ".")[0])
+		m[strings.Split(info.Name(), ".")[0]] = struct{}{}
+		return true, nil
+	})
+	logs.PanicErr(err)
+
+	err = oss.RangeFileInfo("./data/database/kline/", func(info *oss.FileInfo) (bool, error) {
+		delete(m, strings.Split(info.Name(), ".")[0])
+		return true, nil
+	})
+	logs.PanicErr(err)
+
+	ls := []string(nil)
+	for k, _ := range m {
+		ls = append(ls, k)
+	}
+
+	logs.Debug("数量:", len(ls))
+
+	return ls
 }
 
 func convert() {
-	initCfg("./config/convert.yaml")
 	m, err := tdx.NewManage(nil)
 	logs.PanicErr(err)
 	c := NewConvert(
 		Codes,
-		"sh603227",
+		"",
 		filepath.Join(DatabaseDir, "trade"),
 		filepath.Join(DatabaseDir, "kline_append1"),
 		filepath.Join(DatabaseDir, "kline_append2"),
@@ -82,7 +123,6 @@ func export() {
 }
 
 func pull() {
-	initCfg("./config/pull.yaml")
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 

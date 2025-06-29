@@ -69,6 +69,9 @@ func (this *Export) Read(year int, codes []string) ([]*exportTask, error) {
 			if err = db.Find(&data); err != nil {
 				return err
 			}
+			if len(data) == 0 {
+				return nil
+			}
 			//按天分割
 			m := make(Map[uint16, Trades])
 			for _, v := range data {
@@ -120,16 +123,16 @@ func (this *exportTask) Save() error {
 	if err := this.save(this.K1, "1分钟"); err != nil {
 		return err
 	}
-	if err := this.save(this.K1, "5分钟"); err != nil {
+	if err := this.save(this.K5, "5分钟"); err != nil {
 		return err
 	}
-	if err := this.save(this.K1, "15分钟"); err != nil {
+	if err := this.save(this.K15, "15分钟"); err != nil {
 		return err
 	}
-	if err := this.save(this.K1, "30分钟"); err != nil {
+	if err := this.save(this.K30, "30分钟"); err != nil {
 		return err
 	}
-	if err := this.save(this.K1, "60分钟"); err != nil {
+	if err := this.save(this.K60, "60分钟"); err != nil {
 		return err
 	}
 	return nil

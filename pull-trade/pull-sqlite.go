@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/injoyai/base/chans"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/database/sqlite"
@@ -215,6 +216,8 @@ func (this *Sqlite) _pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err e
 				continue
 			}
 
+			logs.Debug(b.Code, b.Year, date.Format("2006-01-02"))
+
 			//3. 获取数据
 			item, err := this.pullDay(c, b.Code, date)
 			if err != nil {
@@ -275,6 +278,9 @@ func (this *Sqlite) getPublic(m *tdx.Manage, code string) (public time.Time, err
 		resp, err := c.GetKlineMonthAll(code)
 		if err != nil {
 			return err
+		}
+		if len(resp.List) == 0 {
+			return fmt.Errorf("股票[%s]可能已经退市", code)
 		}
 		if len(resp.List) > 0 {
 			year = resp.List[0].Time.Year()
