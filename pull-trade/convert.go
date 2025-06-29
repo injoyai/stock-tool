@@ -229,7 +229,7 @@ func (this *Convert) read(code string) (m1, m5, m15, m30, m60 Klines, err error)
 func (this *Convert) read1(code string) (minute1, minute5, minute15, minute30, minute60 Klines, err error) {
 	filename := filepath.Join(this.Database1, code+".db")
 	if !oss.Exists(filename) {
-		return nil, nil, nil, nil, nil, errors.New("数据库不存在:" + code + ".db")
+		return nil, nil, nil, nil, nil, errors.New("数据库1不存在:" + code + ".db")
 	}
 	db, err := sqlite.NewXorm(filepath.Join(this.Database1, code+".db"))
 	if err != nil {
@@ -286,7 +286,7 @@ func (this *Convert) read1(code string) (minute1, minute5, minute15, minute30, m
 func (this *Convert) read2(code string) (minute1, minute5, minute15, minute30, minute60 Klines, err error) {
 	filename := filepath.Join(this.Database2, code+".db")
 	if !oss.Exists(filename) {
-		return nil, nil, nil, nil, nil, errors.New("数据库不存在:" + code + ".db")
+		return nil, nil, nil, nil, nil, errors.New("数据库2不存在:" + code + ".db")
 	}
 	db, err := sqlite.NewXorm(filepath.Join(this.Database2, code+".db"))
 	if err != nil {

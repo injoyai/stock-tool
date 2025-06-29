@@ -148,7 +148,7 @@ func (this *exportTask) save(ks Klines, typeName string) error {
 			v.Low,
 			v.Close,
 			v.Volume,
-			v.Amount,
+			float64(int64(v.Amount)),
 		})
 	}
 	buf, err := csv.Export(data)
