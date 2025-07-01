@@ -10,6 +10,7 @@ import (
 
 var (
 	Boundary = [2]protocol.Price{100 * 1e7, 10 * 1e7}
+	Limit    = 100 //-1
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 	logs.PanicErr(err)
 
 	p3s := types.List[Prices]{}
-	for _, code := range m.Codes.GetStocks(100) {
+	for _, code := range m.Codes.GetStocks(Limit) {
 		err = m.Go(func(c *tdx.Client) {
 			resp, err := c.GetTradeAll(code)
 			if err != nil {
@@ -30,11 +31,23 @@ func main() {
 				p := v.Amount()
 				switch {
 				case p >= Boundary[0]:
-					p3.Big += p
+					if v.Status == 0 {
+						p3.Big += p
+					} else if v.Status == 1 {
+						p3.Big -= p
+					}
 				case p >= Boundary[1]:
-					p3.Mid += p
+					if v.Status == 0 {
+						p3.Mid += p
+					} else if v.Status == 1 {
+						p3.Mid -= p
+					}
 				default:
-					p3.Small += p
+					if v.Status == 0 {
+						p3.Small += p
+					} else if v.Status == 1 {
+						p3.Small -= p
+					}
 				}
 			}
 			p3s = append(p3s, p3)
