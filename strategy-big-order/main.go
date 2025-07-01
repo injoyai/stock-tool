@@ -10,7 +10,7 @@ import (
 
 var (
 	Boundary = [2]protocol.Price{100 * 1e7, 10 * 1e7}
-	Limit    = 100 //-1
+	Limit    = -1
 )
 
 func main() {
@@ -24,6 +24,9 @@ func main() {
 			resp, err := c.GetTradeAll(code)
 			if err != nil {
 				logs.PrintErr(err)
+				return
+			}
+			if len(resp.List) == 0 {
 				return
 			}
 			p3 := Prices{Code: code}
@@ -56,7 +59,7 @@ func main() {
 	}
 
 	p3s.Sort(func(a, b Prices) bool {
-		return a.BigRate() < b.BigRate()
+		return a.SmallRate() < b.SmallRate()
 	})
 
 	for _, v := range p3s {
@@ -71,6 +74,10 @@ type Prices struct {
 
 func (p Prices) BigRate() float64 {
 	return p.Big.Float64() / p.Sum().Float64()
+}
+
+func (p Prices) SmallRate() float64 {
+	return p.Small.Float64() / p.Sum().Float64()
 }
 
 func (p Prices) Sum() protocol.Price {
