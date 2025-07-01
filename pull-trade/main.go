@@ -60,9 +60,30 @@ func main() {
 	//Codes = xxx()
 	//convert()
 
-	clear()
+	invalidFolder()
 	logs.Info("结束...")
 	select {}
+}
+
+func invalidFolder() {
+	oss.RangeFileInfo("./data/database/trade/", func(info *oss.FileInfo) (bool, error) {
+		if info.IsDir() {
+			fs, err := oss.ReadFileInfos(info.FullName())
+			if err != nil {
+				return false, err
+			}
+			has := false
+			for _, f := range fs {
+				if strings.Contains(f.Name(), "-2025.db") {
+					has = true
+				}
+			}
+			if !has {
+				logs.Debug("无效数据:", info.FullName())
+			}
+		}
+		return true, nil
+	})
 }
 
 func clear() {
