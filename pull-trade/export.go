@@ -59,6 +59,9 @@ func (this *Export) Read(year int, codes []string) ([]*exportTask, error) {
 	for _, code := range codes {
 		err := func() error {
 			filename := this.Database.filename(code, year)
+			if oss.Exists(filename) {
+				return nil
+			}
 			db, err := sqlite.NewXorm(filename)
 			if err != nil {
 

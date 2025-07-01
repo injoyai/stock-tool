@@ -8,6 +8,7 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -54,11 +55,35 @@ func main() {
 	//Codes = []string{"001979"}
 	//Startup = true
 	//pull()
-	export()
+	//export()
 	//initCfg("./config/convert.yaml")
 	//Codes = xxx()
 	//convert()
+
+	clear()
+	logs.Info("结束...")
 	select {}
+}
+
+func clear() {
+	t := time.Date(2025, 6, 30, 0, 0, 0, 0, time.Local)
+	oss.RangeFileInfo("./data/database/trade/", func(info *oss.FileInfo) (bool, error) {
+		if info.IsDir() {
+			oss.RangeFileInfo(info.FullName(), func(info *oss.FileInfo) (bool, error) {
+				if info.Size() == 0 {
+					if info.ModTime().After(t) {
+						logs.Debug("删除:", info.FullName(), info.ModTime().Format(time.DateTime))
+						os.Remove(info.FullName())
+						return true, nil
+					} else {
+						logs.Debug("保留:", info.FullName())
+					}
+				}
+				return true, nil
+			})
+		}
+		return true, nil
+	})
 }
 
 func xxx() []string {
@@ -115,7 +140,7 @@ func export() {
 	logs.PanicErr(err)
 	e := NewExport(
 		[]string{}, //"sz000001"},
-		[]int{2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025},
+		[]int{2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025},
 		filepath.Join(DatabaseDir, "trade"),
 		ExportDir,
 	)
