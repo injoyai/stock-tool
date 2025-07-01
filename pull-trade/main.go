@@ -51,19 +51,30 @@ func initCfg(filename string) {
 }
 
 func main() {
-	//initCfg("./config/pull.yaml")
-	//Codes = []string{"001979"}
-	//Startup = true
-	//pull()
-	//export()
-	//initCfg("./config/convert.yaml")
-	//Codes = xxx()
-	//convert()
 
-	invalidFolder()
-	logs.Info("结束...")
+	m, err := tdx.NewManage(&tdx.ManageConfig{
+		Number: Clients,
+	})
+	logs.PanicErr(err)
+
+	u := NewUpdateKline(Codes, filepath.Join(DatabaseDir, "kline"), Coroutines)
+	logs.Debug(u)
+	err = u.Run(context.Background(), m)
+	logs.Info("结束:", err)
 	select {}
 }
+
+/*
+
+
+
+
+
+
+
+
+
+ */
 
 func invalidFolder() {
 	oss.RangeFileInfo("./data/database/trade/", func(info *oss.FileInfo) (bool, error) {
