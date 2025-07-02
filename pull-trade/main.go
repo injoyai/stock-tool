@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/injoyai/conv/cfg"
-	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
@@ -52,8 +51,19 @@ func initCfg(filename string) {
 }
 
 func main() {
-	exportKline()
-	g.Input("结束")
+	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
+	logs.PanicErr(err)
+	corn := cron.New(cron.WithSeconds())
+	corn.AddFunc("0 10 15 * * *", func() {
+		logs.Info("更新数据...")
+		err = update(m)
+		logs.PrintErr(err)
+		logs.Info("导出数据...")
+		err = exportKline(m)
+		logs.PrintErr(err)
+		logs.Info("任务完成...")
+	})
+	corn.Run()
 }
 
 /*
@@ -68,30 +78,19 @@ func main() {
 
  */
 
-func exportKline() {
-	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
-	logs.PanicErr(err)
-
+func exportKline(m *tdx.Manage) error {
 	e := NewExportKline(
 		Codes,
 		[]int{2022, 2023, 2024, 2025},
 		filepath.Join(DatabaseDir, "kline"),
 		filepath.Join(ExportDir),
 	)
-	err = e.Run(context.Background(), m)
-	logs.Info("结束:", err)
+	return e.Run(context.Background(), m)
 }
 
-func update() {
-	m, err := tdx.NewManage(&tdx.ManageConfig{
-		Number: Clients,
-	})
-	logs.PanicErr(err)
-
+func update(m *tdx.Manage) error {
 	u := NewUpdateKline(Codes, filepath.Join(DatabaseDir, "kline"), Coroutines)
-	logs.Debug(u)
-	err = u.Run(context.Background(), m)
-	logs.Info("结束:", err)
+	return u.Run(context.Background(), m)
 }
 
 func invalidFolder() {
