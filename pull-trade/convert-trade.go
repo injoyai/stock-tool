@@ -374,6 +374,10 @@ type KlineMinute60 struct {
 	KlineBase `xorm:"extends"`
 }
 
+type Timer interface {
+	Time() time.Time
+}
+
 type KlineBase struct {
 	ID     int64
 	Year   int
@@ -387,4 +391,32 @@ type KlineBase struct {
 	Close  float64
 	Volume int
 	Amount float64
+}
+
+func (this KlineBase) Base() KlineBase {
+	return this
+}
+
+func (this KlineBase) Time() time.Time {
+	return time.Date(this.Year, time.Month(this.Month), this.Day, this.Hour, this.Minute, 0, 0, time.Local)
+}
+
+type K1 struct {
+	Unix   int64
+	Open   float64
+	High   float64
+	Low    float64
+	Close  float64
+	Volume int
+	Amount int
+}
+
+type K2 struct {
+	Date   int64
+	Open   int
+	High   int
+	Low    int
+	Close  int
+	Volume int
+	Amount int64
 }
