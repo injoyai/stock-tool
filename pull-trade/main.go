@@ -76,7 +76,7 @@ func exportKline() {
 		Codes,
 		[]int{2022, 2023, 2024, 2025},
 		filepath.Join(DatabaseDir, "kline"),
-		filepath.Join(ExportDir, "kline"),
+		filepath.Join(ExportDir),
 	)
 	err = e.Run(context.Background(), m)
 	logs.Info("结束:", err)

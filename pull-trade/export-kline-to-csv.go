@@ -96,5 +96,5 @@ func (this *ExportKline) export(db *xorms.Engine, code string, year int, table a
 	if err != nil {
 		return err
 	}
-	return oss.New(filepath.Join(this.Export, conv.String(year)+"-real", typeName, code+".csv"), buf)
+	return oss.New(filepath.Join(this.Export, conv.String(year), typeName, code+".csv"), buf)
 }
