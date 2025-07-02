@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/injoyai/conv/cfg"
+	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
@@ -51,17 +52,8 @@ func initCfg(filename string) {
 }
 
 func main() {
-
-	m, err := tdx.NewManage(&tdx.ManageConfig{
-		Number: Clients,
-	})
-	logs.PanicErr(err)
-
-	u := NewUpdateKline(Codes, filepath.Join(DatabaseDir, "kline"), Coroutines)
-	logs.Debug(u)
-	err = u.Run(context.Background(), m)
-	logs.Info("结束:", err)
-	select {}
+	exportKline()
+	g.Input("结束")
 }
 
 /*
@@ -75,6 +67,32 @@ func main() {
 
 
  */
+
+func exportKline() {
+	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
+	logs.PanicErr(err)
+
+	e := NewExportKline(
+		Codes,
+		[]int{2022, 2023, 2024, 2025},
+		filepath.Join(DatabaseDir, "kline"),
+		filepath.Join(ExportDir, "kline"),
+	)
+	err = e.Run(context.Background(), m)
+	logs.Info("结束:", err)
+}
+
+func update() {
+	m, err := tdx.NewManage(&tdx.ManageConfig{
+		Number: Clients,
+	})
+	logs.PanicErr(err)
+
+	u := NewUpdateKline(Codes, filepath.Join(DatabaseDir, "kline"), Coroutines)
+	logs.Debug(u)
+	err = u.Run(context.Background(), m)
+	logs.Info("结束:", err)
+}
 
 func invalidFolder() {
 	oss.RangeFileInfo("./data/database/trade/", func(info *oss.FileInfo) (bool, error) {
