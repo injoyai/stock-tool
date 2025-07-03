@@ -24,7 +24,7 @@ func main() {
 
 	NewByDate(
 		"sz000665",
-		time.Now().AddDate(0, 0, -100),
+		time.Now().AddDate(0, 0, -30),
 		time.Now(),
 	).Run(m)
 

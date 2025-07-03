@@ -28,16 +28,25 @@ func (this *ByDate) Run(m *tdx.Manage) error {
 		if !m.Workday.Is(i) {
 			continue
 		}
-		var resp *protocol.HistoryTradeResp
-		var err error
-		err = m.Do(func(c *tdx.Client) error {
-			resp, err = c.GetHistoryTradeAll(date, this.Code)
+		var ls protocol.Trades
+		err := m.Do(func(c *tdx.Client) error {
+			if date == time.Now().Format("20060102") {
+				resp, err := c.GetTradeAll(this.Code)
+				if err == nil {
+					ls = resp.List
+				}
+				return err
+			}
+			resp, err := c.GetHistoryTradeAll(date, this.Code)
+			if err == nil {
+				ls = resp.List
+			}
 			return err
 		})
 		if err != nil {
 			return err
 		}
-		ps := NewPrices(this.Code, i, resp.List)
+		ps := NewPrices(this.Code, i, ls)
 		pss = append(pss, ps)
 	}
 	fmt.Println(m.Codes.GetName(this.Code))

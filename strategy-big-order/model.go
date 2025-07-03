@@ -10,6 +10,7 @@ func NewPrices(code string, date time.Time, ts protocol.Trades) Prices {
 	p3 := Prices{Code: code, Date: date}
 	for i, v := range ts {
 		p := v.Amount()
+		p3.Sum += p
 		switch {
 		case p >= Boundary[0]:
 			if v.Status == 0 {
@@ -42,31 +43,28 @@ type Prices struct {
 	Date            time.Time
 	Big, Mid, Small protocol.Price
 	Price           protocol.Price
+	Sum             protocol.Price
 }
 
 func (p Prices) BigRate() float64 {
-	if p.Sum() == 0 {
+	if p.Sum == 0 {
 		return 0
 	}
-	return p.Big.Float64() / p.Sum().Float64()
+	return p.Big.Float64() / p.Sum.Float64()
 }
 
 func (p Prices) MidRate() float64 {
-	if p.Sum() == 0 {
+	if p.Sum == 0 {
 		return 0
 	}
-	return p.Small.Float64() / p.Sum().Float64()
+	return p.Small.Float64() / p.Sum.Float64()
 }
 
 func (p Prices) SmallRate() float64 {
-	if p.Sum() == 0 {
+	if p.Sum == 0 {
 		return 0
 	}
-	return p.Small.Float64() / p.Sum().Float64()
-}
-
-func (p Prices) Sum() protocol.Price {
-	return p.Big + p.Mid + p.Small
+	return p.Small.Float64() / p.Sum.Float64()
 }
 
 func (p Prices) String() string {
