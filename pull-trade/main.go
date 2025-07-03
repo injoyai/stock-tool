@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/injoyai/conv/cfg"
+	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
@@ -51,6 +52,23 @@ func initCfg(filename string) {
 }
 
 func main() {
+	convert()
+	g.Input("结束...")
+}
+
+/*
+
+
+
+
+
+
+
+
+
+ */
+
+func updateAndExport() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 	corn := cron.New(cron.WithSeconds())
@@ -65,18 +83,6 @@ func main() {
 	})
 	corn.Run()
 }
-
-/*
-
-
-
-
-
-
-
-
-
- */
 
 func exportKline(m *tdx.Manage) error {
 	e := NewExportKline(
@@ -178,7 +184,7 @@ func convert() {
 		filepath.Join(DatabaseDir, "kline_append1"),
 		filepath.Join(DatabaseDir, "kline_append2"),
 		filepath.Join(DatabaseDir, "kline"),
-		time.Date(2024, 7, 21, 0, 0, 0, 0, time.Local),
+		time.Date(2025, 5, 21, 0, 0, 0, 0, time.Local),
 	)
 	c.Run(context.Background(), m)
 }

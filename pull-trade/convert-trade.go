@@ -46,6 +46,8 @@ func (this *Convert) Run(ctx context.Context, m *tdx.Manage) error {
 		if code < this.AfterCode {
 			continue
 		}
+
+		ts := Trades{}
 		err := this.Database.rangeYear(code, func(year int, filename string, exist, hasNext bool) (bool, error) {
 			//从23年开始存数据库,之前的直接导出
 			if year < 2022 {
@@ -54,44 +56,48 @@ func (this *Convert) Run(ctx context.Context, m *tdx.Manage) error {
 			if !exist {
 				return true, nil
 			}
+
 			logs.Debug(filename)
 			db, err := sqlite.NewXorm(filename)
 			if err != nil {
 				return false, err
 			}
 			defer db.Close()
-			start := time.Date(year, 1, 1, 0, 0, 0, 0, time.Local)
-			end := time.Date(year, 12, 31, 0, 0, 0, 0, time.Local).Add(1)
-			last := conv.Select(this.Last.IsZero(), time.Now(), this.Last).Add(1)
-			lastPrice := 0.
 
-			kss := []*Kline(nil)
-			for i := start; i.Before(end) && i.Before(last); i = i.Add(time.Hour * 24) {
-				//排除非工作日
-				if !m.Workday.Is(i) {
-					continue
-				}
-
-				date, _ := FromTime(i)
-				data := Trades{}
-				err = db.Where("Date=?", date).Find(&data)
-				if err != nil {
-					return false, err
-				}
-
-				//1分钟
-				ks := data.Kline1(date, lastPrice)
-				kss = append(kss, ks...)
+			data := Trades{}
+			err = db.Find(&data)
+			if err != nil {
+				return false, err
 			}
-			err = this.Save(code, kss, year)
-			return true, err
+			ts = append(ts, data...)
+			return true, nil
 		})
-		logs.PrintErr(err)
+		if err != nil {
+			logs.Err(err)
+			continue
+		}
+
+		//按天分割
+		mTrade := make(Map[uint16, Trades])
+		for _, v := range ts {
+			mTrade[v.Date] = append(mTrade[v.Date], v)
+		}
+		mKline := Map[uint16, Klines]{}
+		for date, v := range mTrade {
+			mKline[date] = v.Kline1(date, 0)
+		}
+		ls := mKline.Sort()
+		var ks Klines
+		for _, v := range ls {
+			ks = append(ks, v...)
+		}
+
+		err = this.Save(code, ks)
 	}
 	return nil
 }
 
-func (this *Convert) Save(code string, kss Klines, year int) error {
+func (this *Convert) Save(code string, kss Klines) error {
 	m1, m5, m15, m30, m60 := kss.Merge(1), kss.Merge(5), kss.Merge(15), kss.Merge(30), kss.Merge(60)
 
 	var err error
@@ -100,26 +106,26 @@ func (this *Convert) Save(code string, kss Klines, year int) error {
 		return err
 	}
 
-	if err := this.save(code, m1, new(KlineMinute1), year); err != nil {
+	if err := this.save(code, m1, new(KlineMinute1)); err != nil {
 		return err
 	}
-	if err := this.save(code, m5, new(KlineMinute5), year); err != nil {
+	if err := this.save(code, m5, new(KlineMinute5)); err != nil {
 		return err
 	}
-	if err := this.save(code, m15, new(KlineMinute15), year); err != nil {
+	if err := this.save(code, m15, new(KlineMinute15)); err != nil {
 		return err
 	}
-	if err := this.save(code, m30, new(KlineMinute30), year); err != nil {
+	if err := this.save(code, m30, new(KlineMinute30)); err != nil {
 		return err
 	}
-	if err := this.save(code, m60, new(KlineMinute60), year); err != nil {
+	if err := this.save(code, m60, new(KlineMinute60)); err != nil {
 		return err
 	}
 	return nil
 }
 
 // save 保存数据,kss是一整年的数据
-func (this *Convert) save(code string, kss Klines, table any, year int) error {
+func (this *Convert) save(code string, kss Klines, table any) error {
 	db, err := this.open(code)
 	if err != nil {
 		return err
@@ -127,7 +133,7 @@ func (this *Convert) save(code string, kss Klines, table any, year int) error {
 	defer db.Close()
 	db.Sync2(table)
 	return db.SessionFunc(func(session *xorm.Session) error {
-		if _, err = session.Where("Year=?", year).Delete(table); err != nil {
+		if _, err = session.Where("ID>0").Delete(table); err != nil {
 			return err
 		}
 		for _, v := range kss {
@@ -154,9 +160,11 @@ func (this *Convert) save(code string, kss Klines, table any, year int) error {
 
 func (this *Convert) open(code string, year ...int) (*xorms.Engine, error) {
 	if len(year) > 0 {
-		return sqlite.NewXorm(filepath.Join(this.Export, code, code+"-"+conv.String(year[0])+".db"))
+		filename := filepath.Join(this.Export, code, code+"-"+conv.String(year[0])+".db")
+		return sqlite.NewXorm(filename)
 	}
-	return sqlite.NewXorm(filepath.Join(this.Export, code+".db"))
+	filename := filepath.Join(this.Export, code+".db")
+	return sqlite.NewXorm(filename)
 }
 
 /*
@@ -176,8 +184,8 @@ func (this *Convert) append(code string, m1, m5, m15, m30, m60 Klines) (Klines, 
 		}
 		first := k2[0]
 		for i, v := range k1 {
-			if v.Time.Unix() == first.Time.Unix() {
-				k1 = append(k1[:i-1], k2...)
+			if v.Time.Format(time.DateTime) == first.Time.Format(time.DateTime) {
+				k1 = append(k1[:i], k2...)
 				break
 			}
 		}
@@ -206,6 +214,9 @@ func (this *Convert) read(code string) (m1, m5, m15, m30, m60 Klines, err error)
 	}
 	//k2补充k1
 	merge := func(k1, k2 Klines) Klines {
+		if len(k1) == 0 {
+			return k2
+		}
 		last := &Kline{}
 		if len(k1) > 0 {
 			last = k1[len(k1)-1]
@@ -230,7 +241,6 @@ func (this *Convert) read1(code string) (minute1, minute5, minute15, minute30, m
 	filename := filepath.Join(this.Database1, code+".db")
 	if !oss.Exists(filename) {
 		return Klines{}, Klines{}, Klines{}, Klines{}, Klines{}, nil
-		return nil, nil, nil, nil, nil, errors.New("数据库1不存在:" + code + ".db")
 	}
 	db, err := sqlite.NewXorm(filepath.Join(this.Database1, code+".db"))
 	if err != nil {
