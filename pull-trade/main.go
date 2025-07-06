@@ -52,7 +52,10 @@ func initCfg(filename string) {
 }
 
 func main() {
-	convert()
+	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
+	logs.PanicErr(err)
+	err = exportKline(m)
+	logs.PrintErr(err)
 	g.Input("结束...")
 }
 
@@ -87,7 +90,7 @@ func updateAndExport() {
 func exportKline(m *tdx.Manage) error {
 	e := NewExportKline(
 		Codes,
-		[]int{2022, 2023, 2024, 2025},
+		[]int{2024},
 		filepath.Join(DatabaseDir, "kline"),
 		filepath.Join(ExportDir),
 	)
