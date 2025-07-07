@@ -10,7 +10,7 @@ import (
 var (
 	Boundary   = [2]protocol.Price{100 * 1e7, 10 * 1e7}
 	StockLimit = -1
-	Codes      = []string{}
+	Codes      = []string{"sz000665"}
 )
 
 func main() {
@@ -22,9 +22,9 @@ func main() {
 		Codes = m.Codes.GetStocks(StockLimit)
 	}
 
-	NewByDate(
+	NewByCode(
 		"sz000665",
-		time.Now().AddDate(0, 0, -30),
+		time.Now().AddDate(0, 0, -100),
 		time.Now(),
 	).Run(m)
 

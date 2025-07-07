@@ -33,6 +33,7 @@ func NewPrices(code string, date time.Time, ts protocol.Trades) Prices {
 		}
 		if i == len(ts)-1 {
 			p3.Price = v.Price
+			p3.Sum = p3.Big + p3.Mid + p3.Small
 		}
 	}
 	return p3

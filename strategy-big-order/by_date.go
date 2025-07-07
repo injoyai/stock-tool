@@ -7,21 +7,21 @@ import (
 	"time"
 )
 
-func NewByDate(code string, start, end time.Time) *ByDate {
-	return &ByDate{
+func NewByCode(code string, start, end time.Time) *ByCode {
+	return &ByCode{
 		Code:  code,
 		Start: start,
 		End:   end,
 	}
 }
 
-type ByDate struct {
+type ByCode struct {
 	Code  string
 	Start time.Time
 	End   time.Time
 }
 
-func (this *ByDate) Run(m *tdx.Manage) error {
+func (this *ByCode) Run(m *tdx.Manage) error {
 	pss := []Prices(nil)
 	for i := this.Start; i.Before(this.End.Add(1)); i = i.Add(time.Hour * 24) {
 		date := i.Format("20060102")

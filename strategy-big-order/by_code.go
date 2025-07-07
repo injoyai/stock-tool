@@ -7,16 +7,21 @@ import (
 	"time"
 )
 
-type ByCode struct {
+func NewByDate(codes []string, date time.Time) *ByDate {
+	return &ByDate{}
+}
+
+type ByDate struct {
+	Date  time.Time
 	Codes []string
 }
 
-func (this *ByCode) Run(m *tdx.Manage) error {
+func (this *ByDate) Run(m *tdx.Manage) error {
 	now := time.Now()
 	p3s := types.List[Prices]{}
 	for _, code := range Codes {
 		err := m.Go(func(c *tdx.Client) {
-			resp, err := c.GetTradeAll(code)
+			resp, err := c.GetHistoryTradeAll(this.Date.Format("20060102"), code)
 			if err != nil {
 				logs.PrintErr(err)
 				return
