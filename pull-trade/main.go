@@ -51,25 +51,8 @@ func initCfg(filename string) {
 }
 
 func main() {
-	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
-	logs.PanicErr(err)
-
-	f := func() {
-		logs.Info("更新数据...")
-		err = update(m)
-		logs.PrintErr(err)
-		logs.Info("导出数据...")
-		err = exportKline(m, time.Now().Year())
-		logs.PrintErr(err)
-		logs.Info("任务完成...")
-	}
-
-	corn := cron.New(cron.WithSeconds())
-	corn.AddFunc(Spec, f)
-	if Startup {
-		f()
-	}
-	corn.Run()
+	convert()
+	select {}
 }
 
 /*

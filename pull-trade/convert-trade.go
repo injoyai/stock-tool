@@ -50,7 +50,7 @@ func (this *Convert) Run(ctx context.Context, m *tdx.Manage) error {
 		ts := Trades{}
 		err := this.Database.rangeYear(code, func(year int, filename string, exist, hasNext bool) (bool, error) {
 			//从23年开始存数据库,之前的直接导出
-			if year < 2022 {
+			if year < 2023 {
 				return true, nil
 			}
 			if !exist {
@@ -191,7 +191,7 @@ func (this *Convert) append(code string, m1, m5, m15, m30, m60 Klines) (Klines, 
 		}
 		return k1
 	}
-	m1_, m5_, m15_, m30_, m60_, err := this.read(code)
+	m1_, m5_, m15_, m30_, m60_, err := this.read2(code)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
@@ -321,7 +321,7 @@ func (this *Convert) read2(code string) (minute1, minute5, minute15, minute30, m
 				Low:    protocol.Price(v.Low).Float64(),
 				Close:  protocol.Price(v.Close).Float64(),
 				Volume: v.Volume,
-				Amount: float64(v.Amount),
+				Amount: protocol.Price(v.Amount).Float64(),
 			})
 		}
 		return result, nil
