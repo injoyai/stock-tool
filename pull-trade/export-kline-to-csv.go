@@ -7,6 +7,7 @@ import (
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/database/xorms"
 	"github.com/injoyai/goutil/oss"
+	"github.com/injoyai/goutil/oss/compress/zip"
 	"github.com/injoyai/goutil/other/csv"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
@@ -50,15 +51,25 @@ func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
 					return err
 				}
 				defer db.Close()
-				this.export(db, code, year, new(KlineMinute1), "1分钟")
-				this.export(db, code, year, new(KlineMinute5), "5分钟")
-				this.export(db, code, year, new(KlineMinute15), "15分钟")
-				this.export(db, code, year, new(KlineMinute30), "30分钟")
-				this.export(db, code, year, new(KlineMinute60), "60分钟")
+				err = this.export(db, code, year, new(KlineMinute1), "1分钟")
+				logs.PrintErr(err)
+				err = this.export(db, code, year, new(KlineMinute5), "5分钟")
+				logs.PrintErr(err)
+				err = this.export(db, code, year, new(KlineMinute15), "15分钟")
+				logs.PrintErr(err)
+				err = this.export(db, code, year, new(KlineMinute30), "30分钟")
+				logs.PrintErr(err)
+				err = this.export(db, code, year, new(KlineMinute60), "60分钟")
+				logs.PrintErr(err)
 				return nil
 			}()
 			logs.PrintErr(err)
 		}
+		err := zip.Encode(
+			filepath.Join(this.Export, conv.String(year)),
+			filepath.Join(this.Export, conv.String(year)+".zip"),
+		)
+		logs.PrintErr(err)
 	}
 
 	return nil

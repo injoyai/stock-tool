@@ -10,8 +10,10 @@ coroutines: 10
 # 每次任务数量
 tasks: 2
 
-# spec:
+spec: '0 10 15 * * *'
 
-#codes:
-#  - sh600000
-#  - sz000001
+startup: true
+
+codes:
+  - sh600000
+  - sz000001

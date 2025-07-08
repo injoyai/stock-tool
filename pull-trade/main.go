@@ -32,8 +32,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2.2")
-	logs.Info("说明:", "增加定时任务")
+	logs.Info("版本:", "v0.2.4")
+	logs.Info("说明:", "定时同步,导出和压缩")
 	fmt.Println("=====================================================")
 	initCfg("./config/config.yaml")
 }
@@ -45,7 +45,7 @@ func initCfg(filename string) {
 	Tasks = cfg.GetInt("tasks", 2)
 	DatabaseDir = cfg.GetString("database", "./data/database")
 	ExportDir = cfg.GetString("export", "./data/export")
-	Spec = cfg.GetString("spec", "0 1 19 * * *")
+	Spec = cfg.GetString("spec", "0 10 15 * * *")
 	Codes = cfg.GetStrings("codes")
 	Startup = cfg.GetBool("startup")
 }
@@ -54,24 +54,22 @@ func main() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 
-	p := NewPullKlineDay(
-		Codes,
-		"./data/klineday",
-	)
+	f := func() {
+		logs.Info("更新数据...")
+		err = update(m)
+		logs.PrintErr(err)
+		logs.Info("导出数据...")
+		err = exportKline(m, time.Now().Year())
+		logs.PrintErr(err)
+		logs.Info("任务完成...")
+	}
 
-	err = p.pullDay(
-		m, Codes,
-		time.Date(2025, 2, 12, 0, 0, 0, 0, time.Local),
-		time.Date(2025, 7, 8, 0, 0, 0, 0, time.Local),
-	)
-
-	//err = p.Run(context.Background(), m)
-	logs.PrintErr(err)
-
-	//err = exportKline(m)
-	//logs.PrintErr(err)
-	//g.Input("结束...")
-	//select {}
+	corn := cron.New(cron.WithSeconds())
+	corn.AddFunc(Spec, f)
+	if Startup {
+		f()
+	}
+	corn.Run()
 }
 
 /*
@@ -86,26 +84,43 @@ func main() {
 
  */
 
+func pullByDay() {
+	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
+	logs.PanicErr(err)
+
+	p := NewPullKlineDay(
+		Codes,
+		"./data/klineday",
+	)
+
+	err = p.pullDay(
+		m, Codes,
+		time.Date(2025, 2, 12, 0, 0, 0, 0, time.Local),
+		time.Date(2025, 7, 8, 0, 0, 0, 0, time.Local),
+	)
+
+}
+
 func updateAndExport() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 	corn := cron.New(cron.WithSeconds())
-	corn.AddFunc("0 10 15 * * *", func() {
+	corn.AddFunc(Spec, func() {
 		logs.Info("更新数据...")
 		err = update(m)
 		logs.PrintErr(err)
 		logs.Info("导出数据...")
-		err = exportKline(m)
+		err = exportKline(m, time.Now().Year())
 		logs.PrintErr(err)
 		logs.Info("任务完成...")
 	})
 	corn.Run()
 }
 
-func exportKline(m *tdx.Manage) error {
+func exportKline(m *tdx.Manage, year int) error {
 	e := NewExportKline(
 		Codes,
-		[]int{2023, 2024, 2025},
+		[]int{year},
 		filepath.Join(DatabaseDir, "kline"),
 		filepath.Join(ExportDir),
 	)
