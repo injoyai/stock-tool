@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/injoyai/conv/cfg"
-	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
@@ -54,9 +53,19 @@ func initCfg(filename string) {
 func main() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
-	err = exportKline(m)
+
+	p := NewPullKlineDay(
+		Codes,
+		"./data/klineday",
+	)
+
+	err = p.Run(context.Background(), m)
 	logs.PrintErr(err)
-	g.Input("结束...")
+
+	//err = exportKline(m)
+	//logs.PrintErr(err)
+	//g.Input("结束...")
+	//select {}
 }
 
 /*
@@ -90,7 +99,7 @@ func updateAndExport() {
 func exportKline(m *tdx.Manage) error {
 	e := NewExportKline(
 		Codes,
-		[]int{2024},
+		[]int{2023, 2024, 2025},
 		filepath.Join(DatabaseDir, "kline"),
 		filepath.Join(ExportDir),
 	)

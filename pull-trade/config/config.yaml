@@ -12,5 +12,6 @@ tasks: 2
 
 # spec:
 
-codes:
-  - sh600000
+#codes:
+#  - sh600000
+#  - sz000001

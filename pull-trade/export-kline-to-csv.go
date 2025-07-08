@@ -70,7 +70,7 @@ func (this *ExportKline) export(db *xorms.Engine, code string, year int, table a
 	if err != nil {
 		return err
 	}
-	logs.Debug(typeName, len(data))
+	//logs.Debug(typeName, len(data))
 	xx := [][]any{{
 		"日期",
 		"时间",

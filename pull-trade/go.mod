@@ -3,7 +3,7 @@ module pull-trade
 go 1.20
 
 require (
-	github.com/injoyai/base v1.2.10
+	github.com/injoyai/base v1.2.11
 	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/goutil v1.2.6
 	github.com/injoyai/logs v1.0.9
@@ -16,7 +16,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fatih/color v1.14.1 // indirect
 	github.com/glebarez/go-sqlite v1.22.0 // indirect
-	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/goccy/go-json v0.8.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.5.0 // indirect
