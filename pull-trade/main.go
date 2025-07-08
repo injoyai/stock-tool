@@ -59,7 +59,13 @@ func main() {
 		"./data/klineday",
 	)
 
-	err = p.Run(context.Background(), m)
+	err = p.pullDay(
+		m, Codes,
+		time.Date(2025, 2, 12, 0, 0, 0, 0, time.Local),
+		time.Date(2025, 7, 8, 0, 0, 0, 0, time.Local),
+	)
+
+	//err = p.Run(context.Background(), m)
 	logs.PrintErr(err)
 
 	//err = exportKline(m)
