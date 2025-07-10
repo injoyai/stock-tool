@@ -24,8 +24,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2.11")
-	logs.Info("说明:", "自定义压缩路径")
+	logs.Info("版本:", "v0.2.12")
+	logs.Info("说明:", "增加工作日的判断,非工作日则跳过任务")
 	logs.Info("任务规则:", Spec)
 	logs.Info("立马执行:", Startup)
 	logs.Info("连接数量:", Clients)
@@ -39,6 +39,11 @@ func main() {
 	logs.PanicErr(err)
 
 	f := func() {
+
+		if !m.Workday.TodayIs() {
+			logs.Err("今天不是工作日,跳过任务...")
+			return
+		}
 
 		logs.Info("更新数据...")
 		err = NewUpdateKline(
