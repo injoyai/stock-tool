@@ -58,6 +58,7 @@ func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
 		limit := chans.NewWaitLimit(this.Coroutines)
 		for i := range codes {
 			code := codes[i]
+			limit.Add()
 			go func(code string) {
 				defer limit.Done()
 				defer func() {
