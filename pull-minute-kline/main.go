@@ -24,8 +24,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2.12")
-	logs.Info("说明:", "增加工作日的判断,非工作日则跳过任务")
+	logs.Info("版本:", "v0.2.13")
+	logs.Info("说明:", "通过压缩再重命名的方式移动到同步文件夹,防止重复同步")
 	logs.Info("任务规则:", Spec)
 	logs.Info("立马执行:", Startup)
 	logs.Info("连接数量:", Clients)

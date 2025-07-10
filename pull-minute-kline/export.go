@@ -13,6 +13,7 @@ import (
 	"github.com/injoyai/goutil/str/bar/v2"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -94,9 +95,16 @@ func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
 		limit.Wait()
 
 		//进行压缩
-		logs.Debug("进行压缩...")
+		logs.Debug("压缩...")
 		err := zip.Encode(
 			filepath.Join(this.Export, conv.String(year)),
+			filepath.Join(this.Export, conv.String(year)+".zip"),
+		)
+		logs.PrintErr(err)
+
+		logs.Debug("重命名...")
+		os.Rename(
+			filepath.Join(this.Export, conv.String(year)+".zip"),
 			filepath.Join(this.Upload, conv.String(year)+".zip"),
 		)
 		logs.PrintErr(err)

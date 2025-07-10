@@ -13,6 +13,7 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -62,8 +63,16 @@ func (this *PullByDay) Run(m *tdx.Manage, date time.Time) error {
 	}
 	limit.Wait()
 
-	return zip.Encode(
+	logs.Debug("压缩...")
+	err := zip.Encode(
 		filepath.Join(this.Export, date.Format("20060102")),
+		filepath.Join(this.Export, date.Format("20060102.zip")),
+	)
+	logs.PrintErr(err)
+
+	logs.Debug("重命名...")
+	return os.Rename(
+		filepath.Join(this.Export, date.Format("20060102.zip")),
 		filepath.Join(this.Upload, date.Format("20060102.zip")),
 	)
 
