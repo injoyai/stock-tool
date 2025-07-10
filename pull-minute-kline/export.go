@@ -3,32 +3,36 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/injoyai/base/chans"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/database/xorms"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/oss/compress/zip"
 	"github.com/injoyai/goutil/other/csv"
+	"github.com/injoyai/goutil/str/bar/v2"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"path/filepath"
 	"time"
 )
 
-func NewExportKline(codes []string, years []int, database, export string) *ExportKline {
+func NewExportKline(codes []string, coroutines int, years []int, database, export string) *ExportKline {
 	return &ExportKline{
-		Database: database,
-		Export:   export,
-		Codes:    codes,
-		Years:    years,
+		Database:   database,
+		Export:     export,
+		Coroutines: coroutines,
+		Codes:      codes,
+		Years:      years,
 	}
 }
 
 type ExportKline struct {
-	Database string
-	Export   string
-	Codes    []string
-	Years    []int
+	Database   string
+	Export     string
+	Coroutines int
+	Codes      []string
+	Years      []int
 }
 
 func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
@@ -40,15 +44,36 @@ func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
 
 	for _, year := range this.Years {
 		logs.Debugf("导出年份: %d\n", year)
-		for _, code := range codes {
-			err := func() error {
+
+		b := bar.New()
+		b.SetTotal(int64(len(codes)))
+		b.SetFormat(func(b bar.Bar) string {
+			return fmt.Sprintf("\r[导出] %s  %s  %s",
+				b.Plan(),
+				b.RateSize(),
+				b.Speed(),
+			)
+		})
+
+		limit := chans.NewWaitLimit(this.Coroutines)
+		for i := range codes {
+			code := codes[i]
+			go func(code string) {
+				defer limit.Done()
+				defer func() {
+					b.Add(1)
+					b.Flush()
+				}()
+
 				filename := filepath.Join(this.Database, code+".db")
 				if !oss.Exists(filename) {
-					return fmt.Errorf("文件不存在: %s", filename)
+					logs.Errf("文件不存在: %s\n", filename)
+					return
 				}
 				db, err := sqlite.NewXorm(filename)
 				if err != nil {
-					return err
+					logs.Err(err)
+					return
 				}
 				defer db.Close()
 				err = this.export(db, code, year, new(KlineMinute1), "1分钟")
@@ -61,10 +86,12 @@ func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
 				logs.PrintErr(err)
 				err = this.export(db, code, year, new(KlineMinute60), "60分钟")
 				logs.PrintErr(err)
-				return nil
-			}()
-			logs.PrintErr(err)
+			}(code)
 		}
+		limit.Wait()
+
+		//进行压缩
+		logs.Debug("进行压缩...")
 		err := zip.Encode(
 			filepath.Join(this.Export, conv.String(year)),
 			filepath.Join(this.Export, conv.String(year)+".zip"),

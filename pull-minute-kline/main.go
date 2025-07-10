@@ -23,8 +23,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2.7")
-	logs.Info("说明:", "单独拎出来一个项目")
+	logs.Info("版本:", "v0.2.8")
+	logs.Info("说明:", "增加按天增量数据")
 	logs.Info("任务规则:", Spec)
 	logs.Info("立马执行:", Startup)
 	logs.Info("连接数量:", Clients)
@@ -38,19 +38,33 @@ func main() {
 	logs.PanicErr(err)
 
 	f := func() {
+
 		logs.Info("更新数据...")
-		u := NewUpdateKline(Codes, filepath.Join(DatabaseDir, "kline"), Coroutines)
-		err = u.Run(context.Background(), m)
-		logs.PrintErr(err)
-		logs.Info("导出数据...")
-		e := NewExportKline(
+		err = NewUpdateKline(
 			Codes,
+			filepath.Join(DatabaseDir, "kline"),
+			Coroutines,
+		).Run(context.Background(), m)
+		logs.PrintErr(err)
+
+		logs.Info("导出数据...")
+		err = NewExportKline(
+			Codes,
+			Coroutines,
 			[]int{time.Now().Year()},
 			filepath.Join(DatabaseDir, "kline"),
-			filepath.Join(ExportDir),
-		)
-		err = e.Run(context.Background(), m)
+			filepath.Join(ExportDir, "year"),
+		).Run(context.Background(), m)
 		logs.PrintErr(err)
+
+		logs.Info("导出增量...")
+		err = NewPullByDay(
+			Codes,
+			Coroutines,
+			filepath.Join(ExportDir, "day"),
+		).Run(m, time.Now())
+		logs.PrintErr(err)
+
 		logs.Info("任务完成...")
 	}
 
