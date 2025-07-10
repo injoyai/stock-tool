@@ -2,13 +2,17 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/injoyai/base/chans"
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/database/xorms"
+	"github.com/injoyai/goutil/str/bar/v2"
+	"github.com/injoyai/goutil/times"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
 	"path/filepath"
+	"time"
 	"xorm.io/xorm"
 )
 
@@ -33,11 +37,26 @@ func (this *UpdateKline) Run(ctx context.Context, m *tdx.Manage) error {
 		codes = m.Codes.GetStocks()
 	}
 
+	b := bar.New(func(b bar.Base) {
+		b.SetTotal(int64(len(codes)))
+		b.SetFormat(func(b bar.Bar) string {
+			return fmt.Sprintf("\r[更新] %s  %s  %s",
+				b.Plan(),
+				b.RateSize(),
+				b.Speed(),
+			)
+		})
+	})
+
 	limit := chans.NewWaitLimit(this.Limit)
 	for _, code := range codes {
 		limit.Add()
 		go func(code string) {
 			defer limit.Done()
+			defer func() {
+				b.Add(1)
+				b.Flush()
+			}()
 			err := this.update(code, m)
 			logs.PrintErr(err)
 		}(code)
@@ -51,7 +70,6 @@ func (this *UpdateKline) update(code string, c *tdx.Manage) error {
 
 	//打开数据库
 	filename := filepath.Join(this.Database, code+".db")
-	logs.Debug(filename)
 	db, err := sqlite.NewXorm(filename)
 	if err != nil {
 		return err
@@ -85,7 +103,6 @@ func (this *UpdateKline) pull(db *xorms.Engine, c *tdx.Manage, _type uint8, code
 		return err
 	}
 	lastTime := last.Time()
-	logs.Debug(lastTime.String())
 
 	//拉取数据
 	var resp *protocol.KlineResp
@@ -99,10 +116,16 @@ func (this *UpdateKline) pull(db *xorms.Engine, c *tdx.Manage, _type uint8, code
 		return err
 	}
 
+	now := time.Now()
+	node := times.IntegerDay(now)
 	//顺序写入硬盘
 	return db.SessionFunc(func(session *xorm.Session) error {
 		for _, v := range resp.List {
 			if !v.Time.After(lastTime) {
+				continue
+			}
+			//判断今天是否在15点之后,否则取消今天的数据入库
+			if now.Hour() < 15 && v.Time.After(node) {
 				continue
 			}
 			_, err = session.Table(last).Insert(&KlineBase{

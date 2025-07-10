@@ -39,7 +39,7 @@ func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
 	}
 
 	for _, year := range this.Years {
-		logs.Debugf("执行年份: %d\n", year)
+		logs.Debugf("导出年份: %d\n", year)
 		for _, code := range codes {
 			err := func() error {
 				filename := filepath.Join(this.Database, code+".db")

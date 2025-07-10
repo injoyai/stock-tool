@@ -14,45 +14,35 @@ import (
 	"time"
 )
 
-var (
-	StartDate    = time.Date(2000, 6, 9, 0, 0, 0, 0, time.Local)
+const (
 	DefaultRetry = 3
 )
 
 var (
-	Clients     int
-	Coroutines  int
-	Tasks       int
-	DatabaseDir string
-	ExportDir   string
-	Spec        string
-	Codes       []string
-	Startup     bool
+	Clients     = cfg.GetInt("clients", 4)
+	Coroutines  = cfg.GetInt("coroutines", 10)
+	Tasks       = cfg.GetInt("tasks", 2)
+	DatabaseDir = cfg.GetString("database", "./data/database")
+	ExportDir   = cfg.GetString("export", "./data/export")
+	Spec        = cfg.GetString("spec", "0 10 15 * * *")
+	Codes       = cfg.GetStrings("codes")
+	Startup     = cfg.GetBool("startup")
 )
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2.4")
-	logs.Info("说明:", "定时同步,导出和压缩")
+	logs.Info("版本:", "v0.2.6")
+	logs.Info("说明:", "增加更新进度条")
+	logs.Info("任务规则:", Spec)
+	logs.Info("立马执行:", Startup)
+	logs.Info("连接数量:", Clients)
+	logs.Info("协程数量:", Coroutines)
 	fmt.Println("=====================================================")
-	initCfg("./config/config.yaml")
-}
 
-func initCfg(filename string) {
-	cfg.Init(cfg.WithFile(filename))
-	Clients = cfg.GetInt("clients", 4)
-	Coroutines = cfg.GetInt("coroutines", 10)
-	Tasks = cfg.GetInt("tasks", 2)
-	DatabaseDir = cfg.GetString("database", "./data/database")
-	ExportDir = cfg.GetString("export", "./data/export")
-	Spec = cfg.GetString("spec", "0 10 15 * * *")
-	Codes = cfg.GetStrings("codes")
-	Startup = cfg.GetBool("startup")
 }
 
 func main() {
-	convert()
-	select {}
+	pull()
 }
 
 /*
@@ -87,8 +77,8 @@ func pullByDay() {
 func updateAndExport() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
-	corn := cron.New(cron.WithSeconds())
-	corn.AddFunc(Spec, func() {
+
+	f := func() {
 		logs.Info("更新数据...")
 		err = update(m)
 		logs.PrintErr(err)
@@ -96,7 +86,15 @@ func updateAndExport() {
 		err = exportKline(m, time.Now().Year())
 		logs.PrintErr(err)
 		logs.Info("任务完成...")
-	})
+	}
+
+	corn := cron.New(cron.WithSeconds())
+	corn.AddFunc(Spec, f)
+
+	if Startup {
+		f()
+	}
+
 	corn.Run()
 }
 
@@ -206,7 +204,6 @@ func convert() {
 }
 
 func export() {
-	initCfg("./config/export.yaml")
 	m, err := tdx.NewManage(nil)
 	logs.PanicErr(err)
 	e := NewExport(

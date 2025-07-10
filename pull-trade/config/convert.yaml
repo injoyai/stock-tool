@@ -1,5 +1,0 @@
-database: ./data/database
-export: ./data/export
-
-codes:
-  - sh600000
