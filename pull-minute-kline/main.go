@@ -16,6 +16,7 @@ var (
 	Coroutines  = cfg.GetInt("coroutines", 10)
 	DatabaseDir = cfg.GetString("database", "./data/database")
 	ExportDir   = cfg.GetString("export", "./data/export")
+	UploadDir   = cfg.GetString("upload", "./data/upload")
 	Spec        = cfg.GetString("spec", "0 10 15 * * *")
 	Codes       = cfg.GetStrings("codes")
 	Startup     = cfg.GetBool("startup")
@@ -23,8 +24,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2.10")
-	logs.Info("说明:", "修复并发没有限制的bug")
+	logs.Info("版本:", "v0.2.11")
+	logs.Info("说明:", "自定义压缩路径")
 	logs.Info("任务规则:", Spec)
 	logs.Info("立马执行:", Startup)
 	logs.Info("连接数量:", Clients)
@@ -54,6 +55,7 @@ func main() {
 			[]int{time.Now().Year()},
 			filepath.Join(DatabaseDir, "kline"),
 			filepath.Join(ExportDir, "year"),
+			filepath.Join(UploadDir),
 		).Run(context.Background(), m)
 		logs.PrintErr(err)
 
@@ -62,6 +64,7 @@ func main() {
 			Codes,
 			Coroutines,
 			filepath.Join(ExportDir, "day"),
+			filepath.Join(UploadDir, "每日数据"),
 		).Run(m, time.Now())
 		logs.PrintErr(err)
 

@@ -17,10 +17,11 @@ import (
 	"time"
 )
 
-func NewExportKline(codes []string, coroutines int, years []int, database, export string) *ExportKline {
+func NewExportKline(codes []string, coroutines int, years []int, database, export, upload string) *ExportKline {
 	return &ExportKline{
 		Database:   database,
 		Export:     export,
+		Upload:     upload,
 		Coroutines: coroutines,
 		Codes:      codes,
 		Years:      years,
@@ -30,6 +31,7 @@ func NewExportKline(codes []string, coroutines int, years []int, database, expor
 type ExportKline struct {
 	Database   string
 	Export     string
+	Upload     string
 	Coroutines int
 	Codes      []string
 	Years      []int
@@ -95,7 +97,7 @@ func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
 		logs.Debug("进行压缩...")
 		err := zip.Encode(
 			filepath.Join(this.Export, conv.String(year)),
-			filepath.Join(this.Export, conv.String(year)+".zip"),
+			filepath.Join(this.Upload, conv.String(year)+".zip"),
 		)
 		logs.PrintErr(err)
 	}

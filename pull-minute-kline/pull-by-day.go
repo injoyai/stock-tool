@@ -17,9 +17,10 @@ import (
 	"time"
 )
 
-func NewPullByDay(codes []string, coroutines int, export string) *PullByDay {
+func NewPullByDay(codes []string, coroutines int, export, upload string) *PullByDay {
 	return &PullByDay{
 		Export:     export,
+		Upload:     upload,
 		Coroutines: coroutines,
 		Codes:      codes,
 	}
@@ -27,6 +28,7 @@ func NewPullByDay(codes []string, coroutines int, export string) *PullByDay {
 
 type PullByDay struct {
 	Export     string
+	Upload     string
 	Coroutines int
 	Codes      []string
 }
@@ -60,16 +62,11 @@ func (this *PullByDay) Run(m *tdx.Manage, date time.Time) error {
 	}
 	limit.Wait()
 
-	oss.RangeFileInfo(this.Export, func(info *oss.FileInfo) (bool, error) {
-		if info.IsDir() {
-			logs.Debug("压缩:", info.FullName())
-			err := zip.Encode(info.FullName(), info.FullName()+".zip")
-			logs.PrintErr(err)
-		}
-		return true, nil
-	})
+	return zip.Encode(
+		filepath.Join(this.Export, date.Format("20060102")),
+		filepath.Join(this.Upload, date.Format("20060102.zip")),
+	)
 
-	return nil
 }
 
 func (this *PullByDay) pullCodes(code string, date time.Time, m *tdx.Manage) error {

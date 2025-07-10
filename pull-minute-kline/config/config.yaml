@@ -1,5 +1,6 @@
 database: ./data/database
 export: ./data/export
+upload: ./data/upload
 
 # 连接服务器的客户端数量
 clients: 4
