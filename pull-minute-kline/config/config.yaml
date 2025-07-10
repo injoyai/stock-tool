@@ -1,0 +1,19 @@
+database: ./data/database
+export: ./data/export
+
+# 连接服务器的客户端数量
+clients: 4
+
+# 释放读取协程数量
+coroutines: 10
+
+# 每次任务数量
+tasks: 2
+
+spec: '0 10 15 * * *'
+
+startup: true
+
+codes:
+  - sh600000
+  - sz000001
