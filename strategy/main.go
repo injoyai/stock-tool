@@ -19,10 +19,12 @@ import (
 
 func main() {
 
+	//Pull([]string{extend.Day})
+
 	endAt := time.Now().AddDate(0, 0, 0)
-	offset := 10
-	number := 80
-	windowSize := 8
+	offset := 0
+	number := 120
+	windowSize := 15
 	codes := []string{
 		//"sz000001",
 	}
@@ -45,7 +47,7 @@ func main() {
 
 	//更新数据
 	//logs.Debug("更新数据")
-	//m, err := Pull(tables)
+	//_, err := Pull(tables)
 	//logs.PanicErr(err)
 	cs, err := tdx.DialCodes(filepath.Join(tdx.DefaultDatabaseDir, "codes.db"))
 	logs.PanicErr(err)
