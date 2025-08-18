@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	Version = "v0.5"
-	Details = "增加复权数据"
+	Version = "v0.6"
+	Details = "增加复权数据,修复超过一年未交易的股票数据问题"
 )
 
 var (
