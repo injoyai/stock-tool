@@ -99,7 +99,7 @@ func (this *PullTrade) Run(ctx context.Context, m *tdx.Manage) error {
 
 func (this *PullTrade) readAll(ctx context.Context, m *tdx.Manage, codes []string) []*tradeDB {
 	lss := []*tradeDB(nil)
-	limit := chans.NewWaitLimit(uint(this.limit))
+	limit := chans.NewWaitLimit(this.limit)
 	mu := sync.Mutex{}
 	for _, v := range codes {
 		limit.Add()

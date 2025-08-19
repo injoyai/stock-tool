@@ -28,7 +28,7 @@ func (this *Range[T]) Run(ctx context.Context, m *tdx.Manage) error {
 	if this.Limit <= 0 {
 		this.Limit = 1
 	}
-	limit := chans.NewWaitLimit(uint(this.Limit))
+	limit := chans.NewWaitLimit(this.Limit)
 
 	total := int64(len(codes))
 	taskName := this.Handler.Name()
