@@ -63,13 +63,6 @@ var (
 			task.NewRename(dirExportCompressKline, dirUploadKline),                              //移动
 			task.NewNoticeServerChan(sendKey, "k线同步完成"),
 		),
-
-		//task.Group("分时成交",
-		//	//task.NewPullTradeHistory(codes, dirExportTrade, disks), //拉取
-		//	task.NewPullTrade(codes, dirDatabaseTrade, disks), //拉取
-		//	//task.NewExportTrade(codes, dirDatabaseTrade, dirUploadTrade, disks), //导出
-		//	task.NewNoticeServerChan(sendKey, "分时成交同步完成"),
-		//),
 	}
 
 	tasksFQ = []task.Tasker{
