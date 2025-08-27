@@ -8,6 +8,7 @@ import (
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/csv"
+	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
 	"io"
@@ -170,15 +171,11 @@ func (this *PullKlineFQ) GetTHSDayKline(code string, _type uint8) ([]*model.Klin
 	}
 
 	total := conv.Int(m["total"])
+	sortYears := conv.Interfaces(m["sortYear"])
 	priceFactor := conv.Float64(m["priceFactor"])
 	prices := strings.Split(conv.String(m["price"]), ",")
 	dates := strings.Split(conv.String(m["dates"]), ",")
 	volumes := strings.Split(conv.String(m["volumn"]), ",")
-	start := conv.String(m["start"])
-	t, err := time.Parse("20060102", start)
-	if err != nil {
-		return nil, err
-	}
 
 	//好像到了22点,总数量会比实际多1
 	if total == len(dates)+1 && total == len(volumes)+1 {
@@ -189,31 +186,48 @@ func (this *PullKlineFQ) GetTHSDayKline(code string, _type uint8) ([]*model.Klin
 		return nil, fmt.Errorf("total=%d prices=%d dates=%d volumns=%d", total, len(prices), len(dates), len(volumes))
 	}
 
-	ls := []*model.Kline(nil)
+	mYear := make(map[int][]string)
+	index := 0
+	for i, v := range sortYears {
+		if ls := conv.Ints(v); len(ls) == 2 {
+			year := conv.Int(ls[0])
+			length := conv.Int(ls[1])
+			if i == len(sortYears)-1 {
+				mYear[year] = dates[index:]
+				break
+			}
+			if len(dates) < index+length {
+				logs.Err("意外的错误")
+				mYear[year] = dates[index:]
+				break
+			}
+			mYear[year] = dates[index : index+length]
+			index += length
+		}
+	}
 
-	year := t.Year()
-	lastDate := ""
-	for i := 0; i < total; i++ {
-		//当日前变小时(12xx变01xx),说明过了1年,除非该股票停牌了1年多则数据错误
-		if dates[i] < lastDate {
-			year++
+	ls := []*model.Kline(nil)
+	i := 0
+	nowYear := time.Now().Year()
+	for year := 1990; year <= nowYear; year++ {
+		for _, d := range mYear[year] {
+			x, err := time.Parse("0102", d)
+			if err != nil {
+				return nil, err
+			}
+			x = time.Date(year, x.Month(), x.Day(), 15, 0, 0, 0, time.Local)
+			low := protocol.Price(conv.Float64(prices[i*4+0]) * 1000 / priceFactor)
+			ls = append(ls, &model.Kline{
+				Code:   protocol.AddPrefix(code),
+				Date:   x.Unix(),
+				Open:   protocol.Price(conv.Float64(prices[i*4+1])*1000/priceFactor) + low,
+				High:   protocol.Price(conv.Float64(prices[i*4+2])*1000/priceFactor) + low,
+				Low:    low,
+				Close:  protocol.Price(conv.Float64(prices[i*4+3])*1000/priceFactor) + low,
+				Volume: (conv.Int64(volumes[i]) + 50) / 100,
+			})
+			i++
 		}
-		lastDate = dates[i]
-		x, err := time.Parse("0102", dates[i])
-		if err != nil {
-			return nil, err
-		}
-		x = time.Date(year, x.Month(), x.Day(), 15, 0, 0, 0, time.Local)
-		low := protocol.Price(conv.Float64(prices[i*4+0]) * 1000 / priceFactor)
-		ls = append(ls, &model.Kline{
-			Code:   protocol.AddPrefix(code),
-			Date:   x.Unix(),
-			Open:   protocol.Price(conv.Float64(prices[i*4+1])*1000/priceFactor) + low,
-			High:   protocol.Price(conv.Float64(prices[i*4+2])*1000/priceFactor) + low,
-			Low:    low,
-			Close:  protocol.Price(conv.Float64(prices[i*4+3])*1000/priceFactor) + low,
-			Volume: (conv.Int64(volumes[i]) + 50) / 100,
-		})
 	}
 
 	return ls, nil
