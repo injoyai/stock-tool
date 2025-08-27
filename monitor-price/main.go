@@ -140,10 +140,10 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 			if now.Before(times.IntegerDay(now).Add(time.Hour*9 + time.Minute*30)) {
 				return
 			}
-			if now.After(times.IntegerDay(now).Add(time.Hour * 15)) {
+			if now.After(times.IntegerDay(now).Add(time.Hour*15 + time.Minute*5)) {
 				return
 			}
-			if now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30)) &&
+			if now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30+time.Minute*5)) &&
 				now.Before(times.IntegerDay(now).Add(time.Hour*13)) {
 				return
 			}
