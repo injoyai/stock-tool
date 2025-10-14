@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
+	"github.com/injoyai/goutil/oss/compress/zip"
 	"github.com/injoyai/goutil/other/csv"
 	"github.com/injoyai/goutil/str/bar/v2"
 	"github.com/injoyai/logs"
@@ -49,7 +50,7 @@ func Pull(m *tdx.Manage) error {
 		b.SetPrefix(fmt.Sprintf("[%s]", v))
 		b.Flush()
 		err := m.Do(func(c *tdx.Client) error {
-			return g.Retry(func() error { return pull(c, v) }, Retry, RetryInterval)
+			return g.Retry(func() error { return pull(c, v, "复权因子") }, Retry, RetryInterval)
 		})
 		b.Add(1)
 		b.Flush()
@@ -59,10 +60,10 @@ func Pull(m *tdx.Manage) error {
 		}
 	}
 
-	return nil
+	return zip.Encode(filepath.Join(Dir, "复权因子"), filepath.Join(Dir, "upload", "复权因子.zip"))
 }
 
-func pull(c *tdx.Client, code string) error {
+func pull(c *tdx.Client, code string, folder string) error {
 	_, fs, err := extend.GetTHSDayKlineFactorFull(code, c)
 	if err != nil {
 		return err
@@ -84,6 +85,6 @@ func pull(c *tdx.Client, code string) error {
 	if err != nil {
 		return err
 	}
-	filename := filepath.Join(Dir, "复权因子", code+".csv")
+	filename := filepath.Join(Dir, folder, code+".csv")
 	return oss.New(filename, buf)
 }
