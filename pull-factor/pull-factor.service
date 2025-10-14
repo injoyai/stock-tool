@@ -1,0 +1,16 @@
+[Unit]
+Description=pull-factor daemon
+After=network.target
+
+[Service]
+PIDFile=/tmp/pull-factor.pid
+User=root
+Group=root
+WorkingDirectory=/vol2/1000/server/pull-factor
+ExecStart=/vol2/1000/server/pull-factor/pull-factor
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
