@@ -35,7 +35,14 @@ func main() {
 	logs.PanicErr(err)
 
 	if len(Codes) == 0 {
-		Codes = m.Codes.GetStocks()
+		//cs, err := extend.GetBjCodes()
+		//logs.PanicErr(err)
+		//for _, v := range cs {
+		//	Codes = append(Codes, "bj"+v.Code)
+		//}
+		Codes = append(Codes, "sh000001")
+		Codes = append(Codes, "sz399001")
+		Codes = append(Codes, "sz399006")
 	}
 
 	Run(m, Codes)
