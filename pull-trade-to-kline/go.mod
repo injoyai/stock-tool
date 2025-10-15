@@ -1,6 +1,6 @@
 module pull-trade-to-kline
 
-go 1.20
+go 1.22.0
 
 require (
 	github.com/injoyai/base v1.2.17

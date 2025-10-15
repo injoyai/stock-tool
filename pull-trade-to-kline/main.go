@@ -22,7 +22,8 @@ var (
 		"sz399001",
 		"sz399006",
 	}
-	Dir = "./data"
+	Dir     = "./data"
+	EndDate = time.Date(2024, 12, 31, 15, 0, 0, 0, time.Local)
 )
 
 func main() {
@@ -36,7 +37,7 @@ func main() {
 		Codes = append(Codes, "bj"+v.Code)
 	}
 
-	//PullIndexes(m, Indexes, Dir)
+	PullIndexes(m, Indexes, Dir)
 
 	PullStocks(m, Codes, Dir)
 
@@ -166,7 +167,7 @@ func pullTrades(c *tdx.Client, w *tdx.Workday, code string) (protocol.Trades, er
 	}
 	start := time.Date(resp.List[0].Time.Year(), resp.List[0].Time.Month(), 1, 0, 0, 0, 0, resp.List[0].Time.Location())
 	var res *protocol.TradeResp
-	w.Range(start, time.Now(), func(t time.Time) bool {
+	w.Range(start, EndDate, func(t time.Time) bool {
 		res, err = c.GetHistoryTradeDay(t.Format("20060102"), code)
 		if err != nil {
 			return false
