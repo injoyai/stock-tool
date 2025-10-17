@@ -9,19 +9,21 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
+	"github.com/robfig/cron/v3"
 	"xorm.io/xorm"
 )
 
-const (
-	Clients   = 2
-	Coroutine = 20
+var (
+	Spec      = cfg.GetString("spec", "0 10 15 * * *")
+	Startup   = cfg.GetBool("startup")
+	DSN       = cfg.GetString("database")
+	Clients   = cfg.GetInt("clients", 2)
+	Coroutine = cfg.GetInt("coroutine", 20)
 )
 
 func main() {
 
-	dsn := cfg.GetString("database.dsn")
-
-	db, err := mysql.NewXorm(dsn)
+	db, err := mysql.NewXorm(DSN)
 	logs.PanicErr(err)
 
 	err = db.Sync2(new(DayKline))
@@ -29,13 +31,20 @@ func main() {
 
 	m, err := tdx.NewManageMysql(&tdx.ManageConfig{
 		Number:          Clients,
-		CodesFilename:   dsn,
-		WorkdayFileName: dsn,
+		CodesFilename:   DSN,
+		WorkdayFileName: DSN,
 	})
 	logs.PanicErr(err)
 
-	Run(m, db.Engine)
+	c := cron.New(cron.WithSeconds())
+	_, err = c.AddFunc(Spec, func() { Run(m, db.Engine) })
+	logs.PanicErr(err)
 
+	if Startup {
+		Run(m, db.Engine)
+	}
+
+	c.Run()
 }
 
 func Run(m *tdx.Manage, db *xorm.Engine) {
