@@ -123,6 +123,11 @@ func save(ks protocol.Klines, code string) error {
 	//按年分割
 	m := map[int]protocol.Klines{}
 	for _, v := range ks {
+		switch code {
+		case "sh000001", "sz399001", "sz399006":
+			v.Amount = protocol.Price(v.Volume * 100 * 1000)
+			v.Volume = 0
+		}
 		m[v.Time.Year()] = append(m[v.Time.Year()], v)
 	}
 	for year, ls := range m {
