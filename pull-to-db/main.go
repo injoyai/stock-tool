@@ -29,11 +29,7 @@ func main() {
 	err = db.Sync2(new(DayKline))
 	logs.PanicErr(err)
 
-	m, err := tdx.NewManageMysql(&tdx.ManageConfig{
-		Number:          Clients,
-		CodesFilename:   DSN,
-		WorkdayFileName: DSN,
-	})
+	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 
 	c := cron.New(cron.WithSeconds())
