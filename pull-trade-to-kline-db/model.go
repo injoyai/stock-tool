@@ -28,6 +28,7 @@ type Timer interface {
 
 type KlineBase struct {
 	ID     int64
+	Date   int64
 	Year   int
 	Month  int
 	Day    int
