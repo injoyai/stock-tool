@@ -18,32 +18,35 @@ import (
 
 var (
 	Dir           = "./data/database/kline"
-	Clients       = 5
-	Goroutine     = 20
+	Clients       = 1
+	Goroutine     = 2
 	Startup       = true
 	Retry         = 3
 	RetryInterval = time.Second
-	Codes         = []string{
+	Indexes       = []string{
+		"sh000001",
+		"sz399001",
+		"sz399006",
+	}
+	indexesMap = func() map[string]bool {
+		m := make(map[string]bool)
+		for _, v := range Indexes {
+			m[v] = true
+		}
+		return m
+	}()
+	Codes = []string{
 		//"sh600000",
 	}
 	Start = time.Date(2000, 1, 1, 0, 0, 0, 0, time.Local)
-	End   = time.Date(2025, 6, 1, 0, 0, 0, 0, time.Local)
+	End   = time.Now().AddDate(0, -4, 0)
 )
 
 func main() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 
-	if len(Codes) == 0 {
-		//cs, err := extend.GetBjCodes()
-		//logs.PanicErr(err)
-		//for _, v := range cs {
-		//	Codes = append(Codes, "bj"+v.Code)
-		//}
-		Codes = append(Codes, "sh000001")
-		Codes = append(Codes, "sz399001")
-		Codes = append(Codes, "sz399006")
-	}
+	Codes = append(Codes, Indexes...)
 
 	Run(m, Codes)
 }
@@ -123,8 +126,7 @@ func save(ks protocol.Klines, code string) error {
 	//按年分割
 	m := map[int]protocol.Klines{}
 	for _, v := range ks {
-		switch code {
-		case "sh000001", "sz399001", "sz399006":
+		if indexesMap[code] {
 			v.Amount = protocol.Price(v.Volume * 100 * 1000)
 			v.Volume = 0
 		}
@@ -150,6 +152,7 @@ func toModel(ks protocol.Klines) []any {
 	inserts := make([]any, len(ks))
 	for i, v := range ks {
 		inserts[i] = &KlineBase{
+			Date:   v.Time.Unix(),
 			Year:   v.Time.Year(),
 			Month:  int(v.Time.Month()),
 			Day:    v.Time.Day(),

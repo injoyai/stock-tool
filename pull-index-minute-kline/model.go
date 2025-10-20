@@ -41,7 +41,3 @@ type KlineBase struct {
 	Volume int
 	Amount float64
 }
-
-func (this KlineBase) Time() time.Time {
-	return time.Date(this.Year, time.Month(this.Month), this.Day, this.Hour, this.Minute, 0, 0, time.Local)
-}
