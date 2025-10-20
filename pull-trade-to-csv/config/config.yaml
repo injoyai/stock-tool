@@ -1,0 +1,5 @@
+dir: ./data/trade
+clients: 3
+coroutine: 10
+codes:
+  - sh600000

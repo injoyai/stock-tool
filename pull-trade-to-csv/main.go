@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/csv"
 	"github.com/injoyai/goutil/str/bar/v2"
@@ -12,13 +13,11 @@ import (
 )
 
 var (
-	Dir       = "./data/trade"
-	Clients   = 3
-	Coroutine = 10
-	End       = time.Date(2025, 7, 1, 0, 0, 0, 0, time.Local)
-	Codes     = []string{
-		"sh600000",
-	}
+	Dir       = cfg.GetString("dir", "./data/trade")
+	Clients   = cfg.GetInt("clients", 3)
+	Coroutine = cfg.GetInt("coroutine", 10)
+	End       = time.Now()
+	Codes     = cfg.GetStrings("codes")
 )
 
 func main() {
@@ -47,6 +46,8 @@ func main() {
 				b.Logf("[ERR] [%s] %v", code, err)
 				b.Flush()
 			}
+			b.Log("数量:", len(resp))
+			b.Flush()
 			err = save(resp, code)
 			if err != nil {
 				b.Logf("[ERR] [%s] %v", code, err)
@@ -61,7 +62,7 @@ func main() {
 
 func save(ts protocol.Trades, code string) error {
 	data := [][]any{
-		{"时间", "价格", "数量", "方向(0买,1卖,2中性)"},
+		{"时间", "价格", "成交量", "方向(0买,1卖,2中性)"},
 	}
 	for _, v := range ts {
 		data = append(data, []any{
