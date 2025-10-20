@@ -33,26 +33,32 @@ func init() {
 }
 
 func main() {
-	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
+
+	p, err := tdx.NewPool(func() (*tdx.Client, error) { return tdx.DialDefault() }, Clients)
 	logs.PanicErr(err)
 
-	c := cron.New(cron.WithSeconds())
-	c.AddFunc(Spec, func() { Run(m) })
+	c, err := tdx.DialDefault()
+	logs.PanicErr(err)
+	w, err := tdx.NewWorkdaySqlite(c)
+	logs.PanicErr(err)
+
+	cr := cron.New(cron.WithSeconds())
+	cr.AddFunc(Spec, func() { Run(p, w) })
 
 	if Startup {
-		Run(m)
+		Run(p, w)
 	}
 
-	c.Run()
+	cr.Run()
 }
 
-func Run(m *tdx.Manage) {
-	Update(m)
+func Run(p *tdx.Pool, w *tdx.Workday) {
+	Update(p, w)
 	Export()
 	logs.Info("更新完成...")
 }
 
-func Update(m *tdx.Manage) {
+func Update(p *tdx.Pool, w *tdx.Workday) {
 
 	b := bar.NewCoroutine(len(Codes), Coroutine)
 	defer b.Close()
@@ -62,8 +68,8 @@ func Update(m *tdx.Manage) {
 		b.Go(func() {
 			b.SetPrefix("[更新][" + code + "]")
 			b.Flush()
-			err := m.Do(func(c *tdx.Client) error {
-				return update(c, m.Workday, code)
+			err := p.Do(func(c *tdx.Client) error {
+				return update(c, w, code)
 			})
 			if err != nil {
 				b.Logf("[ERR] [%s] %s", code, err.Error())
@@ -97,7 +103,9 @@ func Export() {
 }
 
 func update(c *tdx.Client, w *tdx.Workday, code string) error {
-	dir := filepath.Join(DatabaseDir, conv.String(time.Now().Year()))
+	year := time.Now().Year()
+	yearStart := time.Date(year, 1, 1, 0, 0, 0, 0, time.Local)
+	dir := filepath.Join(DatabaseDir, conv.String(year))
 	filename := filepath.Join(dir, code+".db")
 	db, err := sqlite.NewXorm(filename)
 	if err != nil {
@@ -113,6 +121,9 @@ func update(c *tdx.Client, w *tdx.Workday, code string) error {
 
 	if last.Date == 0 {
 		last.Date = time.Now().AddDate(0, -4, 0).Unix()
+		if last.Date < yearStart.Unix() {
+			last.Date = yearStart.Unix()
+		}
 	}
 
 	ks := []*KlineBase(nil)
