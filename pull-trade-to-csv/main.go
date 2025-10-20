@@ -1,0 +1,80 @@
+package main
+
+import (
+	"github.com/injoyai/goutil/oss"
+	"github.com/injoyai/goutil/other/csv"
+	"github.com/injoyai/goutil/str/bar/v2"
+	"github.com/injoyai/logs"
+	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/protocol"
+	"path/filepath"
+	"time"
+)
+
+var (
+	Dir       = "./data/trade"
+	Clients   = 3
+	Coroutine = 10
+	End       = time.Date(2025, 7, 1, 0, 0, 0, 0, time.Local)
+	Codes     = []string{
+		"sh600000",
+	}
+)
+
+func main() {
+
+	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
+	logs.PanicErr(err)
+
+	if len(Codes) == 0 {
+		Codes = m.Codes.GetStocks()
+	}
+
+	b := bar.NewCoroutine(len(Codes), Coroutine)
+	defer b.Close()
+
+	for i := range Codes {
+		code := Codes[i]
+		b.Go(func() {
+			b.SetPrefix("[" + code + "]")
+			b.Flush()
+			var resp protocol.Trades
+			err = m.Do(func(c *tdx.Client) error {
+				resp, err = c.GetHistoryTradeBefore(code, m.Workday, End)
+				return err
+			})
+			if err != nil {
+				b.Logf("[ERR] [%s] %v", code, err)
+				b.Flush()
+			}
+			err = save(resp, code)
+			if err != nil {
+				b.Logf("[ERR] [%s] %v", code, err)
+				b.Flush()
+			}
+		})
+	}
+
+	b.Wait()
+
+}
+
+func save(ts protocol.Trades, code string) error {
+	data := [][]any{
+		{"时间", "价格", "数量", "方向(0买,1卖,2中性)"},
+	}
+	for _, v := range ts {
+		data = append(data, []any{
+			v.Time.Format(time.DateTime),
+			v.Price.Float64(),
+			v.Volume,
+			v.Status,
+		})
+	}
+	buf, err := csv.Export(data)
+	if err != nil {
+		return err
+	}
+	filename := filepath.Join(Dir, code+".csv")
+	return oss.New(filename, buf)
+}
