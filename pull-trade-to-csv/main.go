@@ -13,10 +13,10 @@ import (
 )
 
 var (
+	End       = time.Now()
 	Dir       = cfg.GetString("dir", "./data/trade")
 	Clients   = cfg.GetInt("clients", 3)
 	Coroutine = cfg.GetInt("coroutine", 10)
-	End       = time.Now()
 	Codes     = cfg.GetStrings("codes")
 	After     = cfg.GetString("after")
 )
