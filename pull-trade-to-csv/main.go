@@ -18,6 +18,7 @@ var (
 	Coroutine = cfg.GetInt("coroutine", 10)
 	End       = time.Now()
 	Codes     = cfg.GetStrings("codes")
+	After     = cfg.GetString("after")
 )
 
 func main() {
@@ -34,6 +35,9 @@ func main() {
 
 	for i := range Codes {
 		code := Codes[i]
+		if code < After {
+			continue
+		}
 		b.Go(func() {
 			b.SetPrefix("[" + code + "]")
 			b.Flush()

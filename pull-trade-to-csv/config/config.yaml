@@ -1,5 +1,6 @@
 dir: ./data/trade
 clients: 3
 coroutine: 10
+after:
 codes:
   - sh600000
