@@ -3,28 +3,35 @@ package main
 import (
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/database/sqlite"
+	"github.com/injoyai/goutil/oss"
+	"github.com/injoyai/goutil/other/csv"
 	"github.com/injoyai/goutil/str/bar/v2"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
 	"github.com/robfig/cron/v3"
+	"os"
 	"path/filepath"
 	"time"
 	"xorm.io/xorm"
 )
 
 var (
-	Dir   = "./data/database/kline"
-	Codes = []string{
+	DatabaseDir = "./data/database/kline"
+	ExportDir   = "./data/export"
+	UploadDir   = "./data/upload"
+	Codes       = []string{
 		"sh000001",
 		"sz399001",
 		"sz399006",
 	}
-	Startup = true
+	Startup   = true
+	Clients   = 3
+	Coroutine = 3
 )
 
 func main() {
-	m, err := tdx.NewManage(&tdx.ManageConfig{Number: 3})
+	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 
 	c := cron.New(cron.WithSeconds())
@@ -38,14 +45,19 @@ func main() {
 }
 
 func Run(m *tdx.Manage) {
+	Update(m)
+	Export()
+}
 
-	b := bar.NewCoroutine(len(Codes), 3)
+func Update(m *tdx.Manage) {
+
+	b := bar.NewCoroutine(len(Codes), Coroutine)
 	defer b.Close()
 
 	for i := range Codes {
 		code := Codes[i]
 		b.Go(func() {
-			b.SetPrefix("[" + code + "]")
+			b.SetPrefix("[更新][" + code + "]")
 			b.Flush()
 			err := m.Do(func(c *tdx.Client) error {
 				return update(c, m.Workday, code)
@@ -61,8 +73,28 @@ func Run(m *tdx.Manage) {
 
 }
 
+func Export() {
+	b := bar.NewCoroutine(len(Codes), 3)
+	defer b.Close()
+
+	for i := range Codes {
+		code := Codes[i]
+		b.Go(func() {
+			b.SetPrefix("[导出][" + code + "]")
+			b.Flush()
+			err := exportThisYear(code)
+			if err != nil {
+				b.Logf("[ERR] [%s] %s", code, err.Error())
+				b.Flush()
+			}
+		})
+	}
+
+	b.Wait()
+}
+
 func update(c *tdx.Client, w *tdx.Workday, code string) error {
-	dir := filepath.Join(Dir, conv.String(time.Now().Year()))
+	dir := filepath.Join(DatabaseDir, conv.String(time.Now().Year()))
 	filename := filepath.Join(dir, code+".db")
 	db, err := sqlite.NewXorm(filename)
 	if err != nil {
@@ -121,6 +153,76 @@ func update(c *tdx.Client, w *tdx.Workday, code string) error {
 
 }
 
-func export() {
+func pullToDB(c *tdx.Client, code string) error {
 
+	return nil
+}
+
+func exportThisYear(code string) error {
+	year := time.Now().Year()
+	dir := filepath.Join(DatabaseDir, conv.String(year))
+	filename := filepath.Join(dir, code+".db")
+	db, err := sqlite.NewXorm(filename)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	data := Klines{}
+	err = db.Table(new(KlineMinute1)).Find(&data)
+	if err != nil {
+		return err
+	}
+	err = save(data, code, "1分钟", year)
+	if err != nil {
+		return err
+	}
+	err = save(data.Merge(5), code, "5分钟", year)
+	if err != nil {
+		return err
+	}
+	err = save(data.Merge(15), code, "15分钟", year)
+	if err != nil {
+		return err
+	}
+	err = save(data.Merge(30), code, "30分钟", year)
+	if err != nil {
+		return err
+	}
+	err = save(data.Merge(60), code, "60分钟", year)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func save(ks []*KlineBase, code, _type string, year int) error {
+	data := [][]any{
+		{"日期", "时间", "开盘", "最高", "最低", "收盘", "成交量", "成交额"},
+	}
+	for _, v := range ks {
+		t := time.Unix(v.Date, 0)
+		data = append(data, []any{
+			t.Format(time.DateTime),
+			t.Format("15:04"),
+			v.Open,
+			v.High,
+			v.Low,
+			v.Close,
+			v.Volume,
+			v.Amount,
+		})
+	}
+	buf, err := csv.Export(data)
+	if err != nil {
+		return err
+	}
+	filename := filepath.Join(ExportDir, conv.String(year), _type, code+".csv")
+	if err = oss.New(filename, buf); err != nil {
+		return err
+	}
+	<-time.After(time.Millisecond * 100)
+	uploadFilename := filepath.Join(UploadDir, conv.String(year), _type, code+".csv")
+	os.MkdirAll(filepath.Dir(uploadFilename), os.ModePerm)
+	return os.Rename(filename, uploadFilename)
 }
