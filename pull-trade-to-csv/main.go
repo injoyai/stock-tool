@@ -46,8 +46,6 @@ func main() {
 				b.Logf("[ERR] [%s] %v", code, err)
 				b.Flush()
 			}
-			b.Log("数量:", len(resp))
-			b.Flush()
 			err = save(resp, code)
 			if err != nil {
 				b.Logf("[ERR] [%s] %v", code, err)
