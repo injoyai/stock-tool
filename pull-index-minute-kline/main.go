@@ -21,9 +21,17 @@ var (
 	ExportDir   = "./data/export"
 	UploadDir   = "./data/upload"
 	Codes       = []string{
-		"sh000001",
-		"sz399001",
-		"sz399006",
+		"sh000001", //上证指数
+		"sz399001", //深证成指
+		"sz399006", //创业板指
+		"sh000016", //上证50
+		"sh000688", //科创50
+		"sh000010", //上证180
+		"sh000300", //沪深300
+		"sh000905", //中证500
+		"sh000852", //中证1000
+		"sh000932", //中证消费指数,
+		"sh000827", //中证环保指数,
 	}
 	Startup   = true
 	Clients   = 3
@@ -47,6 +55,7 @@ func main() {
 func Run(m *tdx.Manage) {
 	Update(m)
 	Export()
+	logs.Info("更新完成...")
 }
 
 func Update(m *tdx.Manage) {
@@ -203,7 +212,7 @@ func save(ks []*KlineBase, code, _type string, year int) error {
 	for _, v := range ks {
 		t := time.Unix(v.Date, 0)
 		data = append(data, []any{
-			t.Format(time.DateTime),
+			t.Format(time.DateOnly),
 			t.Format("15:04"),
 			v.Open,
 			v.High,
