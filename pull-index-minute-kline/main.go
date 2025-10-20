@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/injoyai/conv"
+	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/csv"
@@ -20,30 +21,23 @@ var (
 	DatabaseDir = "./data/database/kline"
 	ExportDir   = "./data/export"
 	UploadDir   = "./data/upload"
-	Codes       = []string{
-		"sh000001", //上证指数
-		"sz399001", //深证成指
-		"sz399006", //创业板指
-		"sh000016", //上证50
-		"sh000688", //科创50
-		"sh000010", //上证180
-		"sh000300", //沪深300
-		"sh000905", //中证500
-		"sh000852", //中证1000
-		"sh000932", //中证消费指数,
-		"sh000827", //中证环保指数,
-	}
-	Startup   = true
-	Clients   = 3
-	Coroutine = 3
+	Codes       = cfg.GetStrings("codes")
+	Startup     = cfg.GetBool("startup", false)
+	Clients     = cfg.GetInt("clients", 3)
+	Coroutine   = cfg.GetInt("coroutine", 3)
+	Spec        = cfg.GetString("spec", "0 1 15 * * *")
 )
+
+func init() {
+	logs.SetFormatter(logs.TimeFormatter)
+}
 
 func main() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 
 	c := cron.New(cron.WithSeconds())
-	c.AddFunc("0 1 15 * * *", func() { Run(m) })
+	c.AddFunc(Spec, func() { Run(m) })
 
 	if Startup {
 		Run(m)
