@@ -4,14 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/injoyai/conv/cfg"
-	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
-	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 const (
@@ -23,7 +20,6 @@ var (
 	Coroutines  = cfg.GetInt("coroutines", 10)
 	Tasks       = cfg.GetInt("tasks", 2)
 	DatabaseDir = cfg.GetString("database", "./data/database")
-	ExportDir   = cfg.GetString("export", "./data/export")
 	Spec        = cfg.GetString("spec", "0 10 15 * * *")
 	Codes       = cfg.GetStrings("codes")
 	Startup     = cfg.GetBool("startup")
@@ -45,179 +41,15 @@ func main() {
 	pull()
 }
 
-/*
-
-
-
-
-
-
-
-
-
- */
-
-func pullByDay() {
-	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
-	logs.PanicErr(err)
-
-	p := NewPullKlineDay(
-		Codes,
-		"./data/klineday",
-	)
-
-	err = p.pullDay(
-		m, Codes,
-		time.Date(2025, 2, 12, 0, 0, 0, 0, time.Local),
-		time.Date(2025, 7, 8, 0, 0, 0, 0, time.Local),
-	)
-
-}
-
-func updateAndExport() {
-	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
-	logs.PanicErr(err)
-
-	f := func() {
-		logs.Info("更新数据...")
-		err = update(m)
-		logs.PrintErr(err)
-		logs.Info("导出数据...")
-		err = exportKline(m, time.Now().Year())
-		logs.PrintErr(err)
-		logs.Info("任务完成...")
-	}
-
-	corn := cron.New(cron.WithSeconds())
-	corn.AddFunc(Spec, f)
-
-	if Startup {
-		f()
-	}
-
-	corn.Run()
-}
-
-func exportKline(m *tdx.Manage, year int) error {
-	e := NewExportKline(
-		Codes,
-		[]int{year},
-		filepath.Join(DatabaseDir, "kline"),
-		filepath.Join(ExportDir),
-	)
-	return e.Run(context.Background(), m)
-}
-
-func update(m *tdx.Manage) error {
-	u := NewUpdateKline(Codes, filepath.Join(DatabaseDir, "kline"), Coroutines)
-	return u.Run(context.Background(), m)
-}
-
-func invalidFolder() {
-	oss.RangeFileInfo("./data/database/trade/", func(info *oss.FileInfo) (bool, error) {
-		if info.IsDir() {
-			fs, err := oss.ReadFileInfos(info.FullName())
-			if err != nil {
-				return false, err
-			}
-			has := false
-			for _, f := range fs {
-				if strings.Contains(f.Name(), "-2025.db") {
-					has = true
-				}
-			}
-			if !has {
-				logs.Debug("无效数据:", info.FullName())
-			}
-		}
-		return true, nil
-	})
-}
-
-func clear() {
-	t := time.Date(2025, 6, 30, 0, 0, 0, 0, time.Local)
-	oss.RangeFileInfo("./data/database/trade/", func(info *oss.FileInfo) (bool, error) {
-		if info.IsDir() {
-			oss.RangeFileInfo(info.FullName(), func(info *oss.FileInfo) (bool, error) {
-				if info.Size() == 0 {
-					if info.ModTime().After(t) {
-						logs.Debug("删除:", info.FullName(), info.ModTime().Format(time.DateTime))
-						os.Remove(info.FullName())
-						return true, nil
-					} else {
-						logs.Debug("保留:", info.FullName())
-					}
-				}
-				return true, nil
-			})
-		}
-		return true, nil
-	})
-}
-
-func xxx() []string {
-	//c, err := tdx.DialCodes("")
-	//logs.PanicErr(err)
-	//
-	//codes := c.GetStocks()
-	m := make(map[string]struct{})
-	//for _, code := range codes {
-	//	m[code] = struct{}{}
-	//}
-
-	err := oss.RangeFileInfo("./data/database/trade/", func(info *oss.FileInfo) (bool, error) {
-		//delete(m, strings.Split(info.Name(), ".")[0])
-		m[strings.Split(info.Name(), ".")[0]] = struct{}{}
-		return true, nil
-	})
-	logs.PanicErr(err)
-
-	err = oss.RangeFileInfo("./data/database/kline/", func(info *oss.FileInfo) (bool, error) {
-		delete(m, strings.Split(info.Name(), ".")[0])
-		return true, nil
-	})
-	logs.PanicErr(err)
-
-	ls := []string(nil)
-	for k, _ := range m {
-		ls = append(ls, k)
-	}
-
-	logs.Debug("数量:", len(ls))
-
-	return ls
-}
-
-func convert() {
-	m, err := tdx.NewManage(nil)
-	logs.PanicErr(err)
-	c := NewConvert(
-		Codes,
-		"",
-		filepath.Join(DatabaseDir, "trade"),
-		filepath.Join(DatabaseDir, "kline_append1"),
-		filepath.Join(DatabaseDir, "kline_append2"),
-		filepath.Join(DatabaseDir, "kline"),
-		time.Date(2025, 5, 21, 0, 0, 0, 0, time.Local),
-	)
-	c.Run(context.Background(), m)
-}
-
-func export() {
-	m, err := tdx.NewManage(nil)
-	logs.PanicErr(err)
-	e := NewExport(
-		[]string{}, //"sz000001"},
-		[]int{2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025},
-		filepath.Join(DatabaseDir, "trade"),
-		ExportDir,
-	)
-	e.Run(context.Background(), m)
-}
-
 func pull() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
+
+	for _, v := range m.Codes.GetStocks() {
+		if strings.HasPrefix(v, "bj") {
+			Codes = append(Codes, v)
+		}
+	}
 
 	s := NewSqlite(
 		Codes,

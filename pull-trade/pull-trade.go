@@ -196,7 +196,7 @@ func (this *Sqlite) _pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err e
 	yearLast := time.Date(b.Year, 12, 31, 23, 0, 0, 0, time.Local)
 	t := ToTime(b.LastDate, 0)
 
-	var insert []*TradeSqlite
+	var insert []*Trade
 	err = m.Do(func(c *tdx.Client) error {
 		//遍历时间,拉取数据并加入数据库
 		for date := t.Add(time.Hour * 24); date.Before(yearLast) && date.Before(now); date = date.Add(time.Hour * 24) {
@@ -294,9 +294,9 @@ func (this *Sqlite) getPublic(m *tdx.Manage, code string) (public time.Time, err
 }
 
 // pullDay 按天拉取数据
-func (this *Sqlite) pullDay(c *tdx.Client, code string, start time.Time) ([]*TradeSqlite, error) {
+func (this *Sqlite) pullDay(c *tdx.Client, code string, start time.Time) ([]*Trade, error) {
 
-	insert := []*TradeSqlite(nil)
+	insert := []*Trade(nil)
 
 	date, _ := FromTime(start)
 
@@ -314,7 +314,7 @@ func (this *Sqlite) pullDay(c *tdx.Client, code string, start time.Time) ([]*Tra
 		}
 		for _, v := range resp.List {
 			_, minute := FromTime(v.Time)
-			insert = append(insert, &TradeSqlite{
+			insert = append(insert, &Trade{
 				Date:   date,
 				Time:   minute,
 				Price:  v.Price,
@@ -326,13 +326,13 @@ func (this *Sqlite) pullDay(c *tdx.Client, code string, start time.Time) ([]*Tra
 
 	default:
 		//获取历史数据
-		resp, err := c.GetHistoryTradeAll(start.Format("20060102"), code)
+		resp, err := c.GetHistoryTradeDay(start.Format("20060102"), code)
 		if err != nil {
 			return nil, err
 		}
 		for _, v := range resp.List {
 			_, minute := FromTime(v.Time)
-			insert = append(insert, &TradeSqlite{
+			insert = append(insert, &Trade{
 				Date:   date,
 				Time:   minute,
 				Price:  v.Price,
@@ -415,11 +415,11 @@ func (this *tradeDB) init() (err error) {
 		if err != nil {
 			return err
 		}
-		if err = this.DB.Sync2(new(TradeSqlite)); err != nil {
+		if err = this.DB.Sync2(new(Trade)); err != nil {
 			return err
 		}
 
-		last := new(TradeSqlite)
+		last := new(Trade)
 		if exist {
 			_, err = this.DB.Desc("Date", "Time").Get(last)
 			if err != nil {
@@ -427,7 +427,7 @@ func (this *tradeDB) init() (err error) {
 			}
 			if last.Time != 0 && last.Time != 900 && last.Time != 899 {
 				//如果最后时间不是15:00/14:59(早期),说明数据不全,删除这天的数据
-				if _, err = this.DB.Where("Date=?", last.Date).Delete(&TradeSqlite{}); err != nil {
+				if _, err = this.DB.Where("Date=?", last.Date).Delete(&Trade{}); err != nil {
 					return err
 				}
 				last.Date -= 1
