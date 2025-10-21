@@ -127,7 +127,7 @@ func update(c *tdx.Client, w *tdx.Workday, code string) error {
 	}
 
 	ks := []*KlineBase(nil)
-	w.Range(time.Unix(last.Date, 0).AddDate(0, 0, 1), time.Now(), func(t time.Time) bool {
+	w.Range(time.Unix(last.Date, 0).AddDate(0, 0, 1), time.Now().AddDate(0, 0, 1), func(t time.Time) bool {
 		var resp *protocol.TradeResp
 		resp, err = c.GetHistoryTradeDay(t.Format("20060102"), code)
 		if err != nil {
