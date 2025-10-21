@@ -127,11 +127,11 @@ func update(c *tdx.Client, w *tdx.Workday, code string) error {
 	}
 
 	ks := []*KlineBase(nil)
-	w.Range(time.Unix(last.Date, 0).AddDate(0, 0, 1), time.Now().AddDate(0, 0, 1), func(t time.Time) bool {
+	for start := time.Unix(last.Date, 0).AddDate(0, 0, 1); start.Before(time.Now()); start = start.AddDate(0, 0, 1) {
 		var resp *protocol.TradeResp
-		resp, err = c.GetHistoryTradeDay(t.Format("20060102"), code)
+		resp, err = c.GetHistoryTradeDay(start.Format("20060102"), code)
 		if err != nil {
-			return false
+			break
 		}
 		for _, v := range resp.List.Klines() {
 			ks = append(ks, &KlineBase{
@@ -149,8 +149,7 @@ func update(c *tdx.Client, w *tdx.Workday, code string) error {
 				Amount: float64(v.Volume * 100),
 			})
 		}
-		return true
-	})
+	}
 	if err != nil {
 		return err
 	}
@@ -165,11 +164,6 @@ func update(c *tdx.Client, w *tdx.Workday, code string) error {
 		return nil
 	})
 
-}
-
-func pullToDB(c *tdx.Client, code string) error {
-
-	return nil
 }
 
 func exportThisYear(code string) error {
