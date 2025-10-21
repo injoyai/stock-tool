@@ -49,11 +49,13 @@ func main() {
 			if err != nil {
 				b.Logf("[ERR] [%s] %v", code, err)
 				b.Flush()
+				return
 			}
 			err = save(resp, code)
 			if err != nil {
 				b.Logf("[ERR] [%s] %v", code, err)
 				b.Flush()
+				return
 			}
 		})
 	}
