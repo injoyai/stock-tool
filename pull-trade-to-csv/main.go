@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	End       = time.Now()
+	End       = time.Date(2025, 1, 1, 0, 0, 0, 0, time.Local)
 	Dir       = cfg.GetString("dir", "./data/trade")
 	Clients   = cfg.GetInt("clients", 3)
 	Coroutine = cfg.GetInt("coroutine", 10)
