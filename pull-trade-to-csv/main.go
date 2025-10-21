@@ -36,6 +36,8 @@ func main() {
 	for i := range Codes {
 		code := Codes[i]
 		if code < After {
+			b.Add(1)
+			b.Flush()
 			continue
 		}
 		b.Go(func() {
