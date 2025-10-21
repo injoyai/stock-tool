@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/injoyai/goutil v1.2.21
 	github.com/injoyai/logs v1.0.12
-	github.com/injoyai/tdx v0.0.41
+	github.com/injoyai/tdx v0.0.42
 )
 
 require (
