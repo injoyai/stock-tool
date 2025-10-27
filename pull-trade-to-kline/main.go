@@ -20,8 +20,8 @@ import (
 var (
 	DatabaseDir   = "./data/database/kline"
 	CsvDir        = "./data/csv"
-	Clients       = 5
-	Goroutine     = 30
+	Clients       = 3
+	Goroutine     = 6
 	Startup       = true
 	Retry         = 3
 	RetryInterval = time.Second
