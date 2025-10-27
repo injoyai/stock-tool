@@ -20,23 +20,23 @@ import (
 var (
 	DatabaseDir   = "./data/database/kline"
 	CsvDir        = "./data/csv"
-	Clients       = 3
-	Goroutine     = 3
+	Clients       = 5
+	Goroutine     = 30
 	Startup       = true
 	Retry         = 3
 	RetryInterval = time.Second
 	Indexes       = []string{
-		"sh000001", //上证指数
-		"sz399001", //深证成指
-		"sz399006", //创业板指
-		"sh000016", //上证50
-		"sh000688", //科创50
-		"sh000010", //上证180
-		"sh000300", //沪深300
-		"sh000905", //中证500
-		"sh000852", //中证1000
-		"sh000932", //中证消费指数,
-		"sh000827", //中证环保指数,
+		//"sh000001", //上证指数
+		//"sz399001", //深证成指
+		//"sz399006", //创业板指
+		//"sh000016", //上证50
+		//"sh000688", //科创50
+		//"sh000010", //上证180
+		//"sh000300", //沪深300
+		//"sh000905", //中证500
+		//"sh000852", //中证1000
+		//"sh000932", //中证消费指数,
+		//"sh000827", //中证环保指数,
 	}
 	indexesMap = func() map[string]bool {
 		m := make(map[string]bool)
@@ -57,6 +57,9 @@ func main() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 
+	if len(Codes) == 0 {
+		Codes = m.Codes.GetStocks()
+	}
 	Codes = append(Codes, Indexes...)
 
 	logs.PrintErr(pull(m, Codes))

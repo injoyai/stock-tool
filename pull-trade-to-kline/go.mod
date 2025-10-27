@@ -7,8 +7,7 @@ require (
 	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/goutil v1.2.20
 	github.com/injoyai/logs v1.0.12
-	github.com/injoyai/tdx v0.0.39
-	github.com/robfig/cron/v3 v3.0.1
+	github.com/injoyai/tdx v0.0.45
 	xorm.io/xorm v1.3.9
 )
 
@@ -32,6 +31,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect

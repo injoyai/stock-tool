@@ -1,0 +1,16 @@
+[Unit]
+Description=pull-trade-to-kline daemon
+After=network.target
+
+[Service]
+PIDFile=/tmp/pull-trade-to-kline.pid
+User=root
+Group=root
+WorkingDirectory=/vol1/1000/server/pull-trade-to-kline/
+ExecStart=/vol1/1000/server/pull-trade-to-kline/pull-trade-to-kline
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
