@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/injoyai/bar"
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
 	"path/filepath"
-	"strings"
 )
 
 const (
@@ -38,30 +38,47 @@ func init() {
 }
 
 func main() {
-	pull()
-}
-
-func pull() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 
-	for _, v := range m.Codes.GetStocks() {
-		if strings.HasPrefix(v, "bj") {
-			Codes = append(Codes, v)
-		}
+	if len(Codes) == 0 {
+		Codes = m.Codes.GetStocks()
 	}
 
+	t := cron.New(cron.WithSeconds())
+	t.AddFunc(Spec, func() { run(m) })
+	if Startup {
+		run(m)
+	}
+	t.Run()
+}
+
+func run(m *tdx.Manage) {
+	logs.PrintErr(pull(m))
+	logs.PrintErr(exportThisYear(m))
+}
+
+func pull(m *tdx.Manage) error {
 	s := NewSqlite(
 		Codes,
 		filepath.Join(DatabaseDir, "trade"),
 		Coroutines,
 		Tasks,
 	)
+	return s.Run(context.Background(), m)
+}
 
-	t := cron.New(cron.WithSeconds())
-	t.AddFunc(Spec, func() { s.Run(context.Background(), m) })
-	if Startup {
-		s.Run(context.Background(), m)
+func exportThisYear(m *tdx.Manage) error {
+
+	b := bar.NewCoroutine(len(Codes), Coroutines)
+	defer b.Close()
+
+	for i := range Codes {
+		code := Codes[i]
+		b.Go(func() {
+			_ = code
+		})
 	}
-	t.Run()
+
+	return nil
 }
