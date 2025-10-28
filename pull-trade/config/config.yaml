@@ -6,6 +6,7 @@ clients: 4
 
 # 释放读取协程数量
 coroutines: 10
+export_coroutines: 100
 
 # 每次任务数量
 tasks: 2

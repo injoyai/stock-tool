@@ -23,15 +23,16 @@ const (
 )
 
 var (
-	Clients     = cfg.GetInt("clients", 4)
-	Coroutines  = cfg.GetInt("coroutines", 10)
-	Tasks       = cfg.GetInt("tasks", 2)
-	DatabaseDir = cfg.GetString("database", "./data/database")
-	ExportDir   = cfg.GetString("export", "./data/export")
-	UploadDir   = cfg.GetString("upload", "./data/upload")
-	Spec        = cfg.GetString("spec", "0 10 15 * * *")
-	Codes       = cfg.GetStrings("codes")
-	Startup     = cfg.GetBool("startup")
+	Clients          = cfg.GetInt("clients", 4)
+	Coroutines       = cfg.GetInt("coroutines", 10)
+	ExportCoroutines = cfg.GetInt("export_coroutines", 100)
+	Tasks            = cfg.GetInt("tasks", 2)
+	DatabaseDir      = cfg.GetString("database", "./data/database")
+	ExportDir        = cfg.GetString("export", "./data/export")
+	UploadDir        = cfg.GetString("upload", "./data/upload")
+	Spec             = cfg.GetString("spec", "0 10 15 * * *")
+	Codes            = cfg.GetStrings("codes")
+	Startup          = cfg.GetBool("startup")
 )
 
 func init() {
@@ -41,7 +42,8 @@ func init() {
 	logs.Info("任务规则:", Spec)
 	logs.Info("立马执行:", Startup)
 	logs.Info("连接数量:", Clients)
-	logs.Info("协程数量:", Coroutines)
+	logs.Info("协程数量1:", Coroutines)
+	logs.Info("协程数量2:", ExportCoroutines)
 	fmt.Println("=====================================================")
 	os.MkdirAll(DatabaseDir, 0755)
 	os.MkdirAll(ExportDir, 0755)
@@ -86,7 +88,7 @@ func exportThisYear(m *tdx.Manage, codes []string) error {
 	os.MkdirAll(filepath.Join(ExportDir, year), 0755)
 	os.MkdirAll(filepath.Join(UploadDir, year), 0755)
 
-	b := bar.NewCoroutine(len(codes), Coroutines,
+	b := bar.NewCoroutine(len(codes), ExportCoroutines,
 		bar.WithPrefix("[xx000000]"),
 	)
 	defer b.Close()
