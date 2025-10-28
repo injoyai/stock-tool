@@ -1,0 +1,16 @@
+[Unit]
+Description=pull-index-minute-kline daemon
+After=network.target
+
+[Service]
+PIDFile=/tmp/pull-index-minute-kline.pid
+User=root
+Group=root
+WorkingDirectory=/vol2/1000/server/pull-index-minute-kline
+ExecStart=/vol2/1000/server/pull-index-minute-kline/pull-index-minute-kline
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
