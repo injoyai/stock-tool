@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/oss/compress/zip"
@@ -20,7 +21,8 @@ var (
 	Dir           = "./data"
 	Retry         = 3
 	RetryInterval = time.Millisecond * 200
-	Spec          = "0 31 9 * * *"
+	Spec          = cfg.GetString("spec", "0 31 9 * * *")
+	Startup       = cfg.GetBool("startup", false)
 )
 
 func main() {
@@ -28,7 +30,9 @@ func main() {
 	logs.PanicErr(err)
 	c := cron.New(cron.WithSeconds())
 	c.AddFunc(Spec, func() { logs.PrintErr(Pull(m)) })
-	logs.PrintErr(Pull(m))
+	if Startup {
+		logs.PrintErr(Pull(m))
+	}
 	c.Run()
 }
 
