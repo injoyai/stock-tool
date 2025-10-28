@@ -4,11 +4,18 @@ import (
 	"context"
 	"fmt"
 	"github.com/injoyai/bar"
+	"github.com/injoyai/conv"
 	"github.com/injoyai/conv/cfg"
+	"github.com/injoyai/goutil/database/sqlite"
+	"github.com/injoyai/goutil/oss"
+	"github.com/injoyai/goutil/oss/compress/zip"
+	"github.com/injoyai/goutil/other/csv"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
+	"os"
 	"path/filepath"
+	"time"
 )
 
 const (
@@ -20,6 +27,8 @@ var (
 	Coroutines  = cfg.GetInt("coroutines", 10)
 	Tasks       = cfg.GetInt("tasks", 2)
 	DatabaseDir = cfg.GetString("database", "./data/database")
+	ExportDir   = cfg.GetString("export", "./data/export")
+	UploadDir   = cfg.GetString("upload", "./data/upload")
 	Spec        = cfg.GetString("spec", "0 10 15 * * *")
 	Codes       = cfg.GetStrings("codes")
 	Startup     = cfg.GetBool("startup")
@@ -27,58 +36,139 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2.6")
-	logs.Info("说明:", "增加更新进度条")
+	logs.Info("版本:", "v0.2.7")
+	logs.Info("说明:", "增加导出当年数据功能")
 	logs.Info("任务规则:", Spec)
 	logs.Info("立马执行:", Startup)
 	logs.Info("连接数量:", Clients)
 	logs.Info("协程数量:", Coroutines)
 	fmt.Println("=====================================================")
-
+	os.MkdirAll(DatabaseDir, 0755)
+	os.MkdirAll(ExportDir, 0755)
+	os.MkdirAll(UploadDir, 0755)
 }
 
 func main() {
 	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
 	logs.PanicErr(err)
 
-	if len(Codes) == 0 {
-		Codes = m.Codes.GetStocks()
-	}
-
 	t := cron.New(cron.WithSeconds())
-	t.AddFunc(Spec, func() { run(m) })
+	t.AddFunc(Spec, func() { run(m, Codes) })
 	if Startup {
-		run(m)
+		run(m, Codes)
 	}
 	t.Run()
 }
 
-func run(m *tdx.Manage) {
-	logs.PrintErr(pull(m))
-	logs.PrintErr(exportThisYear(m))
+func run(m *tdx.Manage, codes []string) {
+	if len(codes) == 0 {
+		codes = m.Codes.GetStocks()
+	}
+	logs.PrintErr(update(m, codes))
+	logs.PrintErr(exportThisYear(m, codes))
 }
 
-func pull(m *tdx.Manage) error {
-	s := NewSqlite(
-		Codes,
+func update(m *tdx.Manage, codes []string) error {
+	logs.Info("[更新] 最新数据...")
+	return NewSqlite(
+		codes,
 		filepath.Join(DatabaseDir, "trade"),
 		Coroutines,
 		Tasks,
-	)
-	return s.Run(context.Background(), m)
+	).Run(context.Background(), m)
 }
 
-func exportThisYear(m *tdx.Manage) error {
+func exportThisYear(m *tdx.Manage, codes []string) error {
 
-	b := bar.NewCoroutine(len(Codes), Coroutines)
+	logs.Info("[导出] 本年数据...")
+
+	year := conv.String(time.Now().Year())
+	os.MkdirAll(filepath.Join(ExportDir, year), 0755)
+	os.MkdirAll(filepath.Join(UploadDir, year), 0755)
+
+	b := bar.NewCoroutine(len(codes), Coroutines,
+		bar.WithPrefix("[xx000000]"),
+	)
 	defer b.Close()
 
-	for i := range Codes {
-		code := Codes[i]
+	for i := range codes {
+		code := codes[i]
+		filename := filepath.Join(DatabaseDir, "trade", code, code+"-"+year+".db")
 		b.Go(func() {
-			_ = code
+
+			b.SetPrefix("[" + code + "]")
+			b.Flush()
+
+			db, err := sqlite.NewXorm(filename)
+			if err != nil {
+				b.Logf("[ERR] [%s] %s\n", code, err)
+				b.Flush()
+				return
+			}
+			defer db.Close()
+
+			//读取当前全部数据
+			var trades []*Trade
+			err = db.Find(&trades)
+			if err != nil {
+				b.Logf("[ERR] [%s] %s\n", code, err)
+				b.Flush()
+				return
+			}
+
+			//导出
+			output := filepath.Join(ExportDir, year, code+".csv")
+			if err = save(trades, output); err != nil {
+				b.Logf("[ERR] [%s] %s\n", code, err)
+				b.Flush()
+				return
+			}
+
 		})
 	}
 
+	b.Wait()
+
+	//压缩
+	logs.Info("[导出] 压缩...")
+	zipFilename := filepath.Join(ExportDir, year+".zip")
+	err := zip.Encode(
+		filepath.Join(ExportDir, year),
+		zipFilename,
+	)
+	if err != nil {
+		return err
+	}
+
+	//重命名
+	logs.Info("[导出] 重命名...")
+	<-time.After(time.Second * 5)
+	err = os.Rename(zipFilename, filepath.Join(UploadDir, year, year+".zip"))
+	if err != nil {
+		return err
+	}
+
+	logs.Info("[导出] 完成...")
+
 	return nil
+}
+
+func save(ts []*Trade, output string) error {
+	data := [][]any{
+		{"时间", "价格", "成交量", "方向(0买,1卖,2中性)"},
+	}
+	for _, v := range ts {
+		t := ToTime(v.Date, v.Time)
+		data = append(data, []any{
+			t.Format(time.DateTime),
+			v.Price.Float64(),
+			v.Volume,
+			v.Status,
+		})
+	}
+	buf, err := csv.Export(data)
+	if err != nil {
+		return err
+	}
+	return oss.New(output, buf)
 }

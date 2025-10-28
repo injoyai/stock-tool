@@ -216,7 +216,7 @@ func (this *Sqlite) _pull(ctx context.Context, b *tradeDB, m *tdx.Manage) (err e
 				continue
 			}
 
-			logs.Debug(b.Code, b.Year, date.Format("2006-01-02"))
+			//logs.Debug(b.Code, b.Year, date.Format("2006-01-02"))
 
 			//3. 获取数据
 			item, err := this.pullDay(c, b.Code, date)

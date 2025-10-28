@@ -3,7 +3,7 @@ module pull-trade
 go 1.20
 
 require (
-	github.com/injoyai/bar v0.0.2
+	github.com/injoyai/bar v0.0.3
 	github.com/injoyai/base v1.2.17
 	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/goutil v1.2.6
