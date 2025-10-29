@@ -37,8 +37,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2.7")
-	logs.Info("说明:", "增加导出当年数据功能")
+	logs.Info("版本:", "v0.2.8")
+	logs.Info("说明:", "可自定义导出的协程数量")
 	logs.Info("任务规则:", Spec)
 	logs.Info("立马执行:", Startup)
 	logs.Info("连接数量:", Clients)
