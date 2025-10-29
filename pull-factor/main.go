@@ -3,12 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/injoyai/bar"
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/oss/compress/zip"
 	"github.com/injoyai/goutil/other/csv"
-	"github.com/injoyai/goutil/str/bar/v2"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/extend"
@@ -41,6 +41,10 @@ func Pull(m *tdx.Manage) error {
 		return errors.New("昨天不是工作日")
 	}
 
+	defer func() {
+		logs.Info("[完成] 复权因子")
+	}()
+
 	codes := m.Codes.GetStocks()
 
 	b := bar.New(
@@ -50,7 +54,7 @@ func Pull(m *tdx.Manage) error {
 	)
 	defer b.Close()
 
-	for _, v := range m.Codes.GetStocks() {
+	for _, v := range codes {
 		b.SetPrefix(fmt.Sprintf("[%s]", v))
 		b.Flush()
 		err := m.Do(func(c *tdx.Client) error {

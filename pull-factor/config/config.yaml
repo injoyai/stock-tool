@@ -1,2 +1,3 @@
+dir: ./data
 spec: "0 31 9 * * *"
 startup: false
