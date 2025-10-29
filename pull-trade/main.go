@@ -25,7 +25,7 @@ const (
 var (
 	Clients          = cfg.GetInt("clients", 4)
 	Coroutines       = cfg.GetInt("coroutines", 10)
-	ExportCoroutines = cfg.GetInt("export_coroutines", 100)
+	ExportCoroutines = cfg.GetInt("export_coroutines", 20)
 	Tasks            = cfg.GetInt("tasks", 2)
 	DatabaseDir      = cfg.GetString("database", "./data/database")
 	ExportDir        = cfg.GetString("export", "./data/export")
