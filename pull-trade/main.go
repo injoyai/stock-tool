@@ -90,6 +90,7 @@ func exportThisYear(m *tdx.Manage, codes []string) error {
 
 	b := bar.NewCoroutine(len(codes), ExportCoroutines,
 		bar.WithPrefix("[xx000000]"),
+		bar.WithFlush(),
 	)
 	defer b.Close()
 
