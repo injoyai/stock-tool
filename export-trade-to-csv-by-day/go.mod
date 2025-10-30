@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/injoyai/bar v0.0.4
 	github.com/injoyai/conv v1.2.5
-	github.com/injoyai/goutil v1.2.22
+	github.com/injoyai/goutil v1.2.23
 	github.com/injoyai/logs v1.0.12
 	github.com/injoyai/tdx v0.0.47
 )
@@ -30,6 +30,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.30.0 // indirect

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/injoyai/bar"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/conv/cfg"
@@ -18,17 +19,25 @@ import (
 
 var (
 	DatabaseDir = cfg.GetString("database_dir", "./data/database/trade")
-	ExportDir   = cfg.GetString("export_dir", "./data/export")
+	ExportDir   = cfg.GetString("export_dir", "./data/export_by_day")
 	Coroutine   = cfg.GetInt("coroutine", 10)
+	StartYear   = cfg.GetInt("start_year", 1990)
+	EndYear     = cfg.GetInt("end_year", time.Now().Year())
 )
 
 func init() {
 	os.MkdirAll(ExportDir, 0777)
+	logs.SetFormatter(logs.TimeFormatter)
+	logs.Info("数据库目录:", DatabaseDir)
+	logs.Info("导出目录:", ExportDir)
+	logs.Info("并发协程:", Coroutine)
+	logs.Infof("年份范围: %d-%d\n", StartYear, EndYear)
+	fmt.Println("============================================")
 }
 
 func main() {
 
-	defer func() { g.Input("按回车键键退出...") }()
+	defer g.InputEnterFunc()()
 
 	c, err := tdx.DialDefault()
 	logs.PanicErr(err)
@@ -49,9 +58,7 @@ func main() {
 	)
 	defer b.Close()
 
-	startYear := 1990
 	now := time.Now()
-	endYear := now.Year()
 
 	for i := range cs {
 		v := cs[i]
@@ -62,7 +69,7 @@ func main() {
 			if !v.IsDir() {
 				return
 			}
-			for year := startYear; year <= endYear; year++ {
+			for year := StartYear; year <= EndYear && year <= time.Now().Year(); year++ {
 
 				w.Range(
 					time.Date(year, 1, 1, 0, 0, 0, 0, time.Local),
@@ -102,11 +109,12 @@ func export(dir string, dbname string, t time.Time) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	//defer db.Close()
 
 	date, _ := FromTime(t)
 	data := []*Trade(nil)
 	err = db.Where("Date=?", date).Find(&data)
+	db.Close()
 	if err != nil {
 		return err
 	}
