@@ -18,6 +18,7 @@ var (
 	Coroutine   = cfg.GetInt("coroutine", 10)
 )
 
+// /
 func main() {
 
 	es, err := os.ReadDir(DatabaseDir)
