@@ -1,0 +1,3 @@
+database_dir: ./data/database/trade
+export_dir: ./data/database/kline
+coroutine: 1
