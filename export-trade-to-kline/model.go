@@ -1,0 +1,44 @@
+package main
+
+import (
+	"github.com/injoyai/tdx/protocol"
+	"time"
+)
+
+type Trade struct {
+	Date   uint16         `xorm:"index"` //日期
+	Time   uint16         //时间 `xorm:"index"` //时间
+	Price  protocol.Price //成交价格,单位厘
+	Volume int            //交易量
+	Order  int            //订单数
+	Status int            //买或者卖
+}
+
+// ToTime 转时间,最大支持170年,即1990+170=2160
+func ToTime(date, minute uint16) time.Time {
+	yearMonth := date >> 5
+	year := int(yearMonth/12) + 1990
+	month := time.Month(yearMonth%12 + 1)
+	day := int(date & 31)
+	return time.Date(year, month, day, int(minute/60), int(minute%60), 0, 0, time.Local)
+}
+
+// FromTime x
+func FromTime(t time.Time) (date uint16, minute uint16) {
+	return (uint16(t.Year()-1990)*12+uint16(t.Month()-1))<<5 + uint16(t.Day()), uint16(t.Hour()*60 + t.Minute())
+}
+
+type Kline struct {
+	ID     int64
+	Year   int
+	Month  int
+	Day    int
+	Hour   int
+	Minute int
+	Open   float64
+	High   float64
+	Low    float64
+	Close  float64
+	Volume int64
+	Amount float64
+}

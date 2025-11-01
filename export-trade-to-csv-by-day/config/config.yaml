@@ -1,0 +1,5 @@
+database_dir: "./data/database/trade"
+export_dir: "./data/export_by_day"
+coroutine: 1
+start_year: 2000
+end_year:
