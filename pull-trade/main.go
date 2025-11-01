@@ -55,7 +55,13 @@ func main() {
 	logs.PanicErr(err)
 
 	t := cron.New(cron.WithSeconds())
-	t.AddFunc(Spec, func() { run(m, Codes) })
+	t.AddFunc(Spec, func() {
+		if !m.Workday.TodayIs() {
+			logs.Error("今天不是工作日")
+			return
+		}
+		run(m, Codes)
+	})
 	if Startup {
 		run(m, Codes)
 	}
