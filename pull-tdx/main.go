@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	Version = "v0.7"
-	Details = "去除分钟K线的拉取"
+	Version = "v0.8"
+	Details = "优化工作日逻辑"
 )
 
 var (
@@ -100,33 +100,38 @@ func main() {
 	 */
 
 	//2. 任务内容
-	f := func(tasks ...[]task.Tasker) func() {
-		return func() {
-			if !m.Workday.TodayIs() && !startup {
-				logs.Err("今天不是工作日")
-				return
-			}
-			fmt.Println("================================================================")
-			logs.Info("开始执行...")
-			ctx := context.Background()
-			for _, v := range tasks {
-				err = task.Run(ctx, m, v...)
-				logs.PrintErr(err)
-			}
-			logs.Info("执行完成")
+	f := func(tasks ...[]task.Tasker) {
+		fmt.Println("================================================================")
+		logs.Info("开始执行...")
+		ctx := context.Background()
+		for _, v := range tasks {
+			err = task.Run(ctx, m, v...)
+			logs.PrintErr(err)
 		}
+		logs.Info("执行完成")
 	}
 
 	//3. 设置定时
 	cr := cron.New(cron.WithSeconds())
-	cr.AddFunc(spec, f(tasks))
-	cr.AddFunc(specFQ, f(tasksFQ))
-	cr.Start()
+	cr.AddFunc(spec, func() {
+		if !m.Workday.TodayIs() {
+			logs.Err("今天不是工作日")
+			return
+		}
+		f(tasks)
+	})
+	cr.AddFunc(specFQ, func() {
+		if !m.Workday.Is(time.Now().AddDate(0, 0, -1)) {
+			logs.Err("昨天不是工作日")
+			return
+		}
+		f(tasksFQ)
+	})
 
 	//4. 启动便执行
 	if startup {
-		f(tasks, tasksFQ)()
+		f(tasks, tasksFQ)
 	}
 
-	select {}
+	cr.Run()
 }
