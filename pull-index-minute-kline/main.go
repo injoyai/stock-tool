@@ -30,6 +30,7 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
+	logs.Info("增加工作日的判断")
 }
 
 func main() {
@@ -43,7 +44,13 @@ func main() {
 	logs.PanicErr(err)
 
 	cr := cron.New(cron.WithSeconds())
-	cr.AddFunc(Spec, func() { Run(p, w) })
+	cr.AddFunc(Spec, func() {
+		if !w.TodayIs() {
+			logs.Err("今天不是工作日")
+			return
+		}
+		Run(p, w)
+	})
 
 	if Startup {
 		Run(p, w)
