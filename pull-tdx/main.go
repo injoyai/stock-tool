@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	Version = "v0.8"
-	Details = "优化工作日逻辑"
+	Version = "v0.9"
+	Details = "增加北交所数据"
 )
 
 var (

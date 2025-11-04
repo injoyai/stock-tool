@@ -2,11 +2,7 @@ package task
 
 import (
 	"context"
-	"fmt"
-	"github.com/injoyai/base/chans"
-	"github.com/injoyai/goutil/g"
-	"github.com/injoyai/goutil/str/bar"
-	"github.com/injoyai/logs"
+	"github.com/injoyai/bar"
 	"github.com/injoyai/tdx"
 	"time"
 )
@@ -28,46 +24,39 @@ func (this *Range[T]) Run(ctx context.Context, m *tdx.Manage) error {
 	if this.Limit <= 0 {
 		this.Limit = 1
 	}
-	limit := chans.NewWaitLimit(this.Limit)
 
-	total := int64(len(codes))
-	taskName := this.Handler.Name()
-	//logs.Tracef("[%s] 处理数量: %d\n", taskName, total)
-	b := bar.New(total)
-	b.AddOption(func(f *bar.Format) {
-		f.Entity.SetFormatter(func(e *bar.Format) string {
-			return fmt.Sprintf("\r%s [%s] %s  %s  %s  %-10s",
-				time.Now().Format(time.TimeOnly),
-				taskName,
-				e.Bar,
-				e.RateSize,
-				e.Speed,
-				e.Used,
-			)
-		})
-	})
-	b.Add(0).Flush()
-	for _, code := range codes {
+	b := bar.NewCoroutine(
+		len(codes), this.Limit,
+		bar.WithFormat(
+			bar.WithText(time.Now().Format(time.TimeOnly)),
+			bar.WithPlan(),
+			bar.WithRateSize(),
+			bar.WithSpeed(),
+			bar.WithRemain(),
+		),
+		bar.WithFlush(),
+	)
+
+	for i := range codes {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 
 		default:
-			limit.Add()
-			go func(code T) {
-				defer limit.Done()
-				defer func() {
-					b.Add(1).Flush()
-				}()
-				err := g.Retry(func() error { return this.Handler.Handler(ctx, m, code) }, this.Retry)
+
+			code := codes[i]
+			b.GoRetry(func() error {
+				err := this.Handler.Handler(ctx, m, code)
 				if err != nil {
-					logs.Errf("[%s] 处理: %s, 失败: %v\n", taskName, code, err)
+					b.Logf("[%s] 处理: %s, 失败: %v\n", this.Handler.Name(), code, err)
+					b.Flush()
 				}
-			}(code)
+				return err
+			}, this.Retry)
 
 		}
 	}
 
-	limit.Wait()
+	b.Wait()
 	return nil
 }
