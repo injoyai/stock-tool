@@ -119,6 +119,9 @@ func update(c *tdx.Client, w *tdx.Workday, code string) error {
 		return err
 	}
 	defer db.Close()
+	if err = db.Sync2(new(KlineMinute1)); err != nil {
+		return err
+	}
 
 	last := new(KlineMinute1)
 	_, err = db.Desc("Date").Get(last)
