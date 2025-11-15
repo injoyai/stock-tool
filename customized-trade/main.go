@@ -4,7 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/injoyai/conv/cfg/v2"
+	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/conv/codec"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"

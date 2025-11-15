@@ -149,12 +149,12 @@ func (this *Client) DownloadToday(c *tdx.Client, code string, log func(s string)
 		data = append(data,
 			[]any{
 				time.Now().Format("2006/01/02"),
-				strings.ReplaceAll(v.Time, ":", ""),
+				v.Time.Format("1504"),
 				v.Price.Int64(),
 				v.Volume,
 				e,
 				v.Number,
-				getBuySell(v.Time, v.Status),
+				getBuySell(v.Time.Format("1504"), v.Status),
 				fmt.Sprintf("%.2f", float64(v.Volume)/float64(v.Number)),
 				fmt.Sprintf("%.2f", float64(e)/float64(v.Number)),
 				v.Price.Int64() * int64(v.Volume),
@@ -249,7 +249,7 @@ func (this *Client) DownloadHistory(c *tdx.Client, t time.Time, code string, log
 	if err != nil {
 		return err
 	}
-	resp, err := c.GetHistoryMinuteTradeAll(t.Format("20060102"), code)
+	resp, err := c.GetHistoryTradeDay(t.Format("20060102"), code)
 	if err != nil {
 		return err
 	}
@@ -263,12 +263,12 @@ func (this *Client) DownloadHistory(c *tdx.Client, t time.Time, code string, log
 		data = append(data,
 			[]any{
 				t.Format("2006/01/02"),
-				strings.ReplaceAll(v.Time, ":", ""),
+				v.Time.Format("1504"),
 				v.Price.Int64(),
 				v.Volume,
 				e,
 				"",
-				getBuySell(v.Time, v.Status),
+				getBuySell(v.Time.Format("1504"), v.Status),
 				"",
 				"",
 				v.Price.Int64() * int64(v.Volume),
