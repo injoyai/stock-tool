@@ -10,6 +10,7 @@ import (
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/protocol"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -155,8 +156,18 @@ func (this *Client) DownloadToday(c *tdx.Client, code string, log func(s string)
 				e,
 				v.Number,
 				getBuySell(v.Time.Format("1504"), v.Status),
-				fmt.Sprintf("%.2f", float64(v.Volume)/float64(v.Number)),
-				fmt.Sprintf("%.2f", float64(e)/float64(v.Number)),
+				fmt.Sprintf("%.2f", func() float64 {
+					if v.Number == 0 {
+						return 0
+					}
+					return float64(v.Volume) / float64(v.Number)
+				}()), // float64(v.Volume)/float64(v.Number)),
+				fmt.Sprintf("%.2f", func() float64 {
+					if v.Number == 0 {
+						return 0
+					}
+					return float64(e) / float64(v.Number)
+				}()), // float64(e)/float64(v.Number)),
 				v.Price.Int64() * int64(v.Volume),
 			},
 		)
@@ -336,6 +347,7 @@ func getBuySell(time string, n int) string {
 }
 
 func fullCode(code string) (string, error) {
+	return protocol.AddPrefix(code), nil
 	code = strings.ToLower(code)
 	if len(code) == 6 {
 		switch {

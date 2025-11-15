@@ -11,6 +11,7 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/lorca"
 	"github.com/injoyai/stock-tool/trade/api"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -33,7 +34,7 @@ func main() {
 			"clients":  10,
 			"disks":    100,
 			"dir":      "./data/",
-			"codes":    []string{"sz000001"},
+			"codes":    []string{"bj920000"},
 			"userText": false,
 			"interval": 100,
 			"start1":   "09:30",
@@ -193,6 +194,8 @@ func main() {
 		app.Bind("_stop_download", stop)
 
 		app.Bind("_get_config", func() string {
+			bs, _ := os.ReadFile(configPath)
+			return string(bs)
 			return cfg.GetString("")
 		})
 
