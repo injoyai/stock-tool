@@ -16,7 +16,7 @@ done
 echo "🔨 编译 $name.exe ..."
 GOOS=windows GOARCH=amd64 go build -v -ldflags="-H windowsgui -w -s" -o "./bin/$name.exe"
 
-if [ ! -f "./$name.exe" ]; then
+if [ ! -f "./bin/$name.exe" ]; then
     echo "❌ 编译失败，未生成 $name.exe"
     exit 1
 fi
