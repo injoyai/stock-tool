@@ -184,6 +184,7 @@ func (this *Client) DownloadToday(c *tdx.Client, code string, log func(s string)
 		//}
 		code = strings.TrimPrefix(code, "sz")
 		code = strings.TrimPrefix(code, "sh")
+		code = strings.TrimPrefix(code, "bj")
 		err = oss.New(filepath.Join(this.Dir, time.Now().Format("2006-01-02"), code+".csv"), buf)
 		if err != nil {
 			log(err.Error())
