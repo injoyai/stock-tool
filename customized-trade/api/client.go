@@ -296,6 +296,7 @@ func (this *Client) DownloadHistory(c *tdx.Client, t time.Time, code string, log
 
 		code = strings.TrimPrefix(code, "sz")
 		code = strings.TrimPrefix(code, "sh")
+		code = strings.TrimPrefix(code, "bj")
 		err = oss.New(filepath.Join(this.Dir, t.Format("2006-01-02"), code+".csv"), buf)
 		if err != nil {
 			log(err.Error())
