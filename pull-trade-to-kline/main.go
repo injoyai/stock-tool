@@ -26,8 +26,8 @@ var (
 	Retry         = 3
 	RetryInterval = time.Second
 	Indexes       = []string{
-		//"sh000001", //上证指数
-		//"sz399001", //深证成指
+		//"sh999999", //"sh000001", //上证指数
+		"sz399001", //深证成指
 		//"sz399006", //创业板指
 		//"sh000016", //上证50
 		//"sh000688", //科创50
@@ -58,7 +58,7 @@ func main() {
 	logs.PanicErr(err)
 
 	if len(Codes) == 0 {
-		Codes = m.Codes.GetStocks()
+		//Codes = m.Codes.GetStocks()
 	}
 	Codes = append(Codes, Indexes...)
 

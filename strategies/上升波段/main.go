@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	_ "embed"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/database/sqlite"
@@ -58,7 +59,7 @@ func main() {
 		v.Name = codes.GetName(v.Name) + "(" + v.Name + ")"
 	}
 
-	RunHTTP(8080, index, result)
+	RunHTTP(8090, index, result)
 
 }
 
@@ -241,7 +242,8 @@ func RunHTTP(port int, index []byte, data any) error {
 	s := mux.New()
 	s.SetPort(port)
 	s.GET("/", func(r *mux.Request) {
-		in.Html200(index)
+		bs := bytes.ReplaceAll(index, []byte("{port}"), []byte(conv.String(port)))
+		in.Html200(bs)
 	})
 	s.GET("/data.json", func(r *mux.Request) {
 		in.Json200(data)
