@@ -33,7 +33,7 @@ func main() {
 
 	err := lorca.Run(&lorca.Config{
 		Width:  800,
-		Height: 540,
+		Height: 600,
 		Index:  html,
 	}, func(app lorca.APP) error {
 
@@ -78,6 +78,7 @@ func main() {
 			mTradeFirstVol := map[string]int{}
 			mTradeFirst := map[string]int{}
 			mTradeLast := map[string]int{}
+			mTrade := map[string]protocol.Trades{}
 			mu := sync.Mutex{}
 			current := 0
 			for i := range codes {
@@ -111,6 +112,7 @@ func main() {
 					mTradeLast[code] = last
 					mTradeFirst[code] = first
 					mTradeFirstVol[code] = firstVol
+					mTrade[code] = resp.List
 					mu.Unlock()
 				})
 
@@ -121,7 +123,7 @@ func main() {
 			wg.Wait()
 
 			filename := now.Format(Filename)
-			err := toCsv(filename, quotes, m.Codes, mTradeNumber, mTradeLast, mTradeFirst, mTradeFirstVol)
+			err := toCsv(filename, quotes, m.Codes, mTradeNumber, mTradeLast, mTradeFirst, mTradeFirstVol, mTrade)
 			if err != nil {
 				app.Eval(fmt.Sprintf("appendLog(`[错误]: %s`)", err))
 				return
@@ -161,7 +163,7 @@ func main() {
 	logs.PrintErr(err)
 }
 
-func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNumber, mTradeLast, mTradeFirst, mTradeFirstVol map[string]int) error {
+func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNumber, mTradeLast, mTradeFirst, mTradeFirstVol map[string]int, mTrade map[string]protocol.Trades) error {
 	data := [][]any{
 		{"代码", "名称", "现价", "涨跌幅", "成交额", "成交量", "总成交笔数", "现量",
 			"卖五", "卖四", "卖三", "卖二", "卖一", "收盘笔数",
@@ -171,19 +173,38 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 			"今开", "最高", "最低", "开盘量", "开盘笔数", "委买量", "委卖量", "委差", "委加",
 		},
 	}
+	start := time.Date(0, 0, 0, 9, 31, 0, 0, time.Local)
+	end := time.Date(0, 0, 0, 11, 30, 0, 1, time.Local)
+	for i := start; i.Before(end); i = i.Add(time.Minute) {
+		data[0] = append(data[0], i.Format("1504量"))
+	}
+	start = time.Date(0, 0, 0, 13, 1, 0, 0, time.Local)
+	end = time.Date(0, 0, 0, 15, 0, 0, 1, time.Local)
+	for i := start; i.Before(end); i = i.Add(time.Minute) {
+		data[0] = append(data[0], i.Format("1504量"))
+	}
 	for _, v := range quotes {
 		code := v.Exchange.String() + v.Code
 		totalBuy := v.BuyLevel[0].Number + v.BuyLevel[1].Number + v.BuyLevel[2].Number + v.BuyLevel[3].Number + v.BuyLevel[4].Number
 		totalSell := v.SellLevel[0].Number + v.SellLevel[1].Number + v.SellLevel[2].Number + v.SellLevel[3].Number + v.SellLevel[4].Number
-		data = append(data, []any{
+		ls := []any{
 			code, cs.GetName(code), v.K.Close.Float64(), (v.K.Close - v.K.Open).Float64(), v.Amount, v.TotalHand, mTradeNumber[code], v.Intuition,
 			v.SellLevel[4].Price.Float64(), v.SellLevel[3].Price.Float64(), v.SellLevel[2].Price.Float64(), v.SellLevel[1].Price.Float64(), v.SellLevel[0].Price.Float64(), mTradeLast[code],
 			v.SellLevel[4].Number, v.SellLevel[3].Number, v.SellLevel[2].Number, v.SellLevel[1].Number, v.SellLevel[0].Number,
 			v.BuyLevel[0].Number, v.BuyLevel[1].Number, v.BuyLevel[2].Number, v.BuyLevel[3].Number, v.BuyLevel[4].Number,
 			v.BuyLevel[0].Price.Float64(), v.BuyLevel[1].Price.Float64(), v.BuyLevel[2].Price.Float64(), v.BuyLevel[3].Price.Float64(), v.BuyLevel[4].Price.Float64(),
 			v.K.Open.Float64(), v.K.High.Float64(), v.K.Low.Float64(), mTradeFirstVol[code], mTradeFirst[code], totalBuy, totalSell, int64(math.Abs(float64(totalBuy - totalSell))), totalBuy + totalSell,
-		})
+		}
+
+		ts := mTrade[code]
+		for _, vv := range ts.Klines() {
+			ls = append(ls, vv.Volume)
+		}
+
+		data = append(data, ls)
+
 	}
+
 	buf, err := csv.Export(data)
 	if err != nil {
 		return err
