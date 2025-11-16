@@ -183,6 +183,9 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 	for i := start; i.Before(end); i = i.Add(time.Minute) {
 		data[0] = append(data[0], i.Format("1504量"))
 	}
+
+	data[0] = append(data[0], "930笔数", "931笔数", "932笔数", "1455笔数", "1456笔数", "1457笔数", "1458笔数", "1459笔数", "1300笔数")
+
 	for _, v := range quotes {
 		code := v.Exchange.String() + v.Code
 		totalBuy := v.BuyLevel[0].Number + v.BuyLevel[1].Number + v.BuyLevel[2].Number + v.BuyLevel[3].Number + v.BuyLevel[4].Number
@@ -200,6 +203,17 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 		for _, vv := range ts.Klines() {
 			ls = append(ls, vv.Volume)
 		}
+
+		m := map[string]int{}
+		for _, vv := range ts {
+			s := vv.Time.Format("1504")
+			switch s {
+			case "0925", "0930", "0931", "0932", "1455", "1456", "1457", "1458", "1459", "1500":
+				m[s] = m[s] + vv.Number
+			}
+		}
+
+		ls = append(ls, m["0925"]+m["0930"], m["0931"], m["0932"], m["1455"], m["1456"], m["1457"], m["1458"], m["1459"], m["1500"])
 
 		data = append(data, ls)
 
