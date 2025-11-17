@@ -5,24 +5,24 @@ import (
 	"github.com/injoyai/frame/fiber"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
-	"path/filepath"
 )
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.1")
-	logs.Info("详情:", "初版")
+	logs.Info("版本:", "v0.2")
+	logs.Info("详情:", "增加流通/总股本")
 	fmt.Println("===============================================")
 }
 
 func main() {
-	filename := filepath.Join(tdx.DefaultDatabaseDir, "codes.db")
-	cs, err := DialCodes(filename)
+
+	cs, err := tdx.NewCodes2(tdx.WithDBFilename("./data/database/codes.db"))
 	logs.PanicErr(err)
+
 	s := fiber.Default()
 	s.Group("/api", func(g fiber.Grouper) {
 		g.ALL("/stocks", func(c fiber.Ctx) { c.Succ(cs.GetStocks()) })
-		g.ALL("/etfs", func(c fiber.Ctx) { c.Succ(cs.GetEtfs()) })
+		g.ALL("/etfs", func(c fiber.Ctx) { c.Succ(cs.GetETFs()) })
 	})
 	logs.Err(s.Run())
 }
