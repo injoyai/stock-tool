@@ -323,13 +323,13 @@ func (this *Client) PullMinuteTrade(ctx context.Context, plan func(cu, to int), 
 
 			m := [17]int{}
 			for _, v := range resp.List {
-				if v.Time == "09:25" {
+				if v.Time.Format("15:04") == "09:25" {
 					m[0] = v.Volume
 				}
-				if v.Time > "09:45" {
+				if v.Time.Format("15:04") > "09:45" {
 					break
 				}
-				xs := strings.Split(v.Time, ":")
+				xs := strings.Split(v.Time.Format("15:04"), ":")
 				if len(xs) == 2 {
 					x := conv.Int(xs[1]) - 29
 					if x > 0 && x <= 16 {

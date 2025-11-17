@@ -26,7 +26,7 @@
     <script>
         // 从HTTP接口加载数据
         async function loadData() {
-            const response = await fetch('http://127.0.0.1:8080/data.json');
+            const response = await fetch('http://127.0.0.1:{port}/data.json');
             if (!response.ok) {
                 throw new Error('网络响应错误');
             }

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>挂单数据</title>
+<style>
+:root{
+  --bg:#f7f8fb;
+  --card:#ffffff;
+  --text:#2c2f36;
+  --muted:#6b7280;
+  --accent:#3b82f6;
+  --accent-2:#2563eb;
+  --border:#e5e7eb;
+  --log-bg:#f9fafb;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--card);
+  color:var(--text);
+  font:14px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","PingFang SC","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  overflow:hidden;
+}
+.container{
+  width:100%;
+  min-height:100vh;
+  margin:0;
+  padding:24px;
+  background:var(--card);
+  border:none;
+  border-radius:0;
+  box-shadow:none;
+}
+.header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:18px;
+}
+.title{
+  font-size:18px;
+  font-weight:600;
+  letter-spacing:0.2px;
+}
+.btn{
+  appearance:none;
+  border:0;
+  border-radius:12px;
+  padding:10px 16px;
+  background:linear-gradient(180deg,var(--accent) 0%,var(--accent-2) 100%);
+  color:#fff;
+  font-weight:600;
+  letter-spacing:0.3px;
+  cursor:pointer;
+  transition:transform .08s ease-out, box-shadow .2s ease, opacity .2s ease;
+  box-shadow:0 6px 16px rgba(37,99,235,0.25);
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn.loading{pointer-events:none}
+.btn.loading::after{
+  content:"";
+  width:16px;height:16px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.35);
+  border-top-color:#fff;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.section{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.section-label{
+  font-size:13px;
+  color:var(--muted);
+}
+.progress-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.progress{
+  flex:1;
+  height:12px;
+  background:#eef2f9;
+  border:1px solid var(--border);
+  border-radius:999px;
+  overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  width:0%;
+  background-image:linear-gradient(90deg, rgba(37,99,235,0.2) 0%, rgba(37,99,235,0.9) 50%, rgba(37,99,235,0.2) 100%), repeating-linear-gradient(45deg, rgba(255,255,255,0.4) 0 8px, rgba(255,255,255,0.6) 8px 16px);
+  background-size:200% 100%, auto;
+  animation:progressShift 1.2s linear infinite;
+}
+@keyframes progressShift{0%{background-position:0 0,0 0}100%{background-position:-200% 0,0 0}}
+.progress-text{
+  min-width:48px;
+  text-align:right;
+  font-size:12px;
+  color:var(--muted);
+}
+.log{
+  background:var(--log-bg);
+  border:1px solid var(--border);
+  border-radius:12px;
+  height:320px;
+  overflow:auto;
+  padding:14px;
+  box-shadow:none;
+}
+.log-content{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","Courier New",monospace;
+  font-size:12.5px;
+  color:#374151;
+}
+.line{
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+.line .time{
+  color:#2563eb;
+  margin-right:8px;
+}
+.footer{
+  margin-top:16px;
+  font-size:12px;
+  color:var(--muted);
+  display:flex;
+  justify-content:flex-end;
+}
+</style>
+</head>
+<body>
+  <div class="container">
+  <div class="header">
+    <div class="title">挂单数据</div>
+    <button id="btnDownload" class="btn">
+      开始下载
+    </button>
+  </div>
+
+    <div class="section">
+      <div class="section-label">进度</div>
+      <div class="progress-row">
+        <div id="progress" class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+        <div id="progressText" class="progress-text">0%</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">日志</div>
+      <div id="log" class="log" role="log" aria-live="polite" aria-atomic="false">
+        <div id="logContent" class="log-content"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Powered by Lorca
+    </div>
+  </div>
+
+<script>
+const btn = document.getElementById('btnDownload');
+const logEl = document.getElementById('log');
+const logContentEl = document.getElementById('logContent');
+const progressEl = document.getElementById('progress');
+const progressFillEl = document.getElementById('progressFill');
+const progressTextEl = document.getElementById('progressText');
+
+function now(){
+  const d=new Date();
+  const t=d.toLocaleTimeString('zh-CN',{hour12:false});
+  return t;
+}
+
+window.appendLog = function(text){
+  const row=document.createElement('div');
+  row.className='line';
+  const time=document.createElement('span');
+  time.className='time';
+  time.textContent='['+ now() +']';
+  const msg=document.createElement('span');
+  msg.textContent=String(text ?? '');
+  row.appendChild(time);
+  row.appendChild(msg);
+  logContentEl.appendChild(row);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+window.setDownloading = function(isDownloading){
+  if(isDownloading){
+    btn.classList.add('loading');
+    btn.setAttribute('disabled','true');
+  }else{
+    btn.classList.remove('loading');
+    btn.removeAttribute('disabled');
+  }
+}
+
+window.setProgress = function(value){
+  let v = Number(value);
+  if(!isFinite(v)) v = 0;
+  if(v < 0) v = 0;
+  if(v > 100) v = 100;
+  progressFillEl.style.width = v + '%';
+  progressTextEl.textContent = String(Math.round(v)) + '%';
+  progressEl.setAttribute('aria-valuenow', String(Math.round(v)));
+}
+
+btn.addEventListener('click', function(){
+  window.setDownloading(true);
+  window.setProgress(0);
+  if(typeof window.download === 'function'){
+    try{
+      window.download();
+    }catch(e){
+      window.appendLog('调用 download 失败: ' + (e && e.message ? e.message : e));
+      window.setDownloading(false);
+    }
+  }else{
+    window.appendLog('未绑定 download 接口');
+    window.setDownloading(false);
+  }
+});
+</script>
+</body>
+</html>

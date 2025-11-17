@@ -10,6 +10,7 @@ import (
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/protocol"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -149,14 +150,24 @@ func (this *Client) DownloadToday(c *tdx.Client, code string, log func(s string)
 		data = append(data,
 			[]any{
 				time.Now().Format("2006/01/02"),
-				strings.ReplaceAll(v.Time, ":", ""),
+				v.Time.Format("1504"),
 				v.Price.Int64(),
 				v.Volume,
 				e,
 				v.Number,
-				getBuySell(v.Time, v.Status),
-				fmt.Sprintf("%.2f", float64(v.Volume)/float64(v.Number)),
-				fmt.Sprintf("%.2f", float64(e)/float64(v.Number)),
+				getBuySell(v.Time.Format("1504"), v.Status),
+				fmt.Sprintf("%.2f", func() float64 {
+					if v.Number == 0 {
+						return 0
+					}
+					return float64(v.Volume) / float64(v.Number)
+				}()), // float64(v.Volume)/float64(v.Number)),
+				fmt.Sprintf("%.2f", func() float64 {
+					if v.Number == 0 {
+						return 0
+					}
+					return float64(e) / float64(v.Number)
+				}()), // float64(e)/float64(v.Number)),
 				v.Price.Int64() * int64(v.Volume),
 			},
 		)
@@ -173,6 +184,7 @@ func (this *Client) DownloadToday(c *tdx.Client, code string, log func(s string)
 		//}
 		code = strings.TrimPrefix(code, "sz")
 		code = strings.TrimPrefix(code, "sh")
+		code = strings.TrimPrefix(code, "bj")
 		err = oss.New(filepath.Join(this.Dir, time.Now().Format("2006-01-02"), code+".csv"), buf)
 		if err != nil {
 			log(err.Error())
@@ -249,7 +261,7 @@ func (this *Client) DownloadHistory(c *tdx.Client, t time.Time, code string, log
 	if err != nil {
 		return err
 	}
-	resp, err := c.GetHistoryMinuteTradeAll(t.Format("20060102"), code)
+	resp, err := c.GetHistoryTradeDay(t.Format("20060102"), code)
 	if err != nil {
 		return err
 	}
@@ -263,12 +275,12 @@ func (this *Client) DownloadHistory(c *tdx.Client, t time.Time, code string, log
 		data = append(data,
 			[]any{
 				t.Format("2006/01/02"),
-				strings.ReplaceAll(v.Time, ":", ""),
+				v.Time.Format("1504"),
 				v.Price.Int64(),
 				v.Volume,
 				e,
 				"",
-				getBuySell(v.Time, v.Status),
+				getBuySell(v.Time.Format("1504"), v.Status),
 				"",
 				"",
 				v.Price.Int64() * int64(v.Volume),
@@ -285,6 +297,7 @@ func (this *Client) DownloadHistory(c *tdx.Client, t time.Time, code string, log
 
 		code = strings.TrimPrefix(code, "sz")
 		code = strings.TrimPrefix(code, "sh")
+		code = strings.TrimPrefix(code, "bj")
 		err = oss.New(filepath.Join(this.Dir, t.Format("2006-01-02"), code+".csv"), buf)
 		if err != nil {
 			log(err.Error())
@@ -336,6 +349,7 @@ func getBuySell(time string, n int) string {
 }
 
 func fullCode(code string) (string, error) {
+	return protocol.AddPrefix(code), nil
 	code = strings.ToLower(code)
 	if len(code) == 6 {
 		switch {

@@ -5,12 +5,13 @@ import (
 	"customized-pull/api"
 	_ "embed"
 	"fmt"
-	"github.com/injoyai/conv/cfg/v2"
+	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/conv/codec"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/lorca"
+	"os"
 	"strings"
 	"time"
 )
@@ -147,6 +148,8 @@ func main() {
 		})
 
 		app.Bind("_get_config", func() string {
+			bs, _ := os.ReadFile(configPath)
+			return string(bs)
 			logs.Debug(cfg.GetString(""))
 			return cfg.GetString("")
 		})

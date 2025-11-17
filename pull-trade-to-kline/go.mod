@@ -1,13 +1,13 @@
 module pull-trade-to-kline
 
-go 1.25.0
+go 1.20
 
 require (
 	github.com/injoyai/base v1.2.17
 	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/goutil v1.2.20
 	github.com/injoyai/logs v1.0.12
-	github.com/injoyai/tdx v0.0.45
+	github.com/injoyai/tdx v0.0.48
 	xorm.io/xorm v1.3.9
 )
 
