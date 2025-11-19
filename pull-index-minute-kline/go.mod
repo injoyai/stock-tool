@@ -1,6 +1,6 @@
 module pull-index-minute-kline
 
-go 1.20
+go 1.22.0
 
 require (
 	github.com/injoyai/conv v1.2.5
