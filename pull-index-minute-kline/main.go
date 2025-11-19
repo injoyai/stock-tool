@@ -1,6 +1,10 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/injoyai/conv"
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/goutil/database/sqlite"
@@ -11,9 +15,6 @@ import (
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
 	"github.com/robfig/cron/v3"
-	"os"
-	"path/filepath"
-	"time"
 	"xorm.io/xorm"
 )
 
@@ -110,7 +111,8 @@ func Export() {
 }
 
 func update(c *tdx.Client, w *tdx.Workday, code string) error {
-	year := time.Now().Year()
+	now := time.Now()
+	year := now.Year()
 	yearStart := time.Date(year, 1, 1, 0, 0, 0, 0, time.Local)
 	dir := filepath.Join(DatabaseDir, conv.String(year))
 	filename := filepath.Join(dir, code+".db")
@@ -130,20 +132,22 @@ func update(c *tdx.Client, w *tdx.Workday, code string) error {
 	}
 
 	if last.Date == 0 {
-		last.Date = time.Now().AddDate(0, -4, 0).Unix()
+		last.Date = now.AddDate(0, -4, 0).Unix()
 		if last.Date < yearStart.Unix() {
 			last.Date = yearStart.Unix()
 		}
 	}
 
+	lastTime := time.Unix(last.Date, 0)
 	ks := []*KlineBase(nil)
-	for start := time.Unix(last.Date, 0).AddDate(0, 0, 1); start.Before(time.Now()); start = start.AddDate(0, 0, 1) {
-		var resp *protocol.TradeResp
-		resp, err = c.GetHistoryTradeDay(start.Format("20060102"), code)
-		if err != nil {
-			break
-		}
-		for _, v := range resp.List.Klines() {
+	resp, err := c.GetIndexUntil(protocol.TypeKlineMinute, code, func(k *protocol.Kline) bool {
+		return k.Time.Before(lastTime)
+	})
+	if err != nil {
+		return err
+	}
+	for _, v := range resp.List {
+		if v.Time.After(lastTime) {
 			ks = append(ks, &KlineBase{
 				Date:   v.Time.Unix(),
 				Year:   v.Time.Year(),
@@ -159,9 +163,6 @@ func update(c *tdx.Client, w *tdx.Workday, code string) error {
 				Amount: float64(v.Volume * 100),
 			})
 		}
-	}
-	if err != nil {
-		return err
 	}
 
 	return db.SessionFunc(func(session *xorm.Session) error {
