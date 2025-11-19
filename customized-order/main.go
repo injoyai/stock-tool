@@ -3,6 +3,10 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"math"
+	"sync"
+	"time"
+
 	"github.com/injoyai/base/types"
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/goutil/g"
@@ -13,18 +17,17 @@ import (
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
 	"github.com/robfig/cron/v3"
-	"math"
-	"sync"
-	"time"
 )
 
 //go:embed index.html
 var html string
 
 var (
-	Filename  = cfg.GetString("filename", "./data/20060102-150405.csv")
-	Coroutine = cfg.GetInt("coroutine", 10)
-	Specs     = cfg.GetStrings("spec")
+	Filename   = cfg.GetString("filename", "./data/20060102-150405.csv")
+	Coroutine  = cfg.GetInt("coroutine", 10)
+	Specs      = cfg.GetStrings("spec")
+	OrderTime  = cfg.GetStrings("orderTime")
+	OrderTime2 = cfg.GetStrings("orderTime2")
 )
 
 func main() {
@@ -38,6 +41,8 @@ func main() {
 	}, func(app lorca.APP) error {
 
 		var m *tdx.Manage
+		app.Eval("setDownloading(true)")
+		defer app.Eval("setDownloading(false)")
 
 		err := app.Bind("download", func() {
 
@@ -165,34 +170,56 @@ func main() {
 
 func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNumber, mTradeLast, mTradeFirst, mTradeFirstVol map[string]int, mTrade map[string]protocol.Trades) error {
 	data := [][]any{
-		{"代码", "名称", "现价", "涨跌幅", "成交额", "成交量", "总成交笔数", "现量",
-			"卖五", "卖四", "卖三", "卖二", "卖一", "收盘笔数",
+		{"代码", "名称", "现价", "涨跌幅", "成交额", "成交量", "总成交笔数", "现量", "收盘笔数",
+			"卖五", "卖四", "卖三", "卖二", "卖一",
 			"卖五量", "卖四量", "卖三量", "卖二量", "卖一量",
 			"买一量", "买二量", "买三量", "买四量", "买五量",
 			"买一", "买二", "买三", "买四", "买五",
 			"今开", "最高", "最低", "开盘量", "开盘笔数", "委买量", "委卖量", "委差", "委加",
 		},
 	}
-	start := time.Date(0, 0, 0, 9, 31, 0, 0, time.Local)
-	end := time.Date(0, 0, 0, 11, 30, 0, 1, time.Local)
+
+	//成交量
+	start := time.Date(0, 0, 0, 9, 30, 0, 0, time.Local)
+	end := time.Date(0, 0, 0, 11, 30, 0, 0, time.Local)
 	for i := start; i.Before(end); i = i.Add(time.Minute) {
 		data[0] = append(data[0], i.Format("1504量"))
 	}
-	start = time.Date(0, 0, 0, 13, 1, 0, 0, time.Local)
-	end = time.Date(0, 0, 0, 15, 0, 0, 1, time.Local)
+	start = time.Date(0, 0, 0, 13, 0, 0, 0, time.Local)
+	end = time.Date(0, 0, 0, 15, 0, 0, 0, time.Local)
 	for i := start; i.Before(end); i = i.Add(time.Minute) {
 		data[0] = append(data[0], i.Format("1504量"))
 	}
 
-	data[0] = append(data[0], "930笔数", "931笔数", "932笔数", "1455笔数", "1456笔数", "1457笔数", "1458笔数", "1459笔数", "1300笔数")
+	data[0] = append(data[0], "备份1", "0925分笔")
+	//
+	titles := []string(nil)
+	for _, v := range OrderTime2 {
+		titles = append(titles, v)
+		for x := range 20 {
+			data[0] = append(data[0], v+fmt.Sprintf("%02d分笔", x+1))
+		}
+	}
+
+	data[0] = append(data[0], "1457分笔", "1500分笔")
+	data[0] = append(data[0], "备份2")
+
+	orderMap := map[string]bool{"0925": true, "0930": true}
+	data[0] = append(data[0], "930笔数")
+	for _, v := range OrderTime {
+		data[0] = append(data[0], v+"笔数")
+		orderMap[v] = true
+	}
+
+	//data[0] = append(data[0], "930笔数", "931笔数", "932笔数", "933笔数", "934笔数", "1453笔数", "1454笔数", "1455笔数", "1456笔数", "1457笔数", "1458笔数", "1459笔数", "1300笔数")
 
 	for _, v := range quotes {
 		code := v.Exchange.String() + v.Code
 		totalBuy := v.BuyLevel[0].Number + v.BuyLevel[1].Number + v.BuyLevel[2].Number + v.BuyLevel[3].Number + v.BuyLevel[4].Number
 		totalSell := v.SellLevel[0].Number + v.SellLevel[1].Number + v.SellLevel[2].Number + v.SellLevel[3].Number + v.SellLevel[4].Number
 		ls := []any{
-			code, cs.GetName(code), v.K.Close.Float64(), (v.K.Close - v.K.Open).Float64(), v.Amount, v.TotalHand, mTradeNumber[code], v.Intuition,
-			v.SellLevel[4].Price.Float64(), v.SellLevel[3].Price.Float64(), v.SellLevel[2].Price.Float64(), v.SellLevel[1].Price.Float64(), v.SellLevel[0].Price.Float64(), mTradeLast[code],
+			_code(code), cs.GetName(code), v.K.Close.Float64(), (v.K.Close - v.K.Open).Float64(), v.Amount, v.TotalHand, mTradeNumber[code], v.Intuition, mTradeLast[code],
+			v.SellLevel[4].Price.Float64(), v.SellLevel[3].Price.Float64(), v.SellLevel[2].Price.Float64(), v.SellLevel[1].Price.Float64(), v.SellLevel[0].Price.Float64(),
 			v.SellLevel[4].Number, v.SellLevel[3].Number, v.SellLevel[2].Number, v.SellLevel[1].Number, v.SellLevel[0].Number,
 			v.BuyLevel[0].Number, v.BuyLevel[1].Number, v.BuyLevel[2].Number, v.BuyLevel[3].Number, v.BuyLevel[4].Number,
 			v.BuyLevel[0].Price.Float64(), v.BuyLevel[1].Price.Float64(), v.BuyLevel[2].Price.Float64(), v.BuyLevel[3].Price.Float64(), v.BuyLevel[4].Price.Float64(),
@@ -201,19 +228,60 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 
 		ts := mTrade[code]
 		for _, vv := range ts.Klines() {
+			if vv.Volume == 0 {
+				ls = append(ls, "")
+				continue
+			}
 			ls = append(ls, vv.Volume)
 		}
 
-		m := map[string]int{}
-		for _, vv := range ts {
-			s := vv.Time.Format("1504")
-			switch s {
-			case "0925", "0930", "0931", "0932", "1455", "1456", "1457", "1458", "1459", "1500":
-				m[s] = m[s] + vv.Number
+		ls = append(ls, "") //备份1
+		{
+			m := map[string]protocol.Trades{}
+			for _, vv := range ts {
+				s := vv.Time.Format("1504")
+				m[s] = append(m[s], vv)
+			}
+			if val, ok := m["0925"]; ok && len(val) == 1 {
+				ls = append(ls, toString(val[0]))
+			} else {
+				ls = append(ls, toString(nil))
+			}
+			for _, title := range titles {
+				ss := m[title]
+				for len(ss) < 20 {
+					ss = append(ss, nil)
+				}
+				for _, vv := range ss {
+					ls = append(ls, toString(vv))
+				}
+			}
+			if val, ok := m["1457"]; ok && len(val) == 1 {
+				ls = append(ls, toString(val[0]))
+			} else {
+				ls = append(ls, toString(nil))
+			}
+			if val, ok := m["1500"]; ok && len(val) == 1 {
+				ls = append(ls, toString(val[0]))
+			} else {
+				ls = append(ls, toString(nil))
 			}
 		}
+		ls = append(ls, "") //备份2
 
-		ls = append(ls, m["0925"]+m["0930"], m["0931"], m["0932"], m["1455"], m["1456"], m["1457"], m["1458"], m["1459"], m["1500"])
+		{
+			m := map[string]int{}
+			for _, vv := range ts {
+				s := vv.Time.Format("1504")
+				if orderMap[s] {
+					m[s] = m[s] + vv.Number
+				}
+			}
+			ls = append(ls, m["0925"]+m["0930"])
+			for _, s := range OrderTime {
+				ls = append(ls, m[s])
+			}
+		}
 
 		data = append(data, ls)
 
@@ -227,4 +295,23 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 	err = oss.New(filename, buf)
 
 	return err
+}
+
+func _code(code string) string {
+	if len(code) == 8 {
+		return code[2:] + "." + code[:2]
+	}
+	return code
+}
+
+func toString(vv *protocol.Trade) any {
+	if vv == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d_%d_%d_%d",
+		int(vv.Price/10),
+		vv.Volume,
+		int((vv.Price.Float64()*float64(vv.Volume)+5)/10),
+		vv.Number,
+	)
 }
