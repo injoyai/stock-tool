@@ -18,7 +18,7 @@ func init() {
 
 var (
 	Database = cfg.GetString("database", "./data/database/codes.db")
-	Spec     = cfg.GetString("spec", "0 10 9 * * 1/5")
+	Spec     = cfg.GetString("spec", "0 10 9 * * *")
 )
 
 func main() {
