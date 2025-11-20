@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/injoyai/bar"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/conv/cfg"
@@ -13,9 +17,6 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/robfig/cron/v3"
-	"os"
-	"path/filepath"
-	"time"
 )
 
 const (
@@ -73,7 +74,7 @@ func run(m *tdx.Manage, codes []string) {
 		codes = m.Codes.GetStocks()
 	}
 	logs.PrintErr(update(m, codes))
-	logs.PrintErr(exportThisYear(m, codes))
+	//logs.PrintErr(exportThisYear(m, codes))
 	logs.PrintErr(exportThisDay(codes))
 }
 
