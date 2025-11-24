@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/injoyai/base/types"
+	"github.com/injoyai/conv"
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
@@ -191,7 +192,7 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 		data[0] = append(data[0], i.Format("1504量"))
 	}
 
-	data[0] = append(data[0], "备份1", "0925分笔")
+	data[0] = append(data[0], "备份1", "备份2", "备份3", "备份4", "备份5", "备份6", "0925分笔")
 	//
 	titles := []string(nil)
 	for _, v := range OrderTime2 {
@@ -202,7 +203,7 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 	}
 
 	data[0] = append(data[0], "1457分笔", "1500分笔")
-	data[0] = append(data[0], "备份2")
+	data[0] = append(data[0], "备份7", "备份8", "备份9", "备份10", "备份11", "备份12")
 
 	orderMap := map[string]bool{"0925": true, "0930": true}
 	data[0] = append(data[0], "930笔数")
@@ -218,12 +219,12 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 		totalBuy := v.BuyLevel[0].Number + v.BuyLevel[1].Number + v.BuyLevel[2].Number + v.BuyLevel[3].Number + v.BuyLevel[4].Number
 		totalSell := v.SellLevel[0].Number + v.SellLevel[1].Number + v.SellLevel[2].Number + v.SellLevel[3].Number + v.SellLevel[4].Number
 		ls := []any{
-			_code(code), cs.GetName(code), v.K.Close.Float64(), (v.K.Close - v.K.Open).Float64(), v.Amount, v.TotalHand, mTradeNumber[code], v.Intuition, mTradeLast[code],
+			_code(code), cs.GetName(code), int64(v.K.Close / 10), (v.K.Close - v.K.Open).Float64(), v.Amount, v.TotalHand, mTradeNumber[code], v.Intuition, mTradeLast[code],
 			v.SellLevel[4].Price.Float64(), v.SellLevel[3].Price.Float64(), v.SellLevel[2].Price.Float64(), v.SellLevel[1].Price.Float64(), v.SellLevel[0].Price.Float64(),
 			v.SellLevel[4].Number, v.SellLevel[3].Number, v.SellLevel[2].Number, v.SellLevel[1].Number, v.SellLevel[0].Number,
 			v.BuyLevel[0].Number, v.BuyLevel[1].Number, v.BuyLevel[2].Number, v.BuyLevel[3].Number, v.BuyLevel[4].Number,
 			v.BuyLevel[0].Price.Float64(), v.BuyLevel[1].Price.Float64(), v.BuyLevel[2].Price.Float64(), v.BuyLevel[3].Price.Float64(), v.BuyLevel[4].Price.Float64(),
-			v.K.Open.Float64(), v.K.High.Float64(), v.K.Low.Float64(), mTradeFirstVol[code], mTradeFirst[code], totalBuy, totalSell, int64(math.Abs(float64(totalBuy - totalSell))), totalBuy + totalSell,
+			int64(v.K.Open / 10), int64(v.K.High / 10), int64(v.K.Low / 10), mTradeFirstVol[code], mTradeFirst[code], totalBuy, totalSell, int64(math.Abs(float64(totalBuy - totalSell))), totalBuy + totalSell,
 		}
 
 		ts := mTrade[code]
@@ -235,7 +236,7 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 			ls = append(ls, vv.Volume)
 		}
 
-		ls = append(ls, "") //备份1
+		ls = append(ls, "", "", "", "", "", "") //备份1-6
 		{
 			m := map[string]protocol.Trades{}
 			for _, vv := range ts {
@@ -267,7 +268,7 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 				ls = append(ls, toString(nil))
 			}
 		}
-		ls = append(ls, "") //备份2
+		ls = append(ls, "", "", "", "", "", "") //备份7-12
 
 		{
 			m := map[string]int{}
@@ -286,6 +287,16 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 		data = append(data, ls)
 
 	}
+
+	types.List[[]any](data).Sort(func(a, b []any) bool {
+		if len(a) == 0 || len(b) == 0 {
+			return false
+		}
+		if conv.String(a[0]) == "代码" {
+			return true
+		}
+		return conv.String(a[0]) < conv.String(b[0])
+	})
 
 	buf, err := csv.Export(data)
 	if err != nil {
