@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/frame/fiber"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
@@ -9,20 +11,29 @@ import (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2")
-	logs.Info("详情:", "增加流通/总股本")
+	logs.Info("版本:", "v0.3")
+	logs.Info("详情:", "增加指数代码")
 	fmt.Println("===============================================")
 }
 
+var (
+	Database = cfg.GetString("database", "./data/database/codes.db")
+	Spec     = cfg.GetString("spec", "0 10 9 * * *")
+)
+
 func main() {
 
-	cs, err := tdx.NewCodes2(tdx.WithDBFilename("./data/database/codes.db"))
+	cs, err := tdx.NewCodes2(
+		tdx.WithDBFilename(Database),
+		tdx.WithSpec(Spec),
+	)
 	logs.PanicErr(err)
 
 	s := fiber.Default()
 	s.Group("/api", func(g fiber.Grouper) {
-		g.ALL("/stocks", func(c fiber.Ctx) { c.Succ(cs.GetStocks()) })
-		g.ALL("/etfs", func(c fiber.Ctx) { c.Succ(cs.GetETFs()) })
+		g.ALL("/stocks", func(c fiber.Ctx) { data := cs.GetStocks(); c.Succ(data, int64(len(data))) })
+		g.ALL("/etfs", func(c fiber.Ctx) { data := cs.GetETFs(); c.Succ(data, int64(len(data))) })
+		g.ALL("/indexes", func(c fiber.Ctx) { data := cs.GetIndexes(); c.Succ(data, int64(len(data))) })
 	})
 	logs.Err(s.Run())
 }
