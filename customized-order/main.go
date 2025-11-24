@@ -321,8 +321,8 @@ func toString(vv *protocol.Trade) any {
 	}
 	return fmt.Sprintf("%d_%d_%d_%d",
 		int(vv.Price/10),
-		vv.Volume,
 		int((vv.Price.Float64()*float64(vv.Volume)+5)/10),
+		vv.Volume,
 		vv.Number,
 	)
 }
