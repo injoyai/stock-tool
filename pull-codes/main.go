@@ -11,7 +11,7 @@ import (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.3")
+	logs.Info("版本:", "v0.3.1")
 	logs.Info("详情:", "增加指数代码")
 	fmt.Println("===============================================")
 }
