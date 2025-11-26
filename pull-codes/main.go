@@ -19,6 +19,7 @@ func init() {
 var (
 	Database = cfg.GetString("database", "./data/database/codes.db")
 	Spec     = cfg.GetString("spec", "0 10 9 * * *")
+	Port     = cfg.GetInt("port", 8080)
 )
 
 func main() {
@@ -30,6 +31,7 @@ func main() {
 	logs.PanicErr(err)
 
 	s := fiber.Default()
+	s.SetPort(Port)
 	s.Group("/api", func(g fiber.Grouper) {
 		g.ALL("/stocks", func(c fiber.Ctx) { data := cs.GetStocks(); c.Succ(data, int64(len(data))) })
 		g.ALL("/etfs", func(c fiber.Ctx) { data := cs.GetETFs(); c.Succ(data, int64(len(data))) })
