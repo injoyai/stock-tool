@@ -1,6 +1,9 @@
 package main
 
 import (
+	"path/filepath"
+	"time"
+
 	"github.com/injoyai/base/chans"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/database/sqlite"
@@ -12,8 +15,6 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
-	"path/filepath"
-	"time"
 	"xorm.io/xorm"
 )
 
@@ -27,7 +28,7 @@ var (
 	RetryInterval = time.Second
 	Indexes       = []string{
 		//"sh999999", //"sh000001", //上证指数
-		"sz399001", //深证成指
+		//"sz399001", //深证成指
 		//"sz399006", //创业板指
 		//"sh000016", //上证50
 		//"sh000688", //科创50
@@ -54,8 +55,10 @@ var (
 )
 
 func main() {
-	m, err := tdx.NewManage(&tdx.ManageConfig{Number: Clients})
+	m, err := tdx.NewManage(tdx.WithClients(Clients))
 	logs.PanicErr(err)
+
+	Indexes = m.Codes.GetIndexCodes()
 
 	if len(Codes) == 0 {
 		//Codes = m.Codes.GetStocks()
