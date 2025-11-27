@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/injoyai/bar"
 	"github.com/injoyai/base/chans"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/database/sqlite"
@@ -11,7 +12,6 @@ import (
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/csv"
-	"github.com/injoyai/goutil/str/bar/v2"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
@@ -27,7 +27,7 @@ var (
 	Retry         = 3
 	RetryInterval = time.Second
 	Indexes       = []string{
-		//"sh999999", //"sh000001", //上证指数
+		"sh999999", //"sh000001", //上证指数
 		//"sz399001", //深证成指
 		//"sz399006", //创业板指
 		//"sh000016", //上证50
@@ -58,7 +58,17 @@ func main() {
 	m, err := tdx.NewManage(tdx.WithClients(Clients))
 	logs.PanicErr(err)
 
-	Indexes = m.Codes.GetIndexCodes()
+	//Indexes = m.Codes.GetIndexCodes()
+	for _, v := range m.Codes.GetIndexCodes() {
+		Indexes = append(Indexes, v)
+	}
+	indexesMap = func() map[string]bool {
+		x := make(map[string]bool)
+		for _, v := range Indexes {
+			x[v] = true
+		}
+		return x
+	}()
 
 	if len(Codes) == 0 {
 		//Codes = m.Codes.GetStocks()
