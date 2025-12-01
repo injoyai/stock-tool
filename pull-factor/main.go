@@ -29,6 +29,12 @@ var (
 	Startup       = cfg.GetBool("startup", false)
 )
 
+func init() {
+	logs.Info("版本:", "v0.2")
+	logs.Info("详情:", "增加新浪复权因子")
+	fmt.Println("================================================")
+}
+
 func main() {
 	m, err := tdx.NewManage()
 	logs.PanicErr(err)
