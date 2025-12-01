@@ -1,13 +1,13 @@
 module pull-factor
 
-go 1.20
+go 1.23
 
 require (
-	github.com/injoyai/bar v0.0.3
+	github.com/injoyai/bar v0.0.8
 	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/goutil v1.2.20
 	github.com/injoyai/logs v1.0.12
-	github.com/injoyai/tdx v0.0.34
+	github.com/injoyai/tdx v0.0.55
 	github.com/robfig/cron/v3 v3.0.1
 )
 
