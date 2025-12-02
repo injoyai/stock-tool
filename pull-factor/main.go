@@ -95,7 +95,7 @@ func PullSina(m *tdx.Manage) error {
 	}()
 
 	codes := m.Codes.GetStockCodes()
-	codes = append(codes, m.Codes.GetETFCodes()...)
+	//codes = append(codes, m.Codes.GetETFCodes()...)
 	exportDir := filepath.Join(Dir, folderSina)
 
 	b := bar.New(
