@@ -31,7 +31,7 @@ var (
 
 func init() {
 	logs.Info("版本:", "v0.3")
-	logs.Info("详情:", "增加新浪复权因子(股票+etf)")
+	logs.Info("详情:", "增加新浪复权因子(股票)")
 	fmt.Println("================================================")
 }
 
@@ -58,6 +58,7 @@ func PullTHS(m *tdx.Manage) error {
 	}()
 
 	codes := m.Codes.GetStockCodes()
+	codes = append(codes, m.Codes.GetETFCodes()...)
 	exportDir := filepath.Join(Dir, folderTHS)
 
 	b := bar.New(
