@@ -30,8 +30,8 @@ var (
 )
 
 func init() {
-	logs.Info("版本:", "v0.2")
-	logs.Info("详情:", "增加新浪复权因子")
+	logs.Info("版本:", "v0.3")
+	logs.Info("详情:", "增加新浪复权因子(股票+etf)")
 	fmt.Println("================================================")
 }
 
@@ -94,6 +94,7 @@ func PullSina(m *tdx.Manage) error {
 	}()
 
 	codes := m.Codes.GetStockCodes()
+	codes = append(codes, m.Codes.GetETFCodes()...)
 	exportDir := filepath.Join(Dir, folderSina)
 
 	b := bar.New(
