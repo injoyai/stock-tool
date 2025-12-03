@@ -1,19 +1,18 @@
 module pull-trade-to-kline
 
-go 1.20
+go 1.23
 
 require (
+	github.com/injoyai/bar v0.0.8
 	github.com/injoyai/base v1.2.17
 	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/goutil v1.2.20
 	github.com/injoyai/logs v1.0.12
-	github.com/injoyai/tdx v0.0.48
+	github.com/injoyai/tdx v0.0.54
 	xorm.io/xorm v1.3.9
 )
 
 require (
-	github.com/PuerkitoBio/goquery v1.8.1 // indirect
-	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/glebarez/go-sqlite v1.22.0 // indirect

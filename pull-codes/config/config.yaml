@@ -1,0 +1,3 @@
+database: ./data/database/codes.db
+spec: "0 10 9 * * *"
+port: 8080
