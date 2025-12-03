@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"math"
+	"sort"
 	"sync"
 	"time"
 
@@ -288,14 +289,21 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 
 	}
 
-	types.List[[]any](data).Sort(func(a, b []any) bool {
-		if len(a) == 0 || len(b) == 0 {
+	//types.List[[]any](data).Sort(func(a, b []any) bool {
+	//	if len(a) == 0 || len(b) == 0 {
+	//		return false
+	//	}
+	//	if conv.String(a[0]) == "代码" {
+	//		return true
+	//	}
+	//	return conv.String(a[0]) < conv.String(b[0])
+	//})
+
+	sort.Slice(data[1:], func(i, j int) bool {
+		if len(data[i+1]) == 0 || len(data[j+1]) == 0 {
 			return false
 		}
-		if conv.String(a[0]) == "代码" {
-			return true
-		}
-		return conv.String(a[0]) < conv.String(b[0])
+		return conv.String(data[i+1][0]) < conv.String(data[j+1][0])
 	})
 
 	buf, err := csv.Export(data)
