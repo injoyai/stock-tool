@@ -27,7 +27,7 @@ func main() {
 	m, err := tdx.NewManage(
 		tdx.WithClients(clients),
 		tdx.WithDialCodes(func(c *tdx.Client, database string) (tdx.ICodes, error) {
-			return DialCodesHTTP(address)
+			return extend.DialCodesHTTP(address)
 		}),
 	)
 	logs.PanicErr(err)
