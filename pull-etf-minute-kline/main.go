@@ -1,10 +1,16 @@
 package main
 
 import (
+	"path/filepath"
+
 	"github.com/injoyai/bar"
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/extend"
+	"github.com/injoyai/tdx/lib/xorms"
+	"github.com/injoyai/tdx/protocol"
+	"xorm.io/xorm"
 )
 
 var (
@@ -13,6 +19,7 @@ var (
 	retry      = cfg.GetInt("retry", 3)
 	address    = cfg.GetString("address", "http://127.0.0.1:20000")
 	spec       = cfg.GetString("spec", "0 15 15 * * *")
+	dir        = cfg.GetString("dir", "./data/database/kline")
 )
 
 func main() {
@@ -53,11 +60,38 @@ func Update(m *tdx.Manage) error {
 
 func update(c *tdx.Client, code string) error {
 
+	//连接数据库
+	filename := filepath.Join(dir, code+".db")
+	db, err := xorms.NewSqlite(filename)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	err = db.Sync2(new(extend.Kline))
+	if err != nil {
+		return err
+	}
+
 	//读取数据库最后一条数据
+	last := new(extend.Kline)
+	_, err = db.Desc("Date").Get(last)
+	if err != nil {
+		return err
+	}
 
 	//拉取数据
+	resp, err := c.GetKlineMinuteUntil(code, func(k *protocol.Kline) bool { return k.Time.Unix() <= last.Date })
+	if err != nil {
+		return err
+	}
+
+	_ = resp
 
 	//更新到数据库
+	db.SessionFunc(func(session *xorm.Session) error {
+		//session.Where("Date>?", last)
+		return nil
+	})
 
 	return nil
 }
