@@ -53,6 +53,7 @@ func main() {
 }
 
 func Update(m *tdx.Manage) error {
+	defer func() { logs.Info("任务完成...") }()
 
 	if len(codes) == 0 {
 		codes = m.Codes.GetETFCodes()
@@ -80,6 +81,7 @@ func Update(m *tdx.Manage) error {
 
 	b.Wait()
 
+	logs.Info("开始压缩...")
 	return zip.Encode(
 		filepath.Join(exportDir, year),
 		filepath.Join(uploadDir, year, year+".zip"),
@@ -107,11 +109,15 @@ func update(c *tdx.Client, year string, code string) error {
 		return err
 	}
 
+	logs.Debug(time.Unix(last.Date, 0))
+
 	//拉取数据
 	resp, err := c.GetKlineMinuteUntil(code, func(k *protocol.Kline) bool { return k.Time.Unix() <= last.Date })
 	if err != nil {
 		return err
 	}
+
+	logs.Debug(len(resp.List))
 
 	//更新到数据库
 	return db.SessionFunc(func(session *xorm.Session) error {
