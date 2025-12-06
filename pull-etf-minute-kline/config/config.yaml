@@ -1,1 +1,7 @@
 address: http://192.168.1.103:20000
+startup: true
+spec: "0 15 15 * * *"
+clients: 3
+coroutines: 10
+codes:
+  # - "sz159399"

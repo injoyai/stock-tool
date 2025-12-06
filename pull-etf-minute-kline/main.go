@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -28,26 +29,43 @@ var (
 	spec        = cfg.GetString("spec", "0 15 15 * * *")
 	databaseDir = cfg.GetString("database_dir", "./data/database/kline")
 	exportDir   = cfg.GetString("export_dir", "./data/export")
-	uploadDir   = cfg.GetString("upload_dir", "./data/upload")
-	codes       = []string{
-		"sz159399",
-	}
+	uploadDir   = cfg.GetString("upload_dir", "./data/分钟K线-ETF")
+	codes       = cfg.GetStrings("codes")
+	startup     = cfg.GetBool("startup")
 )
+
+func init() {
+	logs.SetFormatter(logs.TimeFormatter)
+	logs.Info("版本:", "v1.0")
+	logs.Info("详情:", "初版")
+	fmt.Println("=====================================================")
+	logs.Info("立即执行:", startup)
+	logs.Info("代码地址:", address)
+	logs.Info("连接数量:", clients)
+	logs.Info("协程数量:", coroutines)
+	logs.Info("定时规则:", spec)
+	fmt.Println("=====================================================")
+}
 
 func main() {
 
+	//初始化
 	m, err := tdx.NewManage(
 		tdx.WithClients(clients),
 		tdx.WithDialCodes(func(c *tdx.Client) (tdx.ICodes, error) { return extend.DialCodesHTTP(address) }),
 	)
 	logs.PanicErr(err)
 
-	//更新
-	logs.PanicErr(Update(m))
+	//是否立即更新
+	if startup {
+		logs.PanicErr(Update(m))
+	}
 
-	m.AddWorkdayTask(spec, func(m *tdx.Manage) {
+	//定时更新
+	err = m.AddWorkdayTask(spec, func(m *tdx.Manage) {
 		logs.PrintErr(Update(m))
 	})
+	logs.PanicErr(err)
 
 	select {}
 }
@@ -82,10 +100,22 @@ func Update(m *tdx.Manage) error {
 	b.Wait()
 
 	logs.Info("开始压缩...")
-	return zip.Encode(
-		filepath.Join(exportDir, year),
-		filepath.Join(uploadDir, year, year+".zip"),
-	)
+	if err := zip.Encode(filepath.Join(exportDir, year, "1分钟"), filepath.Join(uploadDir, year, "1分钟.zip")); err != nil {
+		return err
+	}
+	if err := zip.Encode(filepath.Join(exportDir, year, "5分钟"), filepath.Join(uploadDir, year, "5分钟.zip")); err != nil {
+		return err
+	}
+	if err := zip.Encode(filepath.Join(exportDir, year, "15分钟"), filepath.Join(uploadDir, year, "15分钟.zip")); err != nil {
+		return err
+	}
+	if err := zip.Encode(filepath.Join(exportDir, year, "30分钟"), filepath.Join(uploadDir, year, "30分钟.zip")); err != nil {
+		return err
+	}
+	if err := zip.Encode(filepath.Join(exportDir, year, "60分钟"), filepath.Join(uploadDir, year, "60分钟.zip")); err != nil {
+		return err
+	}
+	return nil
 }
 
 func update(c *tdx.Client, year string, code string) error {
@@ -97,19 +127,17 @@ func update(c *tdx.Client, year string, code string) error {
 		return err
 	}
 	defer db.Close()
-	err = db.Sync2(new(extend.Kline))
+	err = db.Sync2(new(KlineMinute1))
 	if err != nil {
 		return err
 	}
 
 	//读取数据库最后一条数据
-	last := new(extend.Kline)
+	last := new(KlineMinute1)
 	_, err = db.Desc("Date").Get(last)
 	if err != nil {
 		return err
 	}
-
-	logs.Debug(time.Unix(last.Date, 0))
 
 	//拉取数据
 	resp, err := c.GetKlineMinuteUntil(code, func(k *protocol.Kline) bool { return k.Time.Unix() <= last.Date })
@@ -117,23 +145,28 @@ func update(c *tdx.Client, year string, code string) error {
 		return err
 	}
 
-	logs.Debug(len(resp.List))
-
 	//更新到数据库
 	return db.SessionFunc(func(session *xorm.Session) error {
-		if _, err := session.Where("Date>=?", last.Date).Delete(new(extend.Kline)); err != nil {
+		if _, err := session.Where("Date>=?", last.Date).Delete(new(KlineMinute1)); err != nil {
 			return err
 		}
 		for _, v := range resp.List {
 			if v.Time.Unix() >= last.Date {
-				if _, err = session.Insert(&extend.Kline{
-					Date:   v.Time.Unix(),
-					Open:   v.Open,
-					High:   v.High,
-					Low:    v.Low,
-					Close:  v.Close,
-					Volume: v.Volume,
-					Amount: v.Amount,
+				if _, err = session.Insert(&KlineMinute1{
+					KlineBase: KlineBase{
+						Date:   v.Time.Unix(),
+						Year:   v.Time.Year(),
+						Month:  int(v.Time.Month()),
+						Day:    v.Time.Day(),
+						Hour:   v.Time.Hour(),
+						Minute: v.Time.Minute(),
+						Open:   v.Open.Float64(),
+						High:   v.High.Float64(),
+						Low:    v.Low.Float64(),
+						Close:  v.Close.Float64(),
+						Volume: v.Volume,
+						Amount: v.Amount.Float64(),
+					},
 				}); err != nil {
 					return err
 				}
@@ -160,11 +193,49 @@ func export(year string, code string) error {
 	defer db.Close()
 
 	//读取今年数据
-	list := []*extend.Kline(nil)
+	list := []*KlineMinute1(nil)
 	if err = db.Asc("Date").Find(&list); err != nil {
 		return err
 	}
 
+	ts := make(protocol.Klines, 0, len(list))
+	for _, v := range list {
+		ts = append(ts, &protocol.Kline{
+			Open:   protocol.Price(v.Open * 1000),
+			High:   protocol.Price(v.High * 1000),
+			Low:    protocol.Price(v.Low * 1000),
+			Close:  protocol.Price(v.Close * 1000),
+			Order:  0,
+			Volume: v.Volume,
+			Amount: protocol.Price(v.Amount * 1000),
+			Time:   time.Unix(v.Date, 0),
+		})
+	}
+
+	if err = save(ts, "1分钟", year, code); err != nil {
+		return err
+	}
+
+	if err = save(ts.Merge(5), "5分钟", year, code); err != nil {
+		return err
+	}
+
+	if err = save(ts.Merge(15), "15分钟", year, code); err != nil {
+		return err
+	}
+
+	if err = save(ts.Merge(30), "30分钟", year, code); err != nil {
+		return err
+	}
+
+	if err = save(ts.Merge(60), "60分钟", year, code); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func save(list protocol.Klines, _type, year, code string) error {
 	//导出
 	data := [][]any{{
 		"日期",
@@ -178,10 +249,9 @@ func export(year string, code string) error {
 	}}
 
 	for _, v := range list {
-		t := time.Unix(v.Date, 0)
 		data = append(data, []any{
-			t.Format(time.DateOnly),
-			t.Format(time.TimeOnly),
+			v.Time.Format(time.DateOnly),
+			v.Time.Format("15:04"),
 			v.Open.Float64(),
 			v.High.Float64(),
 			v.Low.Float64(),
@@ -196,6 +266,6 @@ func export(year string, code string) error {
 		return err
 	}
 
-	exportFilename := filepath.Join(exportDir, conv.String(year), code+".csv")
+	exportFilename := filepath.Join(exportDir, conv.String(year), _type, code+".csv")
 	return oss.New(exportFilename, buf)
 }
