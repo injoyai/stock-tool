@@ -220,9 +220,9 @@ func toCsv(filename string, quotes protocol.QuotesResp, cs *tdx.Codes, mTradeNum
 		totalBuy := v.BuyLevel[0].Number + v.BuyLevel[1].Number + v.BuyLevel[2].Number + v.BuyLevel[3].Number + v.BuyLevel[4].Number
 		totalSell := v.SellLevel[0].Number + v.SellLevel[1].Number + v.SellLevel[2].Number + v.SellLevel[3].Number + v.SellLevel[4].Number
 		lastPrice := conv.Select(v.K.Last > 0, v.K.Last, v.K.Open)
-		rate := 0.
+		rate := "0"
 		if lastPrice > 0 {
-			rate = float64(((v.K.Close-lastPrice)*10000)/lastPrice) / 100
+			rate = fmt.Sprintf("%.2f", ((v.K.Close.Float64()-lastPrice.Float64())*100)/lastPrice.Float64())
 		}
 		ls := []any{
 			_code(code), cs.GetName(code), int64(v.K.Close / 10), rate, v.Amount, v.TotalHand, mTradeNumber[code], v.Intuition, mTradeLast[code],
