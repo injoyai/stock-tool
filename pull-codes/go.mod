@@ -3,9 +3,10 @@ module pull-codes
 go 1.25.0
 
 require (
+	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/frame v0.0.7
 	github.com/injoyai/logs v1.0.12
-	github.com/injoyai/tdx v0.0.52
+	github.com/injoyai/tdx v0.0.66
 )
 
 require (
@@ -23,7 +24,6 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/injoyai/base v1.2.17 // indirect
-	github.com/injoyai/conv v1.2.5 // indirect
 	github.com/injoyai/ios v1.2.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
