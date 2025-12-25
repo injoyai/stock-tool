@@ -9,10 +9,12 @@ import (
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/oss"
+	"github.com/injoyai/goutil/oss/compress/zip"
 	"github.com/injoyai/goutil/other/csv"
 	"github.com/injoyai/goutil/str/bar/v2"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/extend"
 	"github.com/injoyai/tdx/protocol"
 	"github.com/robfig/cron/v3"
 	"xorm.io/xorm"
@@ -27,57 +29,62 @@ var (
 	Clients     = cfg.GetInt("clients", 3)
 	Coroutine   = cfg.GetInt("coroutine", 3)
 	Spec        = cfg.GetString("spec", "0 1 15 * * *")
+	Address     = cfg.GetString("address", "http://192.168.1.103:20000")
 )
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("增加工作日的判断")
+	logs.Info("版本:", "v1.3")
+	logs.Info("详情:", "升级版本,优化版")
 }
 
 func main() {
 
-	p, err := tdx.NewPool(func() (*tdx.Client, error) { return tdx.DialDefault() }, Clients)
-	logs.PanicErr(err)
-
-	c, err := tdx.DialDefault()
-	logs.PanicErr(err)
-	w, err := tdx.NewWorkdaySqlite(c)
+	//初始化
+	m, err := tdx.NewManage(
+		tdx.WithClients(Clients),
+		tdx.WithDialCodes(func(c *tdx.Client) (tdx.ICodes, error) { return extend.DialCodesHTTP(Address) }),
+	)
 	logs.PanicErr(err)
 
 	cr := cron.New(cron.WithSeconds())
 	cr.AddFunc(Spec, func() {
-		if !w.TodayIs() {
+		if !m.Workday.TodayIs() {
 			logs.Err("今天不是工作日")
 			return
 		}
-		Run(p, w)
+		Run(m, Codes)
 	})
 
 	if Startup {
-		Run(p, w)
+		Run(m, Codes)
 	}
 
 	cr.Run()
 }
 
-func Run(p *tdx.Pool, w *tdx.Workday) {
-	Update(p, w)
-	Export()
+func Run(m *tdx.Manage, codes []string) {
+	if len(codes) == 0 {
+		codes = m.Codes.GetIndexCodes()
+	}
+	Update(m, codes)
+	Export(codes)
+
 	logs.Info("更新完成...")
 }
 
-func Update(p *tdx.Pool, w *tdx.Workday) {
+func Update(m *tdx.Manage, codes []string) {
 
-	b := bar.NewCoroutine(len(Codes), Coroutine)
+	b := bar.NewCoroutine(len(codes), Coroutine)
 	defer b.Close()
 
-	for i := range Codes {
-		code := Codes[i]
+	for i := range codes {
+		code := codes[i]
 		b.Go(func() {
 			b.SetPrefix("[更新][" + code + "]")
 			b.Flush()
-			err := p.Do(func(c *tdx.Client) error {
-				return update(c, w, code)
+			err := m.Do(func(c *tdx.Client) error {
+				return update(c, code)
 			})
 			if err != nil {
 				b.Logf("[ERR] [%s] %s", code, err.Error())
@@ -90,16 +97,22 @@ func Update(p *tdx.Pool, w *tdx.Workday) {
 
 }
 
-func Export() {
-	b := bar.NewCoroutine(len(Codes), 3)
+func Export(codes []string) {
+
+	year := conv.String(time.Now().Year())
+
+	os.MkdirAll(filepath.Join(ExportDir, year), os.ModePerm)
+	os.MkdirAll(filepath.Join(UploadDir, year), os.ModePerm)
+
+	b := bar.NewCoroutine(len(codes), 3)
 	defer b.Close()
 
-	for i := range Codes {
-		code := Codes[i]
+	for i := range codes {
+		code := codes[i]
 		b.Go(func() {
 			b.SetPrefix("[导出][" + code + "]")
 			b.Flush()
-			err := exportThisYear(code)
+			err := export(year, code)
 			if err != nil {
 				b.Logf("[ERR] [%s] %s", code, err.Error())
 				b.Flush()
@@ -108,9 +121,23 @@ func Export() {
 	}
 
 	b.Wait()
+
+	for _, v := range []string{"1分钟", "5分钟", "15分钟", "30分钟", "60分钟"} {
+		err := zip.Encode(
+			filepath.Join(ExportDir, year, v),
+			filepath.Join(ExportDir, year, v+".zip"),
+		)
+		logs.PrintErr(err)
+		err = os.Rename(
+			filepath.Join(ExportDir, year, v+".zip"),
+			filepath.Join(UploadDir, year, v+".zip"),
+		)
+		logs.PrintErr(err)
+	}
+
 }
 
-func update(c *tdx.Client, w *tdx.Workday, code string) error {
+func update(c *tdx.Client, code string) error {
 	now := time.Now()
 	year := now.Year()
 	yearStart := time.Date(year, 1, 1, 0, 0, 0, 0, time.Local)
@@ -177,8 +204,7 @@ func update(c *tdx.Client, w *tdx.Workday, code string) error {
 
 }
 
-func exportThisYear(code string) error {
-	year := time.Now().Year()
+func export(year, code string) error {
 	dir := filepath.Join(DatabaseDir, conv.String(year))
 	filename := filepath.Join(dir, code+".db")
 	db, err := sqlite.NewXorm(filename)
@@ -215,7 +241,7 @@ func exportThisYear(code string) error {
 	return nil
 }
 
-func save(ks []*KlineBase, code, _type string, year int) error {
+func save(ks []*KlineBase, code, _type string, year string) error {
 	data := [][]any{
 		{"日期", "时间", "开盘", "最高", "最低", "收盘", "成交量", "成交额"},
 	}
@@ -236,12 +262,6 @@ func save(ks []*KlineBase, code, _type string, year int) error {
 	if err != nil {
 		return err
 	}
-	filename := filepath.Join(ExportDir, conv.String(year), _type, code+".csv")
-	if err = oss.New(filename, buf); err != nil {
-		return err
-	}
-	<-time.After(time.Millisecond * 100)
-	uploadFilename := filepath.Join(UploadDir, conv.String(year), _type, code+".csv")
-	os.MkdirAll(filepath.Dir(uploadFilename), os.ModePerm)
-	return os.Rename(filename, uploadFilename)
+	filename := filepath.Join(ExportDir, year, _type, code+".csv")
+	return oss.New(filename, buf)
 }
