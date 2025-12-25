@@ -1,27 +1,27 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/injoyai/bar"
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx/protocol"
-	"os"
-	"path/filepath"
 	"xorm.io/xorm"
 )
 
 var (
-	DatabaseDir = cfg.GetString("database_dir", "./data/database/trade")
-	ExportDir   = cfg.GetString("export_dir", "./data/database/kline")
-	Coroutine   = cfg.GetInt("coroutine", 10)
+	TradeDir  = cfg.GetString("database_dir", "./data/database/trade")
+	KlineDir  = cfg.GetString("export_dir", "./data/database/kline")
+	Coroutine = cfg.GetInt("coroutine", 10)
 )
 
-// /
 func main() {
 
-	es, err := os.ReadDir(DatabaseDir)
+	es, err := os.ReadDir(TradeDir)
 	logs.PanicErr(err)
 
 	b := bar.NewCoroutine(len(es), Coroutine, bar.WithPrefix("[xx000000]"))
@@ -37,7 +37,7 @@ func main() {
 			b.SetPrefix("[" + e.Name() + "]")
 			b.Flush()
 
-			dir := filepath.Join(DatabaseDir, e.Name())
+			dir := filepath.Join(TradeDir, e.Name())
 			vs, err := os.ReadDir(dir)
 			if err != nil {
 				b.Logf("[ERR] [%s] %v", dir, err)
@@ -48,7 +48,7 @@ func main() {
 			for _, v := range vs {
 				err = convert(
 					filepath.Join(dir, v.Name()),
-					filepath.Join(ExportDir, e.Name(), v.Name()),
+					filepath.Join(KlineDir, e.Name(), v.Name()),
 				)
 				if err != nil {
 					b.Logf("[ERR] [%s] %v", e.Name(), err)
@@ -105,29 +105,13 @@ func insert(klineFilename string, ks protocol.Klines) error {
 		return err
 	}
 	defer db.Close()
-	err = db.Sync2(new(Kline))
+	err = db.Sync2(new(protocol.Kline))
 	if err != nil {
 		return err
 	}
 
-	inserts := []*Kline(nil)
-	for _, k := range ks {
-		inserts = append(inserts, &Kline{
-			Year:   k.Time.Year(),
-			Month:  int(k.Time.Month()),
-			Day:    k.Time.Day(),
-			Hour:   k.Time.Hour(),
-			Minute: k.Time.Minute(),
-			Open:   k.Open.Float64(),
-			High:   k.High.Float64(),
-			Low:    k.Low.Float64(),
-			Close:  k.Close.Float64(),
-			Volume: k.Volume,
-			Amount: k.Amount.Float64(),
-		})
-	}
 	return db.SessionFunc(func(session *xorm.Session) error {
-		for _, v := range inserts {
+		for _, v := range ks {
 			_, err = session.Insert(v)
 			if err != nil {
 				return err

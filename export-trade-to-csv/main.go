@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/injoyai/bar"
-	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
+	"github.com/injoyai/goutil/other/csv"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/lib/xorms"
@@ -16,12 +16,18 @@ import (
 
 var (
 	TradeDir   = "./data/database/trade"
-	KlineDir   = "./data/database/kline"
+	csvDir     = "./data/database/csv"
 	Coroutines = 10
-	Retry      = tdx.DefaultRetry
 )
 
+func init() {
+	logs.SetFormatter(logs.TimeFormatter)
+}
+
 func main() {
+
+	gb, err := tdx.NewGbbq()
+	logs.PanicErr(err)
 
 	es, err := os.ReadDir(TradeDir)
 	logs.PanicErr(err)
@@ -30,52 +36,88 @@ func main() {
 	defer b.Close()
 
 	for _, v := range es {
-		func() {
-			defer b.Done()
+		b.Go(func() {
 			b.SetPrefix("[" + v.Name() + "]")
 			b.Flush()
 			dir := filepath.Join(TradeDir, v.Name())
-			err = oss.RangeFile(dir, func(info *oss.FileInfo, f *os.File) (bool, error) {
-				filename := filepath.Join(dir, f.Name())
-				exportDir := filepath.Join(KlineDir, v.Name())
-				err = g.Retry(func() error { return export(filename, exportDir) }, Retry)
-				logs.PrintErr(err)
+			var ts protocol.Trades
+			err = oss.RangeFileInfo(dir, func(info *oss.FileInfo) (bool, error) {
+				filename := filepath.Join(dir, info.Name())
+				_ts, err := read(filename)
+				if err != nil {
+					return false, err
+				}
+				ts = append(ts, _ts...)
 				return true, nil
 			})
-			b.Log("[错误]", err)
-			b.Flush()
-		}()
+			if err != nil {
+				b.Log("[错误]", err)
+				b.Flush()
+				return
+			}
+			err = export(ts.Klines(), csvDir, v.Name(), gb)
+			if err != nil {
+				b.Log("[错误]", err)
+				b.Flush()
+				return
+			}
+		})
 	}
 
 	b.Wait()
-	logs.Info("完成...")
+	logs.Info("done...")
 }
 
-func export(filename string, exportDir string) error {
+func read(filename string) (protocol.Trades, error) {
 	if !oss.Exists(filename) {
-		return nil
+		return nil, nil
 	}
 	db, err := xorms.NewSqlite(filename)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer db.Close()
 
 	data := []*Trade(nil)
 	err = db.Find(&data)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ts := make(protocol.Trades, 0, len(data))
 	for _, v := range data {
 		ts = append(ts, v.To())
 	}
+	return ts, nil
+}
 
+func export(ks protocol.Klines, exportDir, code string, gb *tdx.Gbbq) error {
+
+	exportName := filepath.Join(exportDir, "1分钟", code+".csv")
+	save(gb, code, exportName, ks)
+
+	exportName = filepath.Join(exportDir, "5分钟", code+".csv")
+	save(gb, code, exportName, ks.Merge241(5))
+
+	exportName = filepath.Join(exportDir, "15分钟", code+".csv")
+	save(gb, code, exportName, ks.Merge241(15))
+
+	exportName = filepath.Join(exportDir, "30分钟", code+".csv")
+	save(gb, code, exportName, ks.Merge241(30))
+
+	exportName = filepath.Join(exportDir, "60分钟", code+".csv")
+	save(gb, code, exportName, ks.Merge241(60))
+
+	return nil
+}
+
+func save(gb *tdx.Gbbq, code, filename string, ks protocol.Klines) error {
+	ks.Sort()
 	xx := [][]any{
 		{"日期", "时间", "开盘", "最高", "最低", "收盘", "成交量(手)", "成交额", "涨跌", "涨跌幅(%)", "流通股本(股)", "总股本(股)", "换手率(%)"},
 	}
-	for _, v := range ts.Klines() {
+	for _, v := range ks {
+		e := gb.GetEquity(code, v.Time)
 		xx = append(xx, []any{
 			v.Time.Format(time.DateOnly),
 			v.Time.Format("15:04"),
@@ -87,11 +129,16 @@ func export(filename string, exportDir string) error {
 			v.Amount.Float64(),
 			v.RisePrice().Float64(),
 			v.RiseRate(),
-			0,
-			0,
-			0,
+			e.Float,
+			e.Total,
+			e.Turnover(v.Volume * 100),
 		})
 	}
 
-	return nil
+	buf, err := csv.Export(xx)
+	if err != nil {
+		return err
+	}
+
+	return oss.New(filename, buf)
 }

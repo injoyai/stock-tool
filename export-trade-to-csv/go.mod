@@ -6,7 +6,7 @@ require (
 	github.com/injoyai/bar v0.0.8
 	github.com/injoyai/goutil v1.2.26
 	github.com/injoyai/logs v1.0.12
-	github.com/injoyai/tdx v0.0.64
+	github.com/injoyai/tdx v0.0.65
 )
 
 require (
@@ -30,7 +30,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
-	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
