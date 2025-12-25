@@ -29,15 +29,15 @@ var (
 	spec        = cfg.GetString("spec", "0 15 15 * * *")
 	databaseDir = cfg.GetString("database_dir", "./data/database/kline")
 	exportDir   = cfg.GetString("export_dir", "./data/export")
-	uploadDir   = cfg.GetString("upload_dir", "./data/分钟K线-ETF")
+	uploadDir   = cfg.GetString("upload_dir", "./data/upload")
 	codes       = cfg.GetStrings("codes")
 	startup     = cfg.GetBool("startup")
 )
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v1.0")
-	logs.Info("详情:", "初版")
+	logs.Info("版本:", "v1.1")
+	logs.Info("详情:", "修复bug")
 	fmt.Println("=====================================================")
 	logs.Info("立即执行:", startup)
 	logs.Info("代码地址:", address)
