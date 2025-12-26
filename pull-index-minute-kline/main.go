@@ -21,9 +21,9 @@ import (
 )
 
 var (
-	DatabaseDir = "./data/database/kline"
-	ExportDir   = "./data/export"
-	UploadDir   = "./data/upload"
+	DatabaseDir = cfg.GetString("database_dir", "./data/database/kline")
+	ExportDir   = cfg.GetString("export_dir", "./data/export")
+	UploadDir   = cfg.GetString("upload_dir", "./data/upload")
 	Codes       = cfg.GetStrings("codes")
 	Startup     = cfg.GetBool("startup", false)
 	Clients     = cfg.GetInt("clients", 3)
@@ -34,7 +34,7 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v1.3")
+	logs.Info("版本:", "v1.3.3")
 	logs.Info("详情:", "升级版本,优化版")
 }
 
@@ -128,6 +128,7 @@ func Export(codes []string) {
 			filepath.Join(ExportDir, year, v+".zip"),
 		)
 		logs.PrintErr(err)
+		<-time.After(time.Millisecond * 500)
 		err = os.Rename(
 			filepath.Join(ExportDir, year, v+".zip"),
 			filepath.Join(UploadDir, year, v+".zip"),
