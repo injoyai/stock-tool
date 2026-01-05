@@ -11,6 +11,7 @@ github.com/injoyai/conv v1.2.5 h1:G4OCyF0NTZul5W1u9IgXDOhW4/zmIigdPKXFHQGmv1M=
 github.com/injoyai/conv v1.2.5/go.mod h1:s05l3fQJQ4mT4VX+KIdbvCWQB0YzZHprmUfUu2uxd1k=
 github.com/injoyai/goutil v1.2.21 h1:B1jVydak5K+woEcYUZU5vA45liBHKmoTmTeJ4f5eVhY=
 github.com/injoyai/goutil v1.2.21/go.mod h1:eMeAdYrmUIADo72kaAvyRbnTeMLJa8/keqRjqY77PPU=
+github.com/injoyai/goutil v1.2.26/go.mod h1:ODyZ+6DTEsAacnrMqK50hZzHbI5sLXu37SnCfLWigPg=
 github.com/injoyai/logs v1.0.12 h1:f7syIGZMTg9ZzhJhdd3tzaPdxkMhdKsncGaxljqIiYE=
 github.com/injoyai/logs v1.0.12/go.mod h1:+dKEL6GvaFqqVRatqUBiCicJbZnAgtj7hVs824Src4s=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=

@@ -1,9 +1,9 @@
 module merge-csv
 
-go 1.20
+go 1.23
 
 require (
-	github.com/injoyai/goutil v1.2.21
+	github.com/injoyai/goutil v1.2.26
 	github.com/injoyai/logs v1.0.12
 )
 

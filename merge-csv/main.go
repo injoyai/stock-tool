@@ -1,14 +1,15 @@
 package main
 
 import (
-	"github.com/injoyai/goutil/g"
-	"github.com/injoyai/goutil/oss"
-	"github.com/injoyai/goutil/other/csv"
-	"github.com/injoyai/logs"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/injoyai/goutil/g"
+	"github.com/injoyai/goutil/oss"
+	"github.com/injoyai/goutil/other/csv"
+	"github.com/injoyai/logs"
 )
 
 func init() {
@@ -19,17 +20,17 @@ func main() {
 
 	defer func() { g.Input("按回车键退出...") }()
 
-	dir1 := "./2000-2024"
-	dir2 := "./2025"
-	dir3 := "./2000-2025"
+	dirHistory := "./历史"
+	dirThisyear := "./当年"
+	dir3 := "./合并"
 
-	if !oss.Exists(dir1) {
-		logs.Err("文件夹2000-2024不存在")
+	if !oss.Exists(dirHistory) {
+		logs.Err("文件夹[历史]不存在")
 		return
 	}
 
-	if !oss.Exists(dir2) {
-		logs.Err("文件夹2025不存在")
+	if !oss.Exists(dirThisyear) {
+		logs.Err("文件夹[当年]不存在")
 		return
 	}
 
@@ -39,11 +40,11 @@ func main() {
 		return
 	}
 
-	oss.RangeFile(dir1, func(info *oss.FileInfo, f *os.File) (bool, error) {
+	oss.RangeFile(dirHistory, func(info *oss.FileInfo, f *os.File) (bool, error) {
 
 		logs.Info(info.Name())
 
-		filename2025 := filepath.Join(dir2, info.Name())
+		filename2025 := filepath.Join(dirThisyear, info.Name())
 
 		output := filepath.Join(dir3, info.Name())
 		ff, err := os.Create(output)
@@ -61,8 +62,7 @@ func main() {
 
 		ff.Write(bs)
 
-		i := 0
-		csv.ImportRange(filename2025, func(line []string) bool {
+		csv.ImportRange(filename2025, func(i int, line []string) bool {
 			if i == 0 {
 				i++
 				return true
