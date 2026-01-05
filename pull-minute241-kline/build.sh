@@ -1,1 +1,1 @@
-GOOS=linux GOARCH=amd64 go build -v -ldflags="-w -s" -o ./pull-minute-kline
+GOOS=linux GOARCH=amd64 go build -v -ldflags="-w -s" -o ./pull-minute241-kline

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/injoyai/bar"
+	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/times"
 	"github.com/injoyai/logs"
@@ -42,10 +43,14 @@ func update(c *tdx.Manage, dir, code, year string) error {
 
 	//读取数据库最后一条数据
 	last := new(protocol.Kline)
-	_, err = db.Desc("Time").Get(last)
+	has, err := db.Desc("Time").Get(last)
 	if err != nil {
 		logs.Err(err)
 		return err
+	}
+
+	if !has {
+		last.Time = time.Date(conv.Int(year), 1, 1, 0, 0, 0, 0, time.Local)
 	}
 
 	//logs.Debug()

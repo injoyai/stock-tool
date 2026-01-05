@@ -14,8 +14,8 @@ ENV TZ=Asia/Shanghai
 RUN apk add --no-cache tzdata
 
 # 添加应用可执行文件，并设置执行权限
-ADD ./pull-minute-kline   $WORKDIR/pull-minute-kline
-RUN chmod +x $WORKDIR/pull-minute-kline
+ADD ./pull-stock-minute-kline   $WORKDIR/pull-stock-minute-kline
+RUN chmod +x $WORKDIR/pull-stock-minute-kline
 
 # 添加I18N多语言文件、静态文件、配置文件、模板文件
 ADD config   $WORKDIR/config
@@ -24,4 +24,4 @@ ADD config   $WORKDIR/config
 #                                   START
 ###############################################################################
 WORKDIR $WORKDIR
-CMD $WORKDIR/pull-minute-kline
+CMD $WORKDIR/pull-stock-minute-kline

@@ -61,18 +61,6 @@ func main() {
 	f := func() {
 
 		year := conv.String(time.Now().Year())
-		year = "2025"
-
-		logs.Info("更新数据...")
-		err = Update(
-			m,
-			m.Codes.GetStockCodes(),
-			year,
-			Coroutines,
-			DatabaseDir,
-		)
-		logs.PrintErr(err)
-		return
 
 		if !m.Workday.TodayIs() {
 			logs.Err("今天不是工作日,跳过任务...")
