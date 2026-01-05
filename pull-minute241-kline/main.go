@@ -95,6 +95,7 @@ func main() {
 
 		logs.Info("导出数据...")
 		err = Export(
+			m.Gbbq,
 			codes,
 			Coroutines,
 			year,

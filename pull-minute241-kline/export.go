@@ -11,10 +11,11 @@ import (
 	"github.com/injoyai/goutil/oss/compress/zip"
 	"github.com/injoyai/goutil/other/csv"
 	"github.com/injoyai/logs"
+	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
 )
 
-func Export(codes []string, goroutines int, year string, databaseDir, exportDir, uploadDir string) error {
+func Export(gb tdx.IGbbq, codes []string, goroutines int, year string, databaseDir, exportDir, uploadDir string) error {
 
 	logs.Debugf("导出年份: %s\n", year)
 
@@ -43,15 +44,15 @@ func Export(codes []string, goroutines int, year string, databaseDir, exportDir,
 				return
 			}
 
-			err = exportYear(ks, exportDir, year, "1分钟", code)
+			err = exportYear(gb, ks, exportDir, year, "1分钟", code)
 			logs.PrintErr(err)
-			err = exportYear(ks.Merge241(5), exportDir, year, "5分钟", code)
+			err = exportYear(gb, ks.Merge241(5), exportDir, year, "5分钟", code)
 			logs.PrintErr(err)
-			err = exportYear(ks.Merge241(15), exportDir, year, "15分钟", code)
+			err = exportYear(gb, ks.Merge241(15), exportDir, year, "15分钟", code)
 			logs.PrintErr(err)
-			err = exportYear(ks.Merge241(30), exportDir, year, "30分钟", code)
+			err = exportYear(gb, ks.Merge241(30), exportDir, year, "30分钟", code)
 			logs.PrintErr(err)
-			err = exportYear(ks.Merge241(60), exportDir, year, "60分钟", code)
+			err = exportYear(gb, ks.Merge241(60), exportDir, year, "60分钟", code)
 			logs.PrintErr(err)
 
 		})
@@ -77,10 +78,10 @@ func Export(codes []string, goroutines int, year string, databaseDir, exportDir,
 	return nil
 }
 
-func exportYear(ks protocol.Klines, dir, year, typeName, code string) error {
+func exportYear(gb tdx.IGbbq, ks protocol.Klines, dir, year, typeName, code string) error {
 	xx := [][]any{Title}
 	for _, v := range ks {
-		xx = append(xx, []any{
+		x := []any{
 			v.Time.Format(time.DateTime),
 			v.Open.Float64(),
 			v.High.Float64(),
@@ -88,7 +89,14 @@ func exportYear(ks protocol.Klines, dir, year, typeName, code string) error {
 			v.Close.Float64(),
 			v.Volume * 100,
 			v.Amount.Float64(),
-		})
+			v.RisePrice().Float64(),
+			v.RiseRate(),
+			gb.GetTurnover(code, v.Time, v.Volume*100),
+		}
+		if eq := gb.GetEquity(code, v.Time); eq != nil {
+			x = append(x, any(eq.Float), eq.Total)
+		}
+		xx = append(xx, x)
 	}
 	buf, err := csv.Export(xx)
 	if err != nil {
