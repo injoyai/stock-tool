@@ -88,7 +88,7 @@ func main() {
 			codes,
 			Coroutines,
 			filepath.Join(ExportDir, "每日数据"),
-			filepath.Join(UploadDir, "每日数据"),
+			filepath.Join(UploadDir, year, "每日数据"),
 		)
 		logs.PrintErr(err)
 
