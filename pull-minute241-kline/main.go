@@ -9,6 +9,7 @@ import (
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/extend"
 	"github.com/robfig/cron/v3"
 )
 
@@ -40,6 +41,7 @@ var (
 	Spec        = cfg.GetString("spec", "0 10 15 * * *")
 	Codes       = cfg.GetStrings("codes")
 	Startup     = cfg.GetBool("startup")
+	Address     = cfg.GetString("address", "http://192.168.1.103:20000")
 )
 
 func init() {
@@ -55,7 +57,14 @@ func init() {
 }
 
 func main() {
-	m, err := tdx.NewManage(tdx.WithClients(Clients))
+	m, err := tdx.NewManage(
+		tdx.WithClients(Clients),
+		tdx.WithGbbq(nil),
+		tdx.WithDialGbbq(func(c *tdx.Client) (tdx.IGbbq, error) {
+			//return tdx.NewGbbq()
+			return extend.DialGbbqHTTP(Address)
+		}),
+	)
 	logs.PanicErr(err)
 
 	f := func() {

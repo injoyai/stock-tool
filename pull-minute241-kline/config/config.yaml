@@ -3,7 +3,7 @@ export: ./data/export
 upload: ./data/upload
 
 # 连接服务器的客户端数量
-clients: 4
+clients: 2
 
 # 释放读取协程数量
 coroutines: 10

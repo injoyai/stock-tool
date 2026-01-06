@@ -113,7 +113,7 @@ func save(gb tdx.IGbbq, code string, ks protocol.Klines, exportDir string) error
 			gb.GetTurnover(code, v.Time, v.Volume*100),
 		}
 		if eq := gb.GetEquity(code, v.Time); eq != nil {
-			x = append(x, any(eq.Float), eq.Total)
+			x = append(x, int64(eq.Float), int64(eq.Total))
 		}
 		data = append(data, x)
 	}

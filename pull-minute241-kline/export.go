@@ -82,6 +82,7 @@ func exportYear(gb tdx.IGbbq, ks protocol.Klines, dir, year, typeName, code stri
 	xx := [][]any{Title}
 	for _, v := range ks {
 		x := []any{
+			code,
 			v.Time.Format(time.DateTime),
 			v.Open.Float64(),
 			v.High.Float64(),
@@ -93,8 +94,9 @@ func exportYear(gb tdx.IGbbq, ks protocol.Klines, dir, year, typeName, code stri
 			v.RiseRate(),
 			gb.GetTurnover(code, v.Time, v.Volume*100),
 		}
+
 		if eq := gb.GetEquity(code, v.Time); eq != nil {
-			x = append(x, any(eq.Float), eq.Total)
+			x = append(x, int64(eq.Float), int64(eq.Total))
 		}
 		xx = append(xx, x)
 	}
