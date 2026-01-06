@@ -68,10 +68,12 @@ func Export(gb tdx.IGbbq, codes []string, goroutines int, year string, databaseD
 	)
 	logs.PrintErr(err)
 
+	<-time.After(time.Millisecond * 100)
+	os.MkdirAll(filepath.Join(uploadDir, year), 0755)
 	logs.Debug("重命名...")
-	os.Rename(
+	err = os.Rename(
 		filepath.Join(exportDir, year+".zip"),
-		filepath.Join(uploadDir, year+".zip"),
+		filepath.Join(uploadDir, year, year+".zip"),
 	)
 	logs.PrintErr(err)
 

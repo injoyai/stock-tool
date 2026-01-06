@@ -87,7 +87,7 @@ func main() {
 			time.Now(),
 			codes,
 			Coroutines,
-			filepath.Join(ExportDir, "day"),
+			filepath.Join(ExportDir, "每日数据"),
 			filepath.Join(UploadDir, "每日数据"),
 		)
 		logs.PrintErr(err)
@@ -109,7 +109,7 @@ func main() {
 			Coroutines,
 			year,
 			DatabaseDir,
-			filepath.Join(ExportDir, "year"),
+			filepath.Join(ExportDir),
 			filepath.Join(UploadDir),
 		)
 		logs.PrintErr(err)
