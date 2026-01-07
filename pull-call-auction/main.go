@@ -44,6 +44,10 @@ func main() {
 
 func update(m *tdx.Manage, codes []string, goroutines int) error {
 
+	defer func() {
+		logs.Info("任务完成...")
+	}()
+
 	year := conv.String(time.Now().Year())
 
 	if len(codes) == 0 {
