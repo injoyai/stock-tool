@@ -1,0 +1,7 @@
+database: "./data/database/auction"
+spec: "20 0 15 * * *"
+goroutines: 10
+startup: true
+
+codes:
+  - sz000001
