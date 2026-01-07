@@ -11,11 +11,12 @@ import (
 	"github.com/injoyai/goutil/other/csv"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/extend"
 	"github.com/injoyai/tdx/protocol"
 )
 
 const (
-	DatabaseDir = "./data/database/kline"
+	DatabaseDir = "./data/database/kline241"
 	ExportDir   = "./data/export/csv"
 	Coroutines  = 10
 )
@@ -67,27 +68,21 @@ func export(gb *tdx.Gbbq, databaseDir, exportDir string) error {
 	kss.Sort()
 
 	data := [][]any{
-		{"代码", "日期", "开盘", "最高", "最低", "收盘", "成交量(股)", "成交额(元)", "涨跌", "涨跌幅(%)", "换手率(%)", "流通股本(股)", "总股本(股)"},
+		extend.DefaultMinuteKlineExportTitle,
 	}
 
-	var last *protocol.Equity
 	for _, v := range kss {
-		eq := gb.GetEquity(code, v.Time)
-		if eq == nil {
-			eq = last
-			if eq == nil {
-				continue
-			}
-		}
-		last = eq
-		data = append(data, []any{
+		x := []any{
 			code, v.Time.Format("2006-01-02 15:04:05"),
 			v.Open.Float64(), v.High.Float64(), v.Low.Float64(), v.Close.Float64(),
 			v.Volume * 100, v.Amount.Float64(),
 			v.RisePrice().Float64(), v.RiseRate(),
 			gb.GetTurnover(code, v.Time, v.Volume*100),
-			int64(eq.Float), int64(eq.Total),
-		})
+		}
+		if eq := gb.GetEquity(code, v.Time); eq != nil {
+			x = append(x, int64(eq.Float), int64(eq.Total))
+		}
+		data = append(data, x)
 	}
 
 	buf, err := csv.Export(data)
