@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/lib/xorms"
+	"github.com/injoyai/tdx/lib/zip"
 	"github.com/injoyai/tdx/protocol"
 	"github.com/robfig/cron/v3"
 	"xorm.io/xorm"
@@ -24,7 +26,8 @@ var (
 	Startup     = cfg.GetBool("startup")
 	Codes       = cfg.GetStrings("codes")
 	DatabaseDir = cfg.GetString("database", "./data/database/auction")
-	ExportDir   = cfg.GetString("export", "./data/export/")
+	ExportDir   = cfg.GetString("export", "./data/output/export/")
+	UploadDir   = cfg.GetString("upload", "./data/output/upload/")
 )
 
 func main() {
@@ -52,6 +55,13 @@ func update(m *tdx.Manage, codes []string, goroutines int) error {
 	}()
 
 	year := conv.String(time.Now().Year())
+	todayNode := tdx.IntegerDay(time.Now())
+
+	exportDir := filepath.Join(ExportDir, year, todayNode.Format(time.DateOnly))
+	uploadFilename := filepath.Join(UploadDir, year, todayNode.Format(time.DateOnly)+".zip")
+
+	os.MkdirAll(exportDir, 0755)
+	os.MkdirAll(filepath.Join(UploadDir, year), 0755)
 
 	if len(codes) == 0 {
 		codes = m.Codes.GetStockCodes()
@@ -65,7 +75,7 @@ func update(m *tdx.Manage, codes []string, goroutines int) error {
 		b.Go(func() {
 			err := g.Retry(func() error {
 				return m.Do(func(c *tdx.Client) error {
-					return pull(c, DatabaseDir, year, code, ExportDir)
+					return pull(c, todayNode, DatabaseDir, year, code, exportDir)
 				})
 			}, tdx.DefaultRetry)
 			if err != nil {
@@ -77,12 +87,21 @@ func update(m *tdx.Manage, codes []string, goroutines int) error {
 
 	b.Wait()
 
-	return nil
+	zip.Encode(
+		exportDir,
+		exportDir+".zip",
+	)
+
+	<-time.After(time.Millisecond * 200)
+
+	return os.Rename(
+		exportDir+".zip",
+		uploadFilename,
+	)
+
 }
 
-func pull(c *tdx.Client, dir, year, code string, exportDir string) error {
-
-	todayNode := tdx.IntegerDay(time.Now())
+func pull(c *tdx.Client, todayNode time.Time, dir, year, code string, exportDir string) error {
 
 	//只能盘后更新
 	if time.Now().Before(todayNode.Add(time.Minute * 60 * 15)) {
@@ -104,7 +123,7 @@ func pull(c *tdx.Client, dir, year, code string, exportDir string) error {
 	}
 
 	if len(data) > 0 && data[0].Time.After(todayNode) {
-		return export(data, todayNode, exportDir, code)
+		return export(data, exportDir, code)
 	}
 
 	resp, err := c.GetCallAuction(code)
@@ -124,11 +143,11 @@ func pull(c *tdx.Client, dir, year, code string, exportDir string) error {
 		return err
 	}
 
-	return export(resp.List, todayNode, exportDir, code)
+	return export(resp.List, exportDir, code)
 }
 
-func export(ls []*protocol.CallAuction, todayNode time.Time, exportDir string, code string) error {
-	exportFilename := filepath.Join(exportDir, conv.String(todayNode.Year()), todayNode.Format(time.DateOnly), code+".csv")
+func export(ls []*protocol.CallAuction, exportDir string, code string) error {
+	exportFilename := filepath.Join(exportDir, code+".csv")
 	data := [][]any{
 		{"时间", "价格", "匹配量(股)", "未匹配量(股)", "未匹配量类型(1买单,-1卖单)"},
 	}
