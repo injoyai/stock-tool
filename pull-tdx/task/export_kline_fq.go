@@ -2,10 +2,11 @@ package task
 
 import (
 	"context"
-	"github.com/injoyai/goutil/oss/compress/zip"
-	"github.com/injoyai/tdx"
 	"os"
 	"path/filepath"
+
+	"github.com/injoyai/goutil/oss/compress/zip"
+	"github.com/injoyai/tdx"
 )
 
 func NewExportKlineFQ(exportDir, compressDir, uploadDir string) *ExportKlineFQ {
@@ -30,7 +31,7 @@ func (this *ExportKlineFQ) Run(ctx context.Context, m *tdx.Manage) error {
 	r := &Range[string]{
 		Codes:   []string{"日线_前复权", "日线_后复权"},
 		Limit:   2,
-		Retry:   DefaultRetry,
+		Retry:   tdx.DefaultRetry,
 		Handler: this,
 	}
 	return r.Run(ctx, m)

@@ -3,15 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/injoyai/conv/cfg"
-	"github.com/injoyai/logs"
-	"github.com/injoyai/tdx"
-	"github.com/robfig/cron/v3"
 	"log"
 	"path/filepath"
 	"pull-tdx/task"
 	"runtime"
 	"time"
+
+	"github.com/injoyai/conv/cfg"
+	"github.com/injoyai/logs"
+	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/extend"
+	"github.com/robfig/cron/v3"
 )
 
 const (
@@ -26,12 +28,12 @@ var (
 	dirUpload   = filepath.Join(dirBase, cfg.GetString("dir.upload", "upload"))
 	clients     = cfg.GetInt("clients", 10)
 	sendKey     = cfg.GetString("notice.serverChan.sendKey")
-	config      = &tdx.ManageConfig{Number: clients}
-	disks       = cfg.GetInt("disks", 150)
-	spec        = cfg.GetString("spec", "0 1 15 * * *")
-	specFQ      = cfg.GetString("specFQ", "0 0 6 * * *")
-	codes       = cfg.GetStrings("codes")
-	startup     = cfg.GetBool("startup")
+	//config      = &tdx.ManageConfig{Number: clients}
+	disks   = cfg.GetInt("disks", 150)
+	spec    = cfg.GetString("spec", "0 1 15 * * *")
+	specFQ  = cfg.GetString("specFQ", "0 0 6 * * *")
+	codes   = cfg.GetStrings("codes")
+	startup = cfg.GetBool("startup")
 )
 
 var (
@@ -90,7 +92,13 @@ func init() {
 func main() {
 
 	//1. 连接服务器
-	m, err := tdx.NewManage(config, tdx.WithRedial())
+	m, err := tdx.NewManage(
+		tdx.WithClients(clients),
+		tdx.WithGbbq(nil),
+		tdx.WithDialGbbq(func(c *tdx.Client) (tdx.IGbbq, error) {
+			return extend.DialGbbqHTTP("")
+		}),
+	)
 	logs.PanicErr(err)
 
 	/*
