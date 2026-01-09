@@ -45,7 +45,7 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.3.0")
+	logs.Info("版本:", "v0.4.0")
 	logs.Info("说明:", "241条数据版本")
 	logs.Info("任务规则:", Spec)
 	logs.Info("立马执行:", Startup)
