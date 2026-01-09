@@ -2,12 +2,13 @@ package task
 
 import (
 	"context"
-	"github.com/injoyai/tdx"
-	"github.com/injoyai/tdx/protocol"
 	"path/filepath"
 	"pull-tdx/db"
 	"pull-tdx/model"
 	"time"
+
+	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/protocol"
 	"xorm.io/xorm"
 )
 
@@ -62,7 +63,7 @@ func (this *PullKline) Run(ctx context.Context, m *tdx.Manage) error {
 	r := &Range[string]{
 		Codes:   GetCodes(m, this.Codes),
 		Limit:   this.limit,
-		Retry:   DefaultRetry,
+		Retry:   tdx.DefaultRetry,
 		Handler: this,
 	}
 	return r.Run(ctx, m)

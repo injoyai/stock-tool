@@ -1,12 +1,13 @@
 package task
 
 import (
+	"pull-tdx/model"
+	"time"
+
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
-	"pull-tdx/model"
-	"time"
 )
 
 var (
@@ -66,11 +67,7 @@ func klineToCsv(code string, ks []*protocol.Kline, filename string, getName func
 
 func GetCodes(m *tdx.Manage, codes []string) []string {
 	if len(codes) == 0 {
-		return m.Codes.GetStocks()
+		return m.Codes.GetStockCodes()
 	}
 	return codes
 }
-
-const (
-	DefaultRetry = 3
-)
