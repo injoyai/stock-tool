@@ -2,10 +2,11 @@ package task
 
 import (
 	"context"
-	"github.com/injoyai/tdx"
 	"path/filepath"
 	"pull-tdx/db"
 	"pull-tdx/model"
+
+	"github.com/injoyai/tdx"
 )
 
 func NewExportKline(codes []string, databaseDir, csvDir string, disks int, tables map[string]string) *ExportKline {
@@ -34,7 +35,7 @@ func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
 	r := &Range[string]{
 		Codes:   GetCodes(m, this.Codes),
 		Limit:   this.Limit,
-		Retry:   3,
+		Retry:   tdx.DefaultRetry,
 		Handler: this,
 	}
 	return r.Run(ctx, m)
@@ -50,6 +51,13 @@ func (this *ExportKline) Handler(ctx context.Context, m *tdx.Manage, code string
 			if err != nil {
 				return err
 			}
+
+			switch table {
+			case "DayKline":
+
+			default:
+			}
+
 			//生成csv文件
 			if err := klineToCsv2(code, all, filepath.Join(this.CsvDir, tableName, code+".csv"), m.Codes.GetName); err != nil {
 				return err

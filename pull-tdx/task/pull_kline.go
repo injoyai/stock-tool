@@ -20,7 +20,7 @@ var (
 		//"Minute5Kline":  "5分线",
 		//"Minute15Kline": "15分线",
 		//"Minute30Kline": "30分线",
-		"HourKline":    "时线",
+		//"HourKline":    "时线",
 		"DayKline":     "日线",
 		"WeekKline":    "周线",
 		"MonthKline":   "月线",
