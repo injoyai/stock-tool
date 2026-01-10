@@ -37,7 +37,8 @@ func (this *PullKlineDay) Run(ctx context.Context, m *tdx.Manage) error {
 }
 
 func (this *PullKlineDay) pullDayKline(ctx context.Context, m *tdx.Manage) error {
-	codes := m.Codes.GetStocks()
+	codes := m.Codes.GetStockCodes()
+	codes = append(codes, m.Codes.GetETFCodes()...)
 	b := bar.New(int64(len(codes)))
 	b.AddOption(func(f *bar.Format) {
 		f.Entity.SetFormatter(func(e *bar.Format) string {
@@ -58,7 +59,7 @@ func (this *PullKlineDay) pullDayKline(ctx context.Context, m *tdx.Manage) error
 		{"代码", "名称", "日期", "昨收", "开盘", "最高", "最低", "收盘", "成交量(股)", "成交额(元)", "涨跌(元)", "涨跌幅(%)", "换手率(%)", "流通股本(股)", "总股本(股)", "分红(元/股)", "配股价", "送转股", "配股"},
 		//{"序号", "代码", "名称", "日期", "昨收", "开盘", "收盘", "最高", "最低", "成交量", "成交额", "振幅", "涨跌幅"},
 	}
-	for i, code := range m.Codes.GetStockCodes() {
+	for i, code := range codes {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

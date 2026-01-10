@@ -1,13 +1,14 @@
 # 是否启动立马执行
 startup: true
 # 连接服务器客户端数量
-clients: 10
+clients: 5
 # 本地操作磁盘数量
-disks: 100
+goroutines: 50
 # 自定义操作代码(空表示全部)
-#codes:
-#   - sz000001
-#   - sh600000
+codes:
+   - sz000001
+   - sh600000
+   - bj920000
 
 # 自定义指数代码
 # index:
