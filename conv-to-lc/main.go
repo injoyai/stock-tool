@@ -164,7 +164,7 @@ func convLc(inputFile, outputFile string, start, end time.Time) error {
 			continue
 		}
 
-		t, err := time.Parse("2006-01-02 15:04", row[0]+" "+row[1])
+		t, err := time.Parse(time.DateTime, row[0])
 		if err != nil {
 			return err
 		}
@@ -178,32 +178,32 @@ func convLc(inputFile, outputFile string, start, end time.Time) error {
 			return err
 		}
 
-		_, err = out.Write(floatToBytes(conv.Float32(row[2]))) //4字节,开盘
+		_, err = out.Write(floatToBytes(conv.Float32(row[1]))) //4字节,开盘
 		if err != nil {
 			return err
 		}
 
-		_, err = out.Write(floatToBytes(conv.Float32(row[3]))) //4字节,最高
+		_, err = out.Write(floatToBytes(conv.Float32(row[2]))) //4字节,最高
 		if err != nil {
 			return err
 		}
 
-		_, err = out.Write(floatToBytes(conv.Float32(row[4]))) //4字节,最低
+		_, err = out.Write(floatToBytes(conv.Float32(row[3]))) //4字节,最低
 		if err != nil {
 			return err
 		}
 
-		_, err = out.Write(floatToBytes(conv.Float32(row[5]))) //4字节,收盘
+		_, err = out.Write(floatToBytes(conv.Float32(row[4]))) //4字节,收盘
 		if err != nil {
 			return err
 		}
 
-		_, err = out.Write(floatToBytes(conv.Float32(row[7]))) //4字节,成交额,股
+		_, err = out.Write(floatToBytes(conv.Float32(row[6]))) //4字节,成交额,元
 		if err != nil {
 			return err
 		}
 
-		_, err = out.Write(intToBytes(conv.Int32(row[6]) * 100)) //4字节,成交量,元
+		_, err = out.Write(intToBytes(conv.Int32(row[5]))) //4字节,成交量,股
 		if err != nil {
 			return err
 		}
@@ -229,127 +229,127 @@ func convLc(inputFile, outputFile string, start, end time.Time) error {
 
  */
 
-func convIndex(inputDir, outputDir, suffix string, start, end time.Time) error {
-	os.MkdirAll(outputDir, 0666)
-
-	ls, err := os.ReadDir(inputDir)
-	if err != nil {
-		return err
-	}
-
-	b := bar.New(
-		bar.WithTotal(int64(len(ls))),
-		bar.WithPrefix("[shxxxxxx]"),
-		bar.WithFormat(
-			bar.WithPlan(),
-			bar.WithRateSize(),
-			bar.WithSpeed(),
-			bar.WithRemain(),
-		),
-		bar.WithFlush(),
-	)
-
-	defer b.Close()
-	return oss.RangeFileInfo(
-		inputDir,
-		func(info *oss.FileInfo) (bool, error) {
-			defer func() {
-				b.Add(1)
-				b.Flush()
-			}()
-			if info.IsDir() || !strings.HasSuffix(info.Name(), ".csv") {
-				return true, nil
-			}
-			name := strings.Split(info.Name(), ".")[0]
-			b.SetPrefix("[" + name + "]")
-			b.Flush()
-			err = convLcIndex(info.FullName(), filepath.Join(outputDir, name+suffix), start, end)
-			if err != nil {
-				b.Logf("[错误] %s %v", info.Name(), err)
-			}
-			return true, err
-		},
-	)
-}
-
-func convLcIndex(inputFile, outputFile string, start, end time.Time) error {
-
-	// 打开 CSV
-	f, err := os.Open(inputFile)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	r := csv.NewReader(f)
-	rows, err := r.ReadAll()
-	if err != nil {
-		return err
-	}
-
-	out, err := os.Create(outputFile)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	//按年分
-	for i, row := range rows {
-		// 跳过表头，从第 2 行开始
-		if i == 0 {
-			continue
-		}
-
-		t, err := time.Parse("2006-01-02 15:04", row[0]+" "+row[1])
-		if err != nil {
-			return err
-		}
-
-		if t.Before(start) || t.After(end) {
-			continue
-		}
-
-		_, err = out.Write(timeToBytes(t)) //4字节,时间
-		if err != nil {
-			return err
-		}
-
-		_, err = out.Write(floatToBytes(conv.Float32(row[2]))) //4字节,开盘
-		if err != nil {
-			return err
-		}
-
-		_, err = out.Write(floatToBytes(conv.Float32(row[3]))) //4字节,最高
-		if err != nil {
-			return err
-		}
-
-		_, err = out.Write(floatToBytes(conv.Float32(row[4]))) //4字节,最低
-		if err != nil {
-			return err
-		}
-
-		_, err = out.Write(floatToBytes(conv.Float32(row[5]))) //4字节,收盘
-		if err != nil {
-			return err
-		}
-
-		_, err = out.Write(floatToBytes(conv.Float32(row[7]))) //4字节,成交额,股
-		if err != nil {
-			return err
-		}
-
-		_, err = out.Write(intToBytes(conv.Int32(row[7]) * 100)) //4字节,成交量,元
-		if err != nil {
-			return err
-		}
-
-		_, err = out.Write([]byte{0, 0, 0, 0}) //4字节,预留
-		if err != nil {
-			return err
-		}
-
-	}
-
-	return nil
-}
+//func convIndex(inputDir, outputDir, suffix string, start, end time.Time) error {
+//	os.MkdirAll(outputDir, 0666)
+//
+//	ls, err := os.ReadDir(inputDir)
+//	if err != nil {
+//		return err
+//	}
+//
+//	b := bar.New(
+//		bar.WithTotal(int64(len(ls))),
+//		bar.WithPrefix("[shxxxxxx]"),
+//		bar.WithFormat(
+//			bar.WithPlan(),
+//			bar.WithRateSize(),
+//			bar.WithSpeed(),
+//			bar.WithRemain(),
+//		),
+//		bar.WithFlush(),
+//	)
+//
+//	defer b.Close()
+//	return oss.RangeFileInfo(
+//		inputDir,
+//		func(info *oss.FileInfo) (bool, error) {
+//			defer func() {
+//				b.Add(1)
+//				b.Flush()
+//			}()
+//			if info.IsDir() || !strings.HasSuffix(info.Name(), ".csv") {
+//				return true, nil
+//			}
+//			name := strings.Split(info.Name(), ".")[0]
+//			b.SetPrefix("[" + name + "]")
+//			b.Flush()
+//			err = convLcIndex(info.FullName(), filepath.Join(outputDir, name+suffix), start, end)
+//			if err != nil {
+//				b.Logf("[错误] %s %v", info.Name(), err)
+//			}
+//			return true, err
+//		},
+//	)
+//}
+//
+//func convLcIndex(inputFile, outputFile string, start, end time.Time) error {
+//
+//	// 打开 CSV
+//	f, err := os.Open(inputFile)
+//	if err != nil {
+//		return err
+//	}
+//	defer f.Close()
+//
+//	r := csv.NewReader(f)
+//	rows, err := r.ReadAll()
+//	if err != nil {
+//		return err
+//	}
+//
+//	out, err := os.Create(outputFile)
+//	if err != nil {
+//		return err
+//	}
+//	defer out.Close()
+//
+//	//按年分
+//	for i, row := range rows {
+//		// 跳过表头，从第 2 行开始
+//		if i == 0 {
+//			continue
+//		}
+//
+//		t, err := time.Parse("2006-01-02 15:04", row[0]+" "+row[1])
+//		if err != nil {
+//			return err
+//		}
+//
+//		if t.Before(start) || t.After(end) {
+//			continue
+//		}
+//
+//		_, err = out.Write(timeToBytes(t)) //4字节,时间
+//		if err != nil {
+//			return err
+//		}
+//
+//		_, err = out.Write(floatToBytes(conv.Float32(row[2]))) //4字节,开盘
+//		if err != nil {
+//			return err
+//		}
+//
+//		_, err = out.Write(floatToBytes(conv.Float32(row[3]))) //4字节,最高
+//		if err != nil {
+//			return err
+//		}
+//
+//		_, err = out.Write(floatToBytes(conv.Float32(row[4]))) //4字节,最低
+//		if err != nil {
+//			return err
+//		}
+//
+//		_, err = out.Write(floatToBytes(conv.Float32(row[5]))) //4字节,收盘
+//		if err != nil {
+//			return err
+//		}
+//
+//		_, err = out.Write(floatToBytes(conv.Float32(row[7]))) //4字节,成交额,股
+//		if err != nil {
+//			return err
+//		}
+//
+//		_, err = out.Write(intToBytes(conv.Int32(row[7]) * 100)) //4字节,成交量,元
+//		if err != nil {
+//			return err
+//		}
+//
+//		_, err = out.Write([]byte{0, 0, 0, 0}) //4字节,预留
+//		if err != nil {
+//			return err
+//		}
+//
+//	}
+//
+//	return nil
+//}
