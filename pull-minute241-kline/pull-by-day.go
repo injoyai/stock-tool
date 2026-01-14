@@ -100,7 +100,6 @@ func save(gb tdx.IGbbq, code string, ks protocol.Klines, exportDir string) error
 	data := [][]any{Title}
 	for _, v := range ks {
 		x := []any{
-			code,
 			v.Time.Format(time.DateTime),
 			v.Open.Float64(),
 			v.High.Float64(),

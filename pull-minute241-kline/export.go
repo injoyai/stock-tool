@@ -84,7 +84,6 @@ func exportYear(gb tdx.IGbbq, ks protocol.Klines, dir, year, typeName, code stri
 	xx := [][]any{Title}
 	for _, v := range ks {
 		x := []any{
-			code,
 			v.Time.Format(time.DateTime),
 			v.Open.Float64(),
 			v.High.Float64(),

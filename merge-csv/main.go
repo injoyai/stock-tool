@@ -20,17 +20,17 @@ func main() {
 
 	defer func() { g.Input("按回车键退出...") }()
 
-	dirHistory := "./历史"
-	dirThisyear := "./当年"
-	dir3 := "./合并"
+	dirHistory := "./2000-2025"
+	dirThisyear := "./2026"
+	dir3 := "./2000-2026"
 
 	if !oss.Exists(dirHistory) {
-		logs.Err("文件夹[历史]不存在")
+		logs.Err("文件夹[2000-2025]不存在")
 		return
 	}
 
 	if !oss.Exists(dirThisyear) {
-		logs.Err("文件夹[当年]不存在")
+		logs.Err("文件夹[2026]不存在")
 		return
 	}
 

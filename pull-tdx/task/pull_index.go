@@ -3,10 +3,11 @@ package task
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
-	"path/filepath"
 )
 
 func NewPullIndex(dir string, codes map[string]string) *PullIndex {

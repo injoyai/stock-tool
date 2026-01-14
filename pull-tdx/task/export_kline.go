@@ -7,6 +7,7 @@ import (
 	"pull-tdx/model"
 
 	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/protocol"
 )
 
 func NewExportKline(codes []string, databaseDir, csvDir string, disks int, tables map[string]string) *ExportKline {
@@ -34,6 +35,7 @@ func (this *ExportKline) Name() string {
 func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
 	r := &Range[string]{
 		Codes:   GetCodes(m, this.Codes),
+		Append:  m.Codes.GetETFCodes(),
 		Limit:   this.Limit,
 		Retry:   tdx.DefaultRetry,
 		Handler: this,
@@ -52,16 +54,19 @@ func (this *ExportKline) Handler(ctx context.Context, m *tdx.Manage, code string
 				return err
 			}
 
-			switch table {
-			case "DayKline":
-
+			switch {
+			case table == "DayKline" && protocol.IsStock(code):
+				//生成csv文件
+				if err := dayKlineToCsv(m.Gbbq, code, all, filepath.Join(this.CsvDir, tableName, code+".csv"), m.Codes.GetName); err != nil {
+					return err
+				}
 			default:
+				//生成csv文件
+				if err := klineToCsv2(code, all, filepath.Join(this.CsvDir, tableName, code+".csv"), m.Codes.GetName); err != nil {
+					return err
+				}
 			}
 
-			//生成csv文件
-			if err := klineToCsv2(code, all, filepath.Join(this.CsvDir, tableName, code+".csv"), m.Codes.GetName); err != nil {
-				return err
-			}
 		}
 		return nil
 	})

@@ -2,9 +2,9 @@ package task
 
 import (
 	"context"
+
 	"github.com/injoyai/bar"
 	"github.com/injoyai/tdx"
-	"time"
 )
 
 type Range[T any] struct {
@@ -25,17 +25,7 @@ func (this *Range[T]) Run(ctx context.Context, m *tdx.Manage) error {
 		this.Limit = 1
 	}
 
-	b := bar.NewCoroutine(
-		len(codes), this.Limit,
-		bar.WithFormat(
-			bar.WithText(time.Now().Format(time.TimeOnly)),
-			bar.WithPlan(),
-			bar.WithRateSize(),
-			bar.WithSpeed(),
-			bar.WithRemain(),
-		),
-		bar.WithFlush(),
-	)
+	b := bar.NewCoroutine(len(codes), this.Limit)
 
 	for i := range codes {
 		select {

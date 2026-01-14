@@ -16,11 +16,6 @@ var (
 	// ExchangeEstablish 交易所成立时间
 	ExchangeEstablish = time.Date(1990, 12, 19, 0, 0, 0, 0, time.Local)
 	AllTables         = map[string]string{
-		//"MinuteKline":   "1分线",
-		//"Minute5Kline":  "5分线",
-		//"Minute15Kline": "15分线",
-		//"Minute30Kline": "30分线",
-		//"HourKline":    "时线",
 		"DayKline":     "日线",
 		"WeekKline":    "周线",
 		"MonthKline":   "月线",
@@ -28,11 +23,6 @@ var (
 		"YearKline":    "年线",
 	}
 	PullKlineTables = []*model.KlineTable{
-		//model.NewKlineTable("MinuteKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineMinuteUntil }),
-		//model.NewKlineTable("Minute5Kline", func(c *tdx.Client) model.KlineHandler { return c.GetKline5MinuteUntil }),
-		//model.NewKlineTable("Minute15Kline", func(c *tdx.Client) model.KlineHandler { return c.GetKline15MinuteUntil }),
-		//model.NewKlineTable("Minute30Kline", func(c *tdx.Client) model.KlineHandler { return c.GetKline30MinuteUntil }),
-		model.NewKlineTable("HourKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineHourUntil }),
 		model.NewKlineTable("DayKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineDayUntil }),
 		model.NewKlineTable("WeekKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineWeekUntil }),
 		model.NewKlineTable("MonthKline", func(c *tdx.Client) model.KlineHandler { return c.GetKlineMonthUntil }),
@@ -62,6 +52,7 @@ func (this *PullKline) Name() string {
 func (this *PullKline) Run(ctx context.Context, m *tdx.Manage) error {
 	r := &Range[string]{
 		Codes:   GetCodes(m, this.Codes),
+		Append:  m.Codes.GetETFCodes(),
 		Limit:   this.limit,
 		Retry:   tdx.DefaultRetry,
 		Handler: this,

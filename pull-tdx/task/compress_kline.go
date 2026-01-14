@@ -2,10 +2,11 @@ package task
 
 import (
 	"context"
-	"github.com/injoyai/goutil/oss/compress/zip"
-	"github.com/injoyai/tdx"
 	"os"
 	"path/filepath"
+
+	"github.com/injoyai/goutil/oss/compress/zip"
+	"github.com/injoyai/tdx"
 )
 
 func NewCompressKline(csvDir, uploadDir string, tables map[string]string) *CompressKline {
