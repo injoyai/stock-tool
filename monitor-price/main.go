@@ -5,6 +5,9 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/notice"
 	"github.com/injoyai/goutil/oss"
@@ -13,16 +16,16 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/lorca"
 	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/lib/xorms"
 	"github.com/injoyai/tdx/protocol"
-	"os"
-	"time"
 )
 
 //go:embed index.html
 var index string
 
 var (
-	filename = oss.UserInjoyDir("/monitor-price/config/config.json")
+	filename   = oss.UserInjoyDir("/monitor-price/config/config.json")
+	dbFilename = oss.UserInjoyDir("/monitor-price/codes.db")
 )
 
 func init() {
@@ -43,7 +46,12 @@ func main() {
 					}
 					logs.Err(err)
 				}
-				codes, _ := tdx.NewCodes(mon.Client, oss.UserInjoyDir("/monitor-price/codes.db"))
+				codes, _ := tdx.NewCodes(
+					tdx.WithCodesClient(mon.Client),
+					tdx.WithCodesDialDB(func() (*xorms.Engine, error) {
+						return xorms.NewSqlite(dbFilename)
+					}),
+				)
 				mon.getName = func(code string) string {
 					if codes == nil {
 						return code
@@ -69,8 +77,8 @@ func main() {
 
 func gui(mon *monitor) {
 	lorca.Run(&lorca.Config{
-		Width:  900,
-		Height: 640,
+		Width:  800,
+		Height: 620,
 		Index:  index,
 	}, func(app lorca.APP) error {
 
@@ -94,7 +102,7 @@ func gui(mon *monitor) {
 }
 
 type monitor struct {
-	*tdx.Client
+	Client   *tdx.Client
 	interval time.Duration
 	codes    map[string]Config
 	getName  func(code string) string
