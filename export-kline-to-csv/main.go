@@ -77,6 +77,48 @@ func export(gb *tdx.Gbbq, databaseDir, exportDir string) error {
 	}
 	kss.Sort()
 
+	err = toCsv(gb, kss, filepath.Join(exportDir, "1分钟"), code)
+	if err != nil {
+		return err
+	}
+
+	err = toCsv(gb, kss.Merge241(5), filepath.Join(exportDir, "5分钟"), code)
+	if err != nil {
+		return err
+	}
+
+	err = toCsv(gb, kss.Merge241(15), filepath.Join(exportDir, "15分钟"), code)
+	if err != nil {
+		return err
+	}
+
+	err = toCsv(gb, kss.Merge241(30), filepath.Join(exportDir, "30分钟"), code)
+	if err != nil {
+		return err
+	}
+
+	err = toCsv(gb, kss.Merge241(60), filepath.Join(exportDir, "60分钟"), code)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func loading(filename string) (protocol.Klines, error) {
+	db, err := sqlite.NewXorm(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	ks := protocol.Klines{}
+	err = db.Find(&ks)
+	return ks, err
+}
+
+func toCsv(gb *tdx.Gbbq, kss protocol.Klines, exportDir, code string) error {
+	kss.Sort()
+
 	data := [][]any{Table}
 
 	for _, v := range kss {
@@ -100,15 +142,4 @@ func export(gb *tdx.Gbbq, databaseDir, exportDir string) error {
 
 	filename := filepath.Join(exportDir, code+".csv")
 	return oss.New(filename, buf)
-}
-
-func loading(filename string) (protocol.Klines, error) {
-	db, err := sqlite.NewXorm(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-	ks := protocol.Klines{}
-	err = db.Find(&ks)
-	return ks, err
 }
