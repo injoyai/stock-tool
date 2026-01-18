@@ -16,7 +16,8 @@ import (
 var (
 	TradeDir  = cfg.GetString("database_dir", "./data/database/trade")
 	KlineDir  = cfg.GetString("export_dir", "./data/database/kline")
-	Coroutine = cfg.GetInt("coroutine", 10)
+	Coroutine = cfg.GetInt("coroutine", 30)
+	After     = cfg.GetString("after", "")
 )
 
 func main() {
@@ -30,6 +31,11 @@ func main() {
 		e := es[i]
 
 		b.Go(func() {
+
+			if e.Name() < After {
+				return
+			}
+
 			if !e.IsDir() {
 				return
 			}
