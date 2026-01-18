@@ -39,7 +39,7 @@ func (this *PullKlineFQ) Run(ctx context.Context, m *tdx.Manage) error {
 	t := &Range[string]{
 		Codes:   GetCodes(m, this.Codes),
 		Limit:   1,
-		Retry:   DefaultRetry,
+		Retry:   tdx.DefaultRetry,
 		Handler: this,
 	}
 	return t.Run(ctx, m)

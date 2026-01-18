@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选股策略结果</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 95%; /* 增加容器宽度 */
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 10px;
+            color: #666;
+        }
+        .count-badge {
+            background-color: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        #chartsContainer {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 两列布局 */
+            gap: 20px; /* 卡片之间的间距 */
+        }
+        .stock-card {
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            background-color: #fafafa;
+            /* margin-bottom 移除了，因为用了 grid gap */
+        }
+        .stock-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .chart {
+            width: 100%;
+            height: 400px; /* 增加图表高度，让其更宽敞 */
+        }
+        /* 移动端适配：小屏幕还是单列显示 */
+        @media (max-width: 768px) {
+            #chartsContainer {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <!-- 使用 ECharts CDN 用于画K线图 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>选股策略结果</h1>
+        
+        <div class="controls">
+            <button id="scanBtn" onclick="runStrategy()">开始筛选并显示K线图</button>
+            <div id="status">点击按钮开始筛选股票并渲染K线图...</div>
+        </div>
+
+        <div id="resultArea" style="display: none;">
+            <h3>筛选结果 <span id="resultCount" class="count-badge">0</span></h3>
+            <div id="chartsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        async function runStrategy() {
+            const btn = document.getElementById('scanBtn');
+            const status = document.getElementById('status');
+            const resultArea = document.getElementById('resultArea');
+            const chartsContainer = document.getElementById('chartsContainer');
+            
+            btn.disabled = true;
+            status.textContent = "正在筛选并生成K线图，可能需要几秒钟，请稍候...";
+            chartsContainer.innerHTML = '';
+            resultArea.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/select');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                
+                status.textContent = `筛选完成，共找到 ${data.length} 只股票，已生成对应K线图`;
+                document.getElementById('resultCount').textContent = data.length;
+                
+                data.forEach((item, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'stock-card';
+
+                    const title = document.createElement('div');
+                    title.className = 'stock-title';
+                    title.textContent = `${index + 1}. ${item.code}`;
+                    card.appendChild(title);
+
+                    const chartDiv = document.createElement('div');
+                    chartDiv.className = 'chart';
+                    chartDiv.id = `chart-${item.code}-${index}`;
+                    card.appendChild(chartDiv);
+
+                    chartsContainer.appendChild(card);
+
+                    renderKlineChart(chartDiv.id, item);
+                });
+                
+                resultArea.style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                status.textContent = "筛选出错: " + error.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function renderKlineChart(domId, stock) {
+            if (!stock.klines || stock.klines.length === 0) {
+                return;
+            }
+
+            const dom = document.getElementById(domId);
+            const chart = echarts.init(dom);
+
+            const dates = stock.klines.map(k => k.date.toString());
+            const klineData = stock.klines.map(k => [k.open, k.close, k.low, k.high]);
+
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    boundaryGap: true,
+                    axisLine: { onZero: false },
+                    axisLabel: { show: false } // 如果觉得挤，可以先不显示日期
+                },
+                yAxis: {
+                    scale: true
+                },
+                grid: {
+                    left: '3%',
+                    right: '3%',
+                    top: '5%',
+                    bottom: '15%'
+                },
+                dataZoom: [
+                    {
+                        type: 'inside', // 支持鼠标滚轮缩放
+                        start: 50,      // 默认显示后50%的数据，让K线看起来更宽
+                        end: 100
+                    },
+                    {
+                        type: 'slider', // 底部滑动条
+                        show: true,
+                        start: 50,
+                        end: 100,
+                        bottom: '5%'
+                    }
+                ],
+                series: [
+                    {
+                        name: stock.code,
+                        type: 'candlestick',
+                        data: klineData,
+                        itemStyle: {
+                            color: '#ec0000',     // 红色上涨
+                            color0: '#00da3c',    // 绿色下跌
+                            borderColor: '#8A0000',
+                            borderColor0: '#008F28'
+                        },
+                        barMaxWidth: 30, // 限制最大宽度
+                        barMinWidth: 5   // 限制最小宽度
+                    }
+                ]
+            };
+
+            chart.setOption(option);
+        }
+    </script>
+</body>
+</html>

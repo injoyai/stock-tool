@@ -5,65 +5,164 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>监听价格</title>
     <style>
+        :root {
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --text-secondary: #666;
+            --border-color: #e1e4e8;
+            --danger-color: #dc3545;
+            --danger-hover: #c82333;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
-            padding: 20px;
+            padding: 10px;
+            line-height: 1.3;
+            font-size: 13px;
         }
+
         .container {
-            max-width: 800px;
-            margin: auto;
-            padding: 20px;
-            background: white;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 12px;
+            background: var(--card-bg);
             border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-md);
         }
+
         h1 {
             text-align: center;
-            color: #333;
+            color: #1a1a1a;
+            font-weight: 700;
+            margin-bottom: 12px;
+            font-size: 18px;
+            margin-top: 0;
         }
-        .rule {
+
+        .config-header {
+            background-color: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .config-header label {
+            font-weight: 600;
+            margin-right: 15px;
+            color: var(--text-color);
+        }
+
+        #interval {
+            width: 80px;
+            padding: 4px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        #interval:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        #rules {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
             margin-bottom: 15px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #f9f9f9;
         }
-        .rule label {
-            margin-right: 10px;
-            font-size: 14px;
+
+        .rule {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1fr 1fr auto;
+            gap: 8px;
+            align-items: center;
+            padding: 8px;
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            transition: all 0.2s ease;
         }
+
+        .rule:hover {
+            box-shadow: var(--shadow-md);
+            border-color: #d1d5db;
+            transform: translateY(-2px);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
         input[type="text"],
         input[type="number"] {
-            padding: 10px;
-            border: 1px solid #ccc;
+            padding: 4px 8px;
+            border: 1px solid var(--border-color);
             border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            width: 100%;
             box-sizing: border-box;
-            height: 40px;
-            font-size: 14px;
-            margin-right: 10px;
+            background-color: #fff;
         }
-        .code-input {
-            width: 100px;
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
         }
-        .price-input {
-            width: 80px;
+
+        /* Toggle Switch */
+        .switch-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
+
+        .switch-group label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
         .toggle-switch {
             position: relative;
             display: inline-block;
-            width: 60px;
-            height: 34px;
-            margin-left: 10px;
+            width: 36px;
+            height: 20px;
+            margin: 0;
         }
+
         .toggle-switch input {
             opacity: 0;
             width: 0;
             height: 0;
         }
+
         .slider {
             position: absolute;
             cursor: pointer;
@@ -71,91 +170,158 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
+            background-color: #cbd5e0;
+            transition: .3s;
             border-radius: 34px;
         }
+
         .slider:before {
             position: absolute;
             content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
             background-color: white;
-            transition: .4s;
+            transition: .3s;
             border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+
         input:checked + .slider {
-            background-color: #007bff;
+            background-color: var(--primary-color);
         }
+
         input:checked + .slider:before {
-            transform: translateX(26px);
+            transform: translateX(16px);
         }
-        button {
-            display: inline-block;
-            width: auto;
+
+        .status-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            min-height: 18px;
+        }
+
+        /* Buttons */
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        button.main-btn {
             padding: 8px 16px;
-            margin-top: 10px;
-            background-color: #007bff;
-            color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            letter-spacing: 0.5px;
         }
-        button:hover {
-            background-color: #0056b3;
+
+        #addRule {
+            background-color: #fff;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
         }
-        .deleteRule {
-            background-color: #dc3545;
+
+        #addRule:hover {
+            background-color: #f8f9fa;
+            border-color: #c3c6cb;
+            transform: translateY(-1px);
+        }
+
+        #submit {
+            background-color: var(--primary-color);
             color: white;
-            border: none;
-            border-radius: 4px;
-            width: 30px;
-            height: 30px;
-            font-size: 20px;
-            margin-left: 10px;
+            box-shadow: 0 4px 6px rgba(0, 123, 255, 0.2);
+        }
+
+        #submit:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px rgba(0, 123, 255, 0.3);
+        }
+
+        .deleteRule {
+            background-color: transparent;
+            color: #a0aec0;
+            border: 2px solid transparent;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background-color 0.3s, transform 0.3s;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1;
+            margin-top: 10px; /* Align with inputs */
         }
+
         .deleteRule:hover {
-            background-color: #c82333;
-            transform: scale(1.1);
+            background-color: #fff5f5;
+            color: var(--danger-color);
+            border-color: #fed7d7;
         }
-        label[for="interval"] {
-            margin-bottom: 10px;
-            display: block;
-        }
-        #interval {
-            margin-bottom: 20px;
-        }
-        #rules {
-            text-align: center;
-        }
-        .rule div {
-            display: flex;
-            align-items: center;
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .rule {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                position: relative;
+            }
+
+            .deleteRule {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                margin-top: 0;
+            }
+            
+            .switch-group {
+                flex-direction: row;
+                justify-content: space-between;
+                width: 100%;
+                padding: 5px 0;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            button.main-btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>监听价格</h1>
-        <label for="interval">监听间隔(秒):</label>
-        <input type="number" id="interval" value="10" min="1" required>
+        
+        <div class="config-header">
+            <label for="interval">监听间隔(秒):</label>
+            <input type="number" id="interval" value="10" min="1" required>
+        </div>
 
         <div id="rules"></div>
 
-        <button id="addRule">添加规则</button>
-        <button id="submit">提交配置</button>
+        <div class="actions">
+            <button id="addRule" class="main-btn">添加规则</button>
+            <button id="submit" class="main-btn">提交配置</button>
+        </div>
     </div>
 
     <script>
-
-
         // 初始化界面
         function initialize() {
             const configStr = getConfig();
@@ -171,28 +337,50 @@
         function addRule(code = "", price = 0, greater = true, enable = true) {
             const ruleDiv = document.createElement('div');
             ruleDiv.className = 'rule';
+            
+            const greaterText = greater ? '大于' : '小于';
+            const enableText = enable ? '启用' : '禁用';
+
             ruleDiv.innerHTML = `
-                <label for="code">代码:</label>
-                <input type="text" class="code code-input" value="${code}" required>
-                <label for="price">价格:</label>
-                <input type="number" class="price price-input" step="0.01" value="${price}" required>
-                <div>
-                    <label for="greater">大于/小于:</label>
+                <div class="input-group">
+                    <label>代码</label>
+                    <input type="text" class="code" value="${code}" placeholder="如: sh600519" required>
+                </div>
+                <div class="input-group">
+                    <label>价格</label>
+                    <input type="number" class="price" step="0.01" value="${price}" placeholder="目标价格" required>
+                </div>
+                <div class="switch-group">
+                    <label>条件</label>
                     <label class="toggle-switch">
                         <input type="checkbox" class="greater" ${greater ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
+                    <span class="status-text">${greaterText}</span>
                 </div>
-                <div>
-                    <label for="enable">启用:</label>
+                <div class="switch-group">
+                    <label>状态</label>
                     <label class="toggle-switch">
                         <input type="checkbox" class="enable" ${enable ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
+                    <span class="status-text">${enableText}</span>
                 </div>
-                <button class="deleteRule">-</button>
+                <button class="deleteRule" title="删除规则">×</button>
             `;
             document.getElementById('rules').appendChild(ruleDiv);
+
+            // 更新状态文字
+            const updateStatus = (checkbox, trueText, falseText) => {
+                const textSpan = checkbox.closest('.switch-group').querySelector('.status-text');
+                textSpan.textContent = checkbox.checked ? trueText : falseText;
+            };
+
+            const greaterCheck = ruleDiv.querySelector('.greater');
+            greaterCheck.addEventListener('change', () => updateStatus(greaterCheck, '大于', '小于'));
+
+            const enableCheck = ruleDiv.querySelector('.enable');
+            enableCheck.addEventListener('change', () => updateStatus(enableCheck, '启用', '禁用'));
 
             // 为删除按钮添加事件监听器
             ruleDiv.querySelector('.deleteRule').addEventListener('click', function() {

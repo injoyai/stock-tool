@@ -1,15 +1,14 @@
 module pull-tdx
 
-go 1.20
+go 1.23
 
 require (
-	github.com/injoyai/bar v0.0.5
-	github.com/injoyai/base v1.2.17
+	github.com/injoyai/bar v0.0.9
 	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/goutil v1.2.5
 	github.com/injoyai/logs v1.0.12
 	github.com/injoyai/notice v0.0.3
-	github.com/injoyai/tdx v0.0.48
+	github.com/injoyai/tdx v0.0.72
 	github.com/robfig/cron/v3 v3.0.1
 	xorm.io/xorm v1.3.9
 )
@@ -25,6 +24,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/grafov/m3u8 v0.12.1 // indirect
+	github.com/injoyai/base v1.2.20 // indirect
 	github.com/injoyai/ios v1.2.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

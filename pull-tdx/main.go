@@ -3,20 +3,22 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/injoyai/conv/cfg"
-	"github.com/injoyai/logs"
-	"github.com/injoyai/tdx"
-	"github.com/robfig/cron/v3"
 	"log"
 	"path/filepath"
 	"pull-tdx/task"
 	"runtime"
 	"time"
+
+	"github.com/injoyai/conv/cfg"
+	"github.com/injoyai/logs"
+	"github.com/injoyai/tdx"
+	"github.com/injoyai/tdx/extend"
+	"github.com/robfig/cron/v3"
 )
 
 const (
-	Version = "v0.9"
-	Details = "增加北交所数据"
+	Version = "v1.1"
+	Details = "改版数据结构,增加ETF日线"
 )
 
 var (
@@ -24,26 +26,23 @@ var (
 	dirDatabase = filepath.Join(dirBase, cfg.GetString("dir.database", "database"))
 	dirExport   = filepath.Join(dirBase, cfg.GetString("dir.export", "export"))
 	dirUpload   = filepath.Join(dirBase, cfg.GetString("dir.upload", "upload"))
-	clients     = cfg.GetInt("clients", 10)
+	clients     = cfg.GetInt("clients", 5)
 	sendKey     = cfg.GetString("notice.serverChan.sendKey")
-	config      = &tdx.ManageConfig{Number: clients}
-	disks       = cfg.GetInt("disks", 150)
+	goroutines  = cfg.GetInt("goroutines", 50)
 	spec        = cfg.GetString("spec", "0 1 15 * * *")
 	specFQ      = cfg.GetString("specFQ", "0 0 6 * * *")
 	codes       = cfg.GetStrings("codes")
 	startup     = cfg.GetBool("startup")
+	address     = cfg.GetString("address", "http://192.168.1.103:20000")
 )
 
 var (
 	dirDatabaseKline       = filepath.Join(dirDatabase, "kline")
-	dirDatabaseTrade       = filepath.Join(dirDatabase, "trade")
 	dirExportKline         = filepath.Join(dirExport, "k线")
 	dirExportCompressKline = filepath.Join(dirExport, "压缩/k线")
 	dirUploadKline         = filepath.Join(dirUpload, "k线")
 	dirUploadIndex         = filepath.Join(dirUpload, "指数")
 	dirIncrementKline      = filepath.Join(dirUpload, "增量")
-	dirUploadTrade         = filepath.Join(dirUpload, "分时成交")
-	dirExportTrade         = filepath.Join(dirExport, "分时成交")
 )
 
 var (
@@ -57,10 +56,10 @@ var (
 
 		//k线
 		task.Group("k线",
-			task.NewPullKline(codes, dirDatabaseKline, disks),                                   //拉取
-			task.NewExportKline(codes, dirDatabaseKline, dirExportKline, disks, task.AllTables), //导出
-			task.NewCompressKline(dirExportKline, dirExportCompressKline, task.AllTables),       //压缩
-			task.NewRename(dirExportCompressKline, dirUploadKline),                              //移动
+			task.NewPullKline(codes, dirDatabaseKline, goroutines),                                   //拉取
+			task.NewExportKline(codes, dirDatabaseKline, dirExportKline, goroutines, task.AllTables), //导出
+			task.NewCompressKline(dirExportKline, dirExportCompressKline, task.AllTables),            //压缩
+			task.NewRename(dirExportCompressKline, dirUploadKline),                                   //移动
 			task.NewNoticeServerChan(sendKey, "k线同步完成"),
 		),
 	}
@@ -82,7 +81,7 @@ func init() {
 	logs.Info("说明:", Details)
 	logs.Debug("启动立马执行:", startup)
 	logs.Debug("连接客户端数量:", clients)
-	logs.Debug("释放协程数量:", disks)
+	logs.Debug("释放协程数量:", goroutines)
 	logs.Debug("配置的股票代码:", codes)
 	fmt.Println("================================================================")
 }
@@ -90,7 +89,17 @@ func init() {
 func main() {
 
 	//1. 连接服务器
-	m, err := tdx.NewManage(config, tdx.WithRedial())
+	m, err := tdx.NewManage(
+		tdx.WithClients(clients),
+		tdx.WithCodes(nil),
+		tdx.WithDialCodes(func(c *tdx.Client) (tdx.ICodes, error) {
+			return extend.DialCodesHTTP(address)
+		}),
+		tdx.WithGbbq(nil),
+		tdx.WithDialGbbq(func(c *tdx.Client) (tdx.IGbbq, error) {
+			return extend.DialGbbqHTTP(address)
+		}),
+	)
 	logs.PanicErr(err)
 
 	/*

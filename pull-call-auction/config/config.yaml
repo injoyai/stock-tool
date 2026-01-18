@@ -1,0 +1,10 @@
+database: "./data/database/auction"
+export: "./data/output/export"
+upload: "./data/output/upload"
+spec: "20 0 15 * * *"
+goroutines: 10
+startup: true
+
+codes:
+  - sz000001
+  - sh600000

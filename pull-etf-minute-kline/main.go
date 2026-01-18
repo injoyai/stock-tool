@@ -29,15 +29,15 @@ var (
 	spec        = cfg.GetString("spec", "0 15 15 * * *")
 	databaseDir = cfg.GetString("database_dir", "./data/database/kline")
 	exportDir   = cfg.GetString("export_dir", "./data/export")
-	uploadDir   = cfg.GetString("upload_dir", "./data/分钟K线-ETF")
+	uploadDir   = cfg.GetString("upload_dir", "./data/upload")
 	codes       = cfg.GetStrings("codes")
 	startup     = cfg.GetBool("startup")
 )
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v1.0")
-	logs.Info("详情:", "初版")
+	logs.Info("版本:", "v1.2")
+	logs.Info("详情:", "修改压缩逻辑")
 	fmt.Println("=====================================================")
 	logs.Info("立即执行:", startup)
 	logs.Info("代码地址:", address)
@@ -100,21 +100,21 @@ func Update(m *tdx.Manage) error {
 	b.Wait()
 
 	logs.Info("开始压缩...")
-	if err := zip.Encode(filepath.Join(exportDir, year, "1分钟"), filepath.Join(uploadDir, year, "1分钟.zip")); err != nil {
-		return err
+
+	for _, v := range []string{"1分钟", "5分钟", "15分钟", "30分钟", "60分钟"} {
+		err := zip.Encode(
+			filepath.Join(exportDir, year, v),
+			filepath.Join(exportDir, year, v+".zip"),
+		)
+		logs.PrintErr(err)
+		<-time.After(time.Millisecond * 200)
+		err = os.Rename(
+			filepath.Join(exportDir, year, v+".zip"),
+			filepath.Join(uploadDir, year, v+".zip"),
+		)
+		logs.PrintErr(err)
 	}
-	if err := zip.Encode(filepath.Join(exportDir, year, "5分钟"), filepath.Join(uploadDir, year, "5分钟.zip")); err != nil {
-		return err
-	}
-	if err := zip.Encode(filepath.Join(exportDir, year, "15分钟"), filepath.Join(uploadDir, year, "15分钟.zip")); err != nil {
-		return err
-	}
-	if err := zip.Encode(filepath.Join(exportDir, year, "30分钟"), filepath.Join(uploadDir, year, "30分钟.zip")); err != nil {
-		return err
-	}
-	if err := zip.Encode(filepath.Join(exportDir, year, "60分钟"), filepath.Join(uploadDir, year, "60分钟.zip")); err != nil {
-		return err
-	}
+
 	return nil
 }
 
