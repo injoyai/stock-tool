@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/injoyai/tdx/protocol"
 	"strings"
 	"time"
+
+	"github.com/injoyai/tdx/protocol"
 )
 
 type Kline struct {
@@ -73,6 +74,9 @@ func (this Klines) Vertexes(windowSize int, filterEdge ...bool) (maxs []*Vertex,
 		case len(this)-1-i < windowSize:
 			//右侧不满足窗口大小
 			if filter {
+				continue
+			}
+			if len(this[i:]) < windowSize/2 {
 				continue
 			}
 			cache = this[i-windowSize:]

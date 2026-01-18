@@ -3,6 +3,12 @@ package main
 import (
 	"bytes"
 	_ "embed"
+	"log"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/frame/in/v3"
@@ -12,16 +18,11 @@ import (
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/extend"
-	"log"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var (
 	testCodes = []string{
-		//"sz001914",
+		//"sz000400",
 	}
 	debug = len(testCodes) > 0
 )
@@ -35,7 +36,7 @@ func main() {
 
 	s := &Strategy{
 		WindowsSize: 8,
-		DayStart:    0,
+		DayEnd:      time.Now(), //time.Date(2025, 12, 10, 0, 0, 0, 0, time.Local),
 		DayNumber:   100,
 		Dir:         filepath.Join(tdx.DefaultDatabaseDir, "daykline"),
 	}
@@ -48,7 +49,11 @@ func main() {
 
 	if len(testCodes) == 0 {
 		oss.RangeFileInfo(s.Dir, func(info *oss.FileInfo) (bool, error) {
-			testCodes = append(testCodes, strings.SplitN(info.Name(), ".", 2)[0])
+			code := strings.SplitN(info.Name(), ".", 2)[0]
+			switch {
+			case strings.HasPrefix(code, "sh") || strings.HasPrefix(code, "sz0"):
+				testCodes = append(testCodes, code)
+			}
 			return true, nil
 		})
 	}
@@ -64,9 +69,10 @@ func main() {
 }
 
 type Strategy struct {
-	WindowsSize int    //窗口大小
-	DayStart    uint16 //股票起始
-	DayNumber   int    //股票天数
+	WindowsSize int       //窗口大小
+	DayStart    uint16    //股票起始
+	DayNumber   int       //股票天数
+	DayEnd      time.Time //
 	Dir         string
 }
 
@@ -77,7 +83,7 @@ func (this *Strategy) GetKlines(code string, limit int) (Klines, error) {
 		return nil, err
 	}
 	defer db.Close()
-	err = db.Table(extend.NewKlineTable("DayKline", nil)).Desc("Date").Limit(limit).Find(&data)
+	err = db.Table(extend.NewKlineTable("DayKline", nil)).Desc("Date").Where("Date<?", this.DayEnd.Unix()).Limit(limit).Find(&data)
 	if err != nil {
 		return nil, err
 	}
@@ -183,6 +189,7 @@ l2>l1 && h2>h1
 */
 
 func Check(highs, lows []*Vertex, windowSize int) bool {
+
 	if len(highs) < 2 || len(lows) < 2 {
 		return false
 	}
@@ -192,26 +199,33 @@ func Check(highs, lows []*Vertex, windowSize int) bool {
 	l := lows[len(lows)-2:]
 
 	if debug {
-		log.Println(l[0].Kline)
-		log.Println(h[0].Kline)
-		log.Println(l[1].Kline)
-		log.Println(h[1].Kline)
+		log.Println("h[0]", h[0].Kline)
+		log.Println("l[0]", l[0].Kline)
+		log.Println("h[1]", h[1].Kline)
+		log.Println("l[1]", l[1].Kline)
 	}
 
 	//判断顶点是否过远
-	if int(time.Now().Sub(h[1].Kline.Time).Hours()/24) > windowSize*2 {
-		return false
-	}
-
-	//判断时间是否交替
-	if !(h[1].Kline.Time.After(l[1].Kline.Time) &&
-		l[1].Kline.Time.After(h[0].Kline.Time) &&
-		h[0].Kline.Time.After(l[0].Kline.Time)) {
-		return false
-	}
+	//if int(h[1].Time.Sub(h[0].Kline.Time).Hours()/24) > windowSize*2 {
+	//	return false
+	//}
 
 	//判断间隔是否过近
-	if h[1].Index-l[1].Index < windowSize || l[1].Index-h[0].Index < windowSize || h[0].Index-l[0].Index < windowSize {
+	if l[1].Index-h[1].Index < windowSize || h[1].Index-l[0].Index < windowSize || l[0].Index-h[0].Index < windowSize {
+		return false
+	}
+
+	////判断时间是否交替
+	//if !(h[1].Kline.Time.After(l[1].Kline.Time) &&
+	//	l[1].Kline.Time.After(h[0].Kline.Time) &&
+	//	h[0].Kline.Time.After(l[0].Kline.Time)) {
+	//	return false
+	//}
+
+	//判断时间是否交替
+	if !(l[1].Kline.Time.After(h[1].Kline.Time) &&
+		h[1].Kline.Time.After(l[0].Kline.Time) &&
+		l[0].Kline.Time.After(h[0].Kline.Time)) {
 		return false
 	}
 
