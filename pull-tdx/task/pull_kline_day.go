@@ -55,7 +55,7 @@ func (this *PullKlineDay) pullDayKline(ctx context.Context, m *tdx.Manage) error
 
 	data := [][]any{
 		//extend.DefaultDayKlineExportTitle,
-		{"日期", "代码", "名称", "昨收", "开盘", "最高", "最低", "收盘", "成交量(股)", "成交额(元)", "涨跌(元)", "涨跌幅(%)", "换手率(%)", "流通股本(股)", "总股本(股)", "分红(元/股)", "配股价", "送转股", "配股"},
+		{"日期", "代码", "名称", "昨收", "开盘", "最高", "最低", "收盘", "成交量(股)", "成交额(元)", "涨跌(元)", "涨跌幅(%)", "换手率(%)", "流通股本(股)", "总股本(股)"},
 		//{"序号", "代码", "名称", "日期", "昨收", "开盘", "收盘", "最高", "最低", "成交量", "成交额", "振幅", "涨跌幅"},
 	}
 	for i, code := range codes {
@@ -100,14 +100,14 @@ func (this *PullKlineDay) pullDayKline(ctx context.Context, m *tdx.Manage) error
 						x = append(x, "", "", "")
 					}
 
-					if xrxd := m.Gbbq.GetXRXDs(code); xrxd != nil {
-						for _, v := range m.Gbbq.GetXRXDs(code) {
-							if v.Time.Sub(v.Time) == 0 {
-								x = append(x, v.Fenhong/10, v.Peigujia, v.Songzhuangu, v.Peigu)
-								break
-							}
-						}
-					}
+					//if xrxd := m.Gbbq.GetXRXDs(code); xrxd != nil {
+					//	for _, v := range m.Gbbq.GetXRXDs(code) {
+					//		if v.Time.Sub(v.Time) == 0 {
+					//			x = append(x, v.Fenhong/10, v.Peigujia, v.Songzhuangu, v.Peigu)
+					//			break
+					//		}
+					//	}
+					//}
 
 					data = append(data, x)
 				}
