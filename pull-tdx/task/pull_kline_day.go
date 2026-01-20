@@ -56,7 +56,6 @@ func (this *PullKlineDay) pullDayKline(ctx context.Context, m *tdx.Manage) error
 	data := [][]any{
 		//extend.DefaultDayKlineExportTitle,
 		{"日期", "代码", "名称", "昨收", "开盘", "最高", "最低", "收盘", "成交量(股)", "成交额(元)", "涨跌(元)", "涨跌幅(%)", "换手率(%)", "流通股本(股)", "总股本(股)"},
-		//{"序号", "代码", "名称", "日期", "昨收", "开盘", "收盘", "最高", "最低", "成交量", "成交额", "振幅", "涨跌幅"},
 	}
 	for i, code := range codes {
 		select {
@@ -85,9 +84,9 @@ func (this *PullKlineDay) pullDayKline(ctx context.Context, m *tdx.Manage) error
 						m.Codes.GetName(code),
 						l.Last.Float64(),
 						l.Open.Float64(),
-						l.Close.Float64(),
 						l.High.Float64(),
 						l.Low.Float64(),
+						l.Close.Float64(),
 						l.Volume * 100,
 						l.Amount.Float64(),
 						l.RisePrice().Float64(),
