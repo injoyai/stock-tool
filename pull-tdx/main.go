@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	Version = "v1.1"
-	Details = "改版数据结构,增加ETF日线"
+	Version = "v1.2"
+	Details = "改版数据结构,增加ETF日线,修复bug"
 )
 
 var (
