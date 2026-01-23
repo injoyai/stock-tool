@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"strings"
+	"sync/atomic"
+	"time"
+
 	"github.com/injoyai/base/chans"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/g"
@@ -11,13 +16,9 @@ import (
 	"github.com/injoyai/goutil/other/excel"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
-	"path/filepath"
-	"strings"
-	"sync/atomic"
-	"time"
 )
 
-func Dial(clients, disks int, timeout time.Duration, log func(s string)) *Client {
+func Dial(clients, disks int, timeout time.Duration, hosts []string, log func(s string)) *Client {
 	if clients <= 0 {
 		clients = 1
 	}
@@ -28,7 +29,7 @@ func Dial(clients, disks int, timeout time.Duration, log func(s string)) *Client
 		timeout = 2 * time.Second
 	}
 
-	df := tdx.NewHostDial(nil)
+	df := tdx.NewHostDial(hosts)
 	for {
 		p, err := NewPool(func() (*tdx.Client, error) {
 			c, err := tdx.DialWith(df, tdx.WithRedial())
