@@ -5,12 +5,15 @@ import (
 	"customized-pull/api"
 	_ "embed"
 	"fmt"
+
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/conv/codec"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/lorca"
+	"github.com/injoyai/tdx"
+
 	"os"
 	"strings"
 	"time"
@@ -95,6 +98,7 @@ func main() {
 			cfg.GetInt("clients", 1),
 			cfg.GetInt("disks", 10),
 			time.Duration(cfg.GetInt("timeout", 2))*time.Second,
+			cfg.GetStrings("hosts", tdx.SHHosts),
 			log,
 		)
 		log(fmt.Sprintf(`连接服务器成功...`))
