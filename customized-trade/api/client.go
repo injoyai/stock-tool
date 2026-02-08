@@ -147,12 +147,12 @@ func (this *Client) DownloadToday(c *tdx.Client, code string, log func(s string)
 	}
 	for _, v := range resp.List {
 		//成交额
-		e := (v.Price.Int64()*int64(v.Volume) + 500) / 1000
+		e := (v.Price.Int64()*int64(v.Volume) + 5000) / 10000
 		data = append(data,
 			[]any{
 				time.Now().Format("2006/01/02"),
 				v.Time.Format("1504"),
-				v.Price.Int64(),
+				v.Price.Int64() / 10,
 				v.Volume,
 				e,
 				v.Number,
