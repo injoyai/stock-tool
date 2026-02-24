@@ -10,8 +10,8 @@ import (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.3.2")
-	logs.Info("详情:", "升级tdx版本,增加gbbq")
+	logs.Info("版本:", "v0.4.0")
+	logs.Info("详情:", "升级tdx版本,补充etf代码")
 	fmt.Println("===============================================")
 }
 
