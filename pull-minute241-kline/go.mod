@@ -3,11 +3,11 @@ module pull-minute241-kline
 go 1.24.0
 
 require (
-	github.com/injoyai/bar v0.0.8
+	github.com/injoyai/bar v0.0.9
 	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/goutil v1.2.26
 	github.com/injoyai/logs v1.0.12
-	github.com/injoyai/tdx v0.0.70
+	github.com/injoyai/tdx v0.0.78
 	github.com/robfig/cron/v3 v3.0.1
 	xorm.io/xorm v1.3.11
 )
@@ -22,7 +22,7 @@ require (
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grafov/m3u8 v0.12.1 // indirect
-	github.com/injoyai/base v1.2.18 // indirect
+	github.com/injoyai/base v1.2.20 // indirect
 	github.com/injoyai/ios v1.2.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
