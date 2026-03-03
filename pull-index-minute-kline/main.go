@@ -34,8 +34,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v1.3.3")
-	logs.Info("详情:", "升级版本,优化版")
+	logs.Info("版本:", "v1.3.4")
+	logs.Info("详情:", "升级版本,优化版,增加上证50")
 }
 
 func main() {
@@ -66,6 +66,7 @@ func main() {
 func Run(m *tdx.Manage, codes []string) {
 	if len(codes) == 0 {
 		codes = m.Codes.GetIndexCodes()
+		codes = append(codes, "bj899050")
 	}
 	Update(m, codes)
 	Export(codes)
