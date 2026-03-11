@@ -94,14 +94,14 @@ func (this *PullKline) Handler(ctx context.Context, m *tdx.Manage, code string) 
 
 		//4. 插入数据库
 		err = b.SessionFunc(func(session *xorm.Session) error {
-			for i, v := range insert {
-				if i == 0 {
-					if _, err := session.Table(table).Where("Date >= ?", v.Date).Delete(); err != nil {
+			if _, err := session.Table(table).Where("Date >= ?", last.Date).Delete(); err != nil {
+				return err
+			}
+			for _, v := range insert {
+				if v.Date >= last.Date {
+					if _, err := session.Table(table).Insert(v); err != nil {
 						return err
 					}
-				}
-				if _, err := session.Table(table).Insert(v); err != nil {
-					return err
 				}
 			}
 			return nil
