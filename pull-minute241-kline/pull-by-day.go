@@ -73,6 +73,12 @@ func pullCode(gb tdx.IGbbq, c *tdx.Client, code string, date time.Time, exportDi
 		ks = append(ks, v)
 	}
 
+	for i, v := range ks {
+		if v.Time.Format(time.TimeOnly) == "13:00:00" {
+			ks[i].Time = time.Date(v.Time.Year(), v.Time.Month(), v.Time.Day(), 11, 30, 0, v.Time.Nanosecond(), v.Time.Location())
+		}
+	}
+
 	if err = save(gb, code, ks, filepath.Join(exportDir, "1分钟")); err != nil {
 		return err
 	}
@@ -112,7 +118,7 @@ func save(gb tdx.IGbbq, code string, ks protocol.Klines, exportDir string) error
 			gb.GetTurnover(code, v.Time, v.Volume*100),
 		}
 		if eq := gb.GetEquity(code, v.Time); eq != nil {
-			x = append(x, int64(eq.Float), int64(eq.Total))
+			x = append(x, eq.Float, eq.Total)
 		}
 		data = append(data, x)
 	}
