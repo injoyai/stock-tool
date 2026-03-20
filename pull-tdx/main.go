@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	Version = "v1.4"
-	Details = "修复新股数据异常的问题"
+	Version = "v1.5"
+	Details = "升级bar的版本"
 )
 
 var (

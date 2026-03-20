@@ -3,7 +3,7 @@ module pull-tdx
 go 1.23
 
 require (
-	github.com/injoyai/bar v0.0.9
+	github.com/injoyai/bar v0.0.11
 	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/goutil v1.2.5
 	github.com/injoyai/logs v1.0.12
