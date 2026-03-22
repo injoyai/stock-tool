@@ -36,8 +36,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v1.2")
-	logs.Info("详情:", "修改压缩逻辑")
+	logs.Info("版本:", "v1.3")
+	logs.Info("详情:", "修复当年数据里面有上一年的数据的问题")
 	fmt.Println("=====================================================")
 	logs.Info("立即执行:", startup)
 	logs.Info("代码地址:", address)
@@ -200,6 +200,9 @@ func export(year string, code string) error {
 
 	ts := make(protocol.Klines, 0, len(list))
 	for _, v := range list {
+		if conv.String(v.Year) != year {
+			continue
+		}
 		ts = append(ts, &protocol.Kline{
 			Open:   protocol.Price(v.Open * 1000),
 			High:   protocol.Price(v.High * 1000),

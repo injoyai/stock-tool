@@ -2,9 +2,10 @@ package task
 
 import (
 	"context"
-	"github.com/injoyai/tdx"
 	"os"
 	"path/filepath"
+
+	"github.com/injoyai/tdx"
 )
 
 func NewRename(source, target string) *Rename {
@@ -21,6 +22,7 @@ func (this *Rename) Name() string {
 }
 
 func (this *Rename) Run(ctx context.Context, m *tdx.Manage) error {
+	os.MkdirAll(this.Target, os.ModePerm)
 	es, err := os.ReadDir(this.Source)
 	if err != nil {
 		return err

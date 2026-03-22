@@ -3,12 +3,12 @@ startup: true
 # 连接服务器客户端数量
 clients: 5
 # 本地操作磁盘数量
-goroutines: 50
+goroutines: 20
 # 自定义操作代码(空表示全部)
 codes:
-   - sz000001
-   - sh600000
-   - bj920000
+   #- sz000001
+   #- sh688411
+   #- bj920000
 
 # 自定义指数代码
 # index:
@@ -28,3 +28,5 @@ notice:
   serverChan:
     sendKey:
     message: 任务完成
+
+address: "http://192.168.192.3:20000"
