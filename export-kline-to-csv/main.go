@@ -9,6 +9,7 @@ import (
 	"github.com/injoyai/goutil/database/sqlite"
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/goutil/other/csv"
+	"github.com/injoyai/goutil/times"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/protocol"
@@ -27,7 +28,11 @@ var (
 
 func main() {
 
-	gb, err := tdx.NewGbbq()
+	m, err := tdx.NewManage(
+		tdx.WithWorkday(&tdx.Workday{}),
+		tdx.WithCodes(tdx.NewCodesBase()),
+		tdx.WithDialGbbqDefault(),
+	)
 	logs.PanicErr(err)
 
 	es, err := os.ReadDir(DatabaseDir)
@@ -44,7 +49,7 @@ func main() {
 			if code < After {
 				return nil
 			}
-			return export(gb, dir, ExportDir)
+			return export(m, dir, ExportDir)
 		}, tdx.DefaultRetry)
 	}
 
@@ -54,7 +59,7 @@ func main() {
 
 }
 
-func export(gb *tdx.Gbbq, databaseDir, exportDir string) error {
+func export(m *tdx.Manage, databaseDir, exportDir string) error {
 
 	defer func() {
 		if e := recover(); e != nil {
@@ -77,27 +82,52 @@ func export(gb *tdx.Gbbq, databaseDir, exportDir string) error {
 	}
 	kss.Sort()
 
-	err = toCsv(gb, kss, filepath.Join(exportDir, "1分钟"), code)
+	if len(kss) == 0 {
+		return nil
+	}
+
+	//获取上市日期
+	startDate := times.IntegerDay(kss[0].Time)
+	err = m.Do(func(c *tdx.Client) error {
+		resp, err := c.GetKlineDayAll(code)
+		if err != nil {
+			return err
+		}
+		if len(resp.List) > 0 {
+			startDate = times.IntegerDay(resp.List[0].Time)
+		}
+		return nil
+	})
+	logs.PrintErr(err)
+
+	kss2 := protocol.Klines{}
+	for _, v := range kss {
+		if v.Time.After(startDate) {
+			kss2 = append(kss2, v)
+		}
+	}
+
+	err = toCsv(m.Gbbq, kss2, filepath.Join(exportDir, "1分钟"), code)
 	if err != nil {
 		return err
 	}
 
-	err = toCsv(gb, kss.Merge241(5), filepath.Join(exportDir, "5分钟"), code)
+	err = toCsv(m.Gbbq, kss2.Merge241(5), filepath.Join(exportDir, "5分钟"), code)
 	if err != nil {
 		return err
 	}
 
-	err = toCsv(gb, kss.Merge241(15), filepath.Join(exportDir, "15分钟"), code)
+	err = toCsv(m.Gbbq, kss2.Merge241(15), filepath.Join(exportDir, "15分钟"), code)
 	if err != nil {
 		return err
 	}
 
-	err = toCsv(gb, kss.Merge241(30), filepath.Join(exportDir, "30分钟"), code)
+	err = toCsv(m.Gbbq, kss2.Merge241(30), filepath.Join(exportDir, "30分钟"), code)
 	if err != nil {
 		return err
 	}
 
-	err = toCsv(gb, kss.Merge241(60), filepath.Join(exportDir, "60分钟"), code)
+	err = toCsv(m.Gbbq, kss2.Merge241(60), filepath.Join(exportDir, "60分钟"), code)
 	if err != nil {
 		return err
 	}
@@ -116,7 +146,7 @@ func loading(filename string) (protocol.Klines, error) {
 	return ks, err
 }
 
-func toCsv(gb *tdx.Gbbq, kss protocol.Klines, exportDir, code string) error {
+func toCsv(gb tdx.IGbbq, kss protocol.Klines, exportDir, code string) error {
 	kss.Sort()
 
 	data := [][]any{Table}
