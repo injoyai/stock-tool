@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"time"
 
+	"split-csv/csv"
+
 	"github.com/injoyai/bar"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/oss"
-	"github.com/injoyai/goutil/other/csv"
 	"github.com/injoyai/logs"
 )
 
@@ -32,9 +33,11 @@ func split(dir string) error {
 	)
 	defer b.Close()
 	for _, v := range es {
+		b.SetPrefix("[" + v.Name() + "]")
+		b.Flush()
 		err = deal(filepath.Join(dir, v.Name()), filepath.Join("export", dir), v.Name())
 		if err != nil {
-			b.Logf("[错误] %s", err)
+			b.Logf("[错误] [%s] %s", v.Name(), err)
 		}
 		b.Add(1)
 		b.Flush()
