@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -25,7 +26,7 @@ var index string
 
 var (
 	filename   = oss.UserInjoyDir("/monitor-price/config/config.json")
-	dbFilename = oss.UserInjoyDir("/monitor-price/codes.db")
+	dbFilename = oss.UserInjoyDir("/monitor-price/database/codes.db")
 )
 
 func init() {
@@ -145,13 +146,16 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 		now := time.Now()
 		hint := fmt.Sprintf("数据时间: %s", now.Format(time.TimeOnly))
 		if !this.refresh {
+			//小于9:30
 			if now.Before(times.IntegerDay(now).Add(time.Hour*9 + time.Minute*30)) {
 				return
 			}
-			if now.After(times.IntegerDay(now).Add(time.Hour*15 + time.Minute*5)) {
+			//大于15:00
+			if now.After(times.IntegerDay(now).Add(time.Hour*15 + time.Minute)) {
 				return
 			}
-			if now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30+time.Minute*5)) &&
+			//大于11:30,小于13:00
+			if now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30+time.Minute)) &&
 				now.Before(times.IntegerDay(now).Add(time.Hour*13)) {
 				return
 			}
@@ -161,36 +165,36 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 			if !config.Enable {
 				continue
 			}
-			resp, err := this.Client.GetKlineDay(code, 0, 1)
+
+			lastPrice, err := this.getPrice(code)
 			if err != nil {
 				logs.Err(err)
 				continue
 			}
-			if len(resp.List) > 0 {
-				lastPrice := resp.List[0].Close
-				info := fmt.Sprintf("%s: %.2f", this.getName(code), lastPrice.Float64())
-				hint += "\n" + info
-				logs.Info(info, "  大于阈值:", lastPrice >= config.Price)
-				if config.Greater && lastPrice >= config.Price {
-					if config.limit < 0 {
-						//向上突破阈值,发送通知
-						notice.DefaultWindows.Publish(&notice.Message{
-							Content: fmt.Sprintf("代码[%s],[%.2f]大于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
-						})
-					}
-					config.limit = 1
 
-				} else if !config.Greater && lastPrice <= config.Price {
-					if config.limit > 0 {
-						//向下突破阈值,发送通知
-						notice.DefaultWindows.Publish(&notice.Message{
-							Content: fmt.Sprintf("代码[%s],[%.2f]小于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
-						})
-					}
-					config.limit = -1
-
+			info := fmt.Sprintf("%s: %.2f", this.getName(code), lastPrice.Float64())
+			hint += "\n" + info
+			logs.Info(info, "  大于阈值:", lastPrice >= config.Price)
+			if config.Greater && lastPrice >= config.Price {
+				if config.limit < 0 {
+					//向上突破阈值,发送通知
+					notice.DefaultWindows.Publish(&notice.Message{
+						Content: fmt.Sprintf("%s: 当前价格[%.2f元],大于阈值[%.2f元]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
+					})
 				}
+				config.limit = 1
+
+			} else if !config.Greater && lastPrice <= config.Price {
+				if config.limit >= 0 {
+					//向下突破阈值,发送通知
+					notice.DefaultWindows.Publish(&notice.Message{
+						Content: fmt.Sprintf("%s: 当前价格[%.2f元],小于阈值[%.2f元]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
+					})
+				}
+				config.limit = -1
+
 			}
+
 			s.SetHint(hint)
 		}
 	}
@@ -206,6 +210,17 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 			f()
 		}
 	}
+}
+
+func (this *monitor) getPrice(code string) (protocol.Price, error) {
+	resp, err := this.Client.GetKlineDay(code, 0, 1)
+	if err != nil {
+		return -1, err
+	}
+	if len(resp.List) == 0 {
+		return -1, errors.New("无数据")
+	}
+	return resp.List[0].Close, nil
 }
 
 type Config struct {
