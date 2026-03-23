@@ -97,6 +97,30 @@
             transition: all 0.2s ease;
         }
 
+        .code-group {
+            grid-column: 1;
+        }
+
+        .price-group {
+            grid-column: 2;
+        }
+
+        .status-group {
+            grid-column: 3;
+        }
+
+        .condition-group {
+            grid-column: 4;
+        }
+
+        .deleteRule {
+            grid-column: 5;
+        }
+
+        .rule.disabled .condition-group {
+            visibility: hidden;
+        }
+
         .rule:hover {
             box-shadow: var(--shadow-md);
             border-color: #d1d5db;
@@ -198,13 +222,6 @@
             transform: translateX(16px);
         }
 
-        .status-text {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-top: 4px;
-            min-height: 18px;
-        }
-
         /* Buttons */
         .actions {
             display: flex;
@@ -271,6 +288,33 @@
             border-color: #fed7d7;
         }
 
+        .toast {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 9999;
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: #fff;
+            background-color: #16a34a;
+            box-shadow: var(--shadow-md);
+            opacity: 0;
+            transform: translateY(-6px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: none;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.error {
+            background-color: var(--danger-color);
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -323,7 +367,22 @@
         </div>
     </div>
 
+    <div id="toast" class="toast"></div>
+
     <script>
+        let toastTimer = null;
+
+        function showToast(text, type = 'success') {
+            const el = document.getElementById('toast');
+            if (!el) return;
+            el.textContent = text;
+            el.className = `toast ${type === 'error' ? 'error' : ''} show`;
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                el.classList.remove('show');
+            }, 2000);
+        }
+
         // 初始化界面
         function initialize() {
             const configStr = getConfig();
@@ -340,40 +399,45 @@
             const ruleDiv = document.createElement('div');
             ruleDiv.className = 'rule';
             
-            const enableText = enable ? '启用' : '禁用';
-
             ruleDiv.innerHTML = `
-                <div class="input-group">
+                <div class="input-group code-group">
                     <label>代码</label>
                     <input type="text" class="code" value="${code}" placeholder="如: sh600519" required>
                 </div>
-                <div class="input-group">
+                <div class="input-group price-group">
                     <label>价格</label>
                     <input type="number" class="price" step="0.01" value="${price}" placeholder="目标价格" required>
                 </div>
-                <div class="switch-group">
+                <div class="switch-group status-group">
+                    <label>状态</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" class="enable" ${enable ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="switch-group condition-group">
                     <label>条件</label>
                     <select class="greater">
                         <option value="true" ${greater ? 'selected' : ''}>≥（大于等于）</option>
                         <option value="false" ${greater ? '' : 'selected'}>≤（小于等于）</option>
                     </select>
                 </div>
-                <div class="switch-group">
-                    <label>状态</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" class="enable" ${enable ? 'checked' : ''}>
-                        <span class="slider"></span>
-                    </label>
-                    <span class="status-text">${enableText}</span>
-                </div>
                 <button class="deleteRule" title="删除规则">×</button>
             `;
             document.getElementById('rules').appendChild(ruleDiv);
 
             const enableCheck = ruleDiv.querySelector('.enable');
+            const greaterSelect = ruleDiv.querySelector('.greater');
+
+            const updateEnableUI = () => {
+                ruleDiv.classList.toggle('disabled', !enableCheck.checked);
+                greaterSelect.disabled = !enableCheck.checked;
+            };
+
+            updateEnableUI();
+
             enableCheck.addEventListener('change', () => {
-                const textSpan = enableCheck.closest('.switch-group').querySelector('.status-text');
-                textSpan.textContent = enableCheck.checked ? '启用' : '禁用';
+                updateEnableUI();
             });
 
             // 为删除按钮添加事件监听器
@@ -396,7 +460,11 @@
             }));
             const config = { interval: parseInt(interval), rule: rules };
             console.log(JSON.stringify(config));
-            setConfig(config); // 调用保存配置的函数
+            try {
+                Promise.resolve(setConfig(config)).then(() => showToast('提交成功')).catch(() => showToast('提交失败', 'error'));
+            } catch (e) {
+                showToast('提交失败', 'error');
+            }
         });
 
         // 页面加载时初始化

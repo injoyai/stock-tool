@@ -79,7 +79,7 @@ func main() {
 func gui(mon *monitor) {
 	lorca.Run(&lorca.Config{
 		Width:  800,
-		Height: 620,
+		Height: 600,
 		Index:  index,
 	}, func(app lorca.APP) error {
 
