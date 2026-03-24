@@ -122,6 +122,7 @@ func klineToCsv(code string, ks []*protocol.Kline, filename string, getName func
 			v.Time.Format(time.DateOnly),
 			code,
 			getName(code),
+			v.Last.Float64(),
 			v.Open.Float64(),
 			v.High.Float64(),
 			v.Low.Float64(),
