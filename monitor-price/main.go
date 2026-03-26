@@ -183,7 +183,6 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 					})
 				}
 				config.limit = 1
-				logs.Debug("limit set 1")
 
 			} else if !config.Greater && lastPrice <= config.Price {
 				if config.limit >= 0 {
@@ -193,7 +192,6 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 					})
 				}
 				config.limit = -1
-				logs.Debug("limit set -1")
 
 			}
 
