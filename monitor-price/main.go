@@ -105,7 +105,7 @@ func gui(mon *monitor) {
 type monitor struct {
 	Client   *tdx.Client
 	interval time.Duration
-	codes    map[string]Config
+	codes    map[string]*Config
 	getName  func(code string) string
 	hand     chan struct{}
 	refresh  bool
@@ -122,11 +122,11 @@ func (this *monitor) setConfig(cfg any) {
 		this.interval = time.Second * 10
 	}
 	this.refresh = true
-	this.codes = func() map[string]Config {
-		result := make(map[string]Config)
+	this.codes = func() map[string]*Config {
+		result := make(map[string]*Config)
 		for _, v := range m.GetInterfaces("rule") {
 			m2 := conv.NewMap(v)
-			result[m2.GetString("code")] = Config{
+			result[m2.GetString("code")] = &Config{
 				Code:    m2.GetString("code"),
 				Price:   protocol.Price(m2.GetFloat64("price") * 1000),
 				Greater: m2.GetBool("greater"),
@@ -183,6 +183,7 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 					})
 				}
 				config.limit = 1
+				logs.Debug("limit set 1")
 
 			} else if !config.Greater && lastPrice <= config.Price {
 				if config.limit >= 0 {
@@ -192,6 +193,7 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 					})
 				}
 				config.limit = -1
+				logs.Debug("limit set -1")
 
 			}
 
