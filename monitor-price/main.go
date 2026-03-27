@@ -176,7 +176,7 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 			hint += "\n" + info
 			logs.Info(info, "  大于阈值:", lastPrice >= config.Price)
 			if config.Greater && lastPrice >= config.Price {
-				if config.limit < 0 {
+				if config.limit <= 0 {
 					//向上突破阈值,发送通知
 					notice.DefaultWindows.Publish(&notice.Message{
 						Content: fmt.Sprintf("%s: 当前价格[%.3f元],大于阈值[%.3f元]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
