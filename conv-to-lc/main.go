@@ -146,6 +146,7 @@ func convLc(inputFile, outputFile string, start, end time.Time) error {
 	defer f.Close()
 
 	r := csv.NewReader(f)
+	r.FieldsPerRecord = -1
 	rows, err := r.ReadAll()
 	if err != nil {
 		return err
