@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -25,7 +26,7 @@ var index string
 
 var (
 	filename   = oss.UserInjoyDir("/monitor-price/config/config.json")
-	dbFilename = oss.UserInjoyDir("/monitor-price/codes.db")
+	dbFilename = oss.UserInjoyDir("/monitor-price/database/codes.db")
 )
 
 func init() {
@@ -78,7 +79,7 @@ func main() {
 func gui(mon *monitor) {
 	lorca.Run(&lorca.Config{
 		Width:  800,
-		Height: 620,
+		Height: 600,
 		Index:  index,
 	}, func(app lorca.APP) error {
 
@@ -104,7 +105,7 @@ func gui(mon *monitor) {
 type monitor struct {
 	Client   *tdx.Client
 	interval time.Duration
-	codes    map[string]Config
+	codes    map[string]*Config
 	getName  func(code string) string
 	hand     chan struct{}
 	refresh  bool
@@ -121,11 +122,11 @@ func (this *monitor) setConfig(cfg any) {
 		this.interval = time.Second * 10
 	}
 	this.refresh = true
-	this.codes = func() map[string]Config {
-		result := make(map[string]Config)
+	this.codes = func() map[string]*Config {
+		result := make(map[string]*Config)
 		for _, v := range m.GetInterfaces("rule") {
 			m2 := conv.NewMap(v)
-			result[m2.GetString("code")] = Config{
+			result[m2.GetString("code")] = &Config{
 				Code:    m2.GetString("code"),
 				Price:   protocol.Price(m2.GetFloat64("price") * 1000),
 				Greater: m2.GetBool("greater"),
@@ -145,13 +146,16 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 		now := time.Now()
 		hint := fmt.Sprintf("数据时间: %s", now.Format(time.TimeOnly))
 		if !this.refresh {
+			//小于9:30
 			if now.Before(times.IntegerDay(now).Add(time.Hour*9 + time.Minute*30)) {
 				return
 			}
-			if now.After(times.IntegerDay(now).Add(time.Hour*15 + time.Minute*5)) {
+			//大于15:00
+			if now.After(times.IntegerDay(now).Add(time.Hour*15 + time.Minute)) {
 				return
 			}
-			if now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30+time.Minute*5)) &&
+			//大于11:30,小于13:00
+			if now.After(times.IntegerDay(now).Add(time.Hour*11+time.Minute*30+time.Minute)) &&
 				now.Before(times.IntegerDay(now).Add(time.Hour*13)) {
 				return
 			}
@@ -161,36 +165,36 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 			if !config.Enable {
 				continue
 			}
-			resp, err := this.Client.GetKlineDay(code, 0, 1)
+
+			lastPrice, err := this.getPrice(code)
 			if err != nil {
 				logs.Err(err)
 				continue
 			}
-			if len(resp.List) > 0 {
-				lastPrice := resp.List[0].Close
-				info := fmt.Sprintf("%s: %.2f", this.getName(code), lastPrice.Float64())
-				hint += "\n" + info
-				logs.Info(info, "  大于阈值:", lastPrice >= config.Price)
-				if config.Greater && lastPrice >= config.Price {
-					if config.limit < 0 {
-						//向上突破阈值,发送通知
-						notice.DefaultWindows.Publish(&notice.Message{
-							Content: fmt.Sprintf("代码[%s],[%.2f]大于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
-						})
-					}
-					config.limit = 1
 
-				} else if !config.Greater && lastPrice <= config.Price {
-					if config.limit > 0 {
-						//向下突破阈值,发送通知
-						notice.DefaultWindows.Publish(&notice.Message{
-							Content: fmt.Sprintf("代码[%s],[%.2f]小于阈值[%.2f]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
-						})
-					}
-					config.limit = -1
-
+			info := fmt.Sprintf("%s: %.2f", this.getName(code), lastPrice.Float64())
+			hint += "\n" + info
+			logs.Info(info, "  大于阈值:", lastPrice >= config.Price)
+			if config.Greater && lastPrice >= config.Price {
+				if config.limit <= 0 {
+					//向上突破阈值,发送通知
+					notice.DefaultWindows.Publish(&notice.Message{
+						Content: fmt.Sprintf("%s: 当前价格[%.3f元],大于阈值[%.3f元]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
+					})
 				}
+				config.limit = 1
+
+			} else if !config.Greater && lastPrice <= config.Price {
+				if config.limit >= 0 {
+					//向下突破阈值,发送通知
+					notice.DefaultWindows.Publish(&notice.Message{
+						Content: fmt.Sprintf("%s: 当前价格[%.3f元],小于阈值[%.3f元]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
+					})
+				}
+				config.limit = -1
+
 			}
+
 			s.SetHint(hint)
 		}
 	}
@@ -206,6 +210,17 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 			f()
 		}
 	}
+}
+
+func (this *monitor) getPrice(code string) (protocol.Price, error) {
+	resp, err := this.Client.GetKlineDay(code, 0, 1)
+	if err != nil {
+		return -1, err
+	}
+	if len(resp.List) == 0 {
+		return -1, errors.New("无数据")
+	}
+	return resp.List[0].Close, nil
 }
 
 type Config struct {

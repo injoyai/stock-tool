@@ -73,6 +73,8 @@ github.com/injoyai/lorca v0.0.0-20241219020631-030018723d82 h1:fuyn7C3rTWUciXtIF
 github.com/injoyai/lorca v0.0.0-20241219020631-030018723d82/go.mod h1:Dtac1G/egJ2cUYt+G6EQ8PxYK8APzXZcvpvNNpTgoRY=
 github.com/injoyai/tdx v0.0.72 h1:mA8rslkJZZpcTghQguphYe0uGsQ+CjBoGfYiSIERCNU=
 github.com/injoyai/tdx v0.0.72/go.mod h1:LfSit7l7Prm1/29Ntxz8RFb8IP454zm4DtQFKCjK4CA=
+github.com/injoyai/tdx v0.0.78 h1:oGW1BlJOo5Ay/1G3UnP4de5PTNUkVF4pcfBi7RqKU+U=
+github.com/injoyai/tdx v0.0.78/go.mod h1:eeWABq2NWLlZPFsECucZM3K/sy1Li1QXLzAJsYPfwC4=
 github.com/jmespath/go-jmespath v0.4.0 h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=
 github.com/jmespath/go-jmespath v0.4.0/go.mod h1:T8mJZnbsbmF+m6zOOFylbeCJqk5+pHWvzYPziyZiYoo=
 github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGwWFoC7ycTf1rcQZHOlsJ6N8=

@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	Version = "v1.5"
-	Details = "升级bar的版本"
+	Version = "v1.6"
+	Details = "修改指数标题数据位置对不上的问题"
 )
 
 var (
