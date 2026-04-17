@@ -3,8 +3,7 @@ module conv-to-lc
 go 1.20
 
 require (
-	github.com/injoyai/bar v0.0.8
-	github.com/injoyai/base v1.2.17
+	github.com/injoyai/bar v0.0.11
 	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/goutil v1.2.19
 	github.com/injoyai/logs v1.0.12
@@ -13,6 +12,7 @@ require (
 require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/grafov/m3u8 v0.12.1 // indirect
+	github.com/injoyai/base v1.2.20 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"time"
 
 	"github.com/injoyai/bar"
 	"github.com/injoyai/goutil/database/sqlite"
@@ -151,7 +152,17 @@ func toCsv(gb tdx.IGbbq, kss protocol.Klines, exportDir, code string) error {
 
 	data := [][]any{Table}
 
-	for _, v := range kss {
+	for i, v := range kss {
+		//修复集合竞价没有的情况
+		if v.Time.Format(time.TimeOnly) == "09:30:00" && v.Open == 0 && i+1 < len(kss) {
+			if i > 0 {
+				v.Last = kss[i-1].Close
+			}
+			v.Open = kss[i+1].Open
+			v.High = kss[i+1].Open
+			v.Low = kss[i+1].Open
+			v.Close = kss[i+1].Open
+		}
 		x := []any{
 			v.Time.Format("2006-01-02 15:04:05"),
 			v.Open.Float64(), v.High.Float64(), v.Low.Float64(), v.Close.Float64(),
@@ -160,7 +171,7 @@ func toCsv(gb tdx.IGbbq, kss protocol.Klines, exportDir, code string) error {
 			gb.GetTurnover(code, v.Time, v.Volume*100),
 		}
 		if eq := gb.GetEquity(code, v.Time); eq != nil {
-			x = append(x, int64(eq.Float), int64(eq.Total))
+			x = append(x, eq.Float, eq.Total)
 		}
 		data = append(data, x)
 	}

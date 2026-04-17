@@ -7,10 +7,10 @@ github.com/fatih/color v1.18.0/go.mod h1:4FelSpRwEGDpQ12mAdzqdOukCy4u8WUtOY6lkT/
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/grafov/m3u8 v0.12.1 h1:DuP1uA1kvRRmGNAZ0m+ObLv1dvrfNO0TPx0c/enNk0s=
 github.com/grafov/m3u8 v0.12.1/go.mod h1:nqzOkfBiZJENr52zTVd/Dcl03yzphIMbJqkXGu+u080=
-github.com/injoyai/bar v0.0.8 h1:QoAZnQn5xoh8fTXvlBgoUs+u3uSA/kZN5owvKna4Kwc=
-github.com/injoyai/bar v0.0.8/go.mod h1:kH8XQJfSdpnQqYeL8uTwuwTIkB98TOnSMLu8rn78Wzw=
-github.com/injoyai/base v1.2.17 h1:+qYeCSeEMWgmTla+LBC0Ozan9ysS4mV0ne5nfMt9opU=
-github.com/injoyai/base v1.2.17/go.mod h1:NfCQjml3z2pCvQ3J3YcOXtecqXD0xVPKjo4YTsMLhr8=
+github.com/injoyai/bar v0.0.11 h1:HOD5xxEcEErzk9gC2+aUhuBV4N/A8D+Xl3Q31xK6+OQ=
+github.com/injoyai/bar v0.0.11/go.mod h1:fhn3OC7/h9z7wYFiByd3AJ2UTnCR/9fa2MXIMYdxlII=
+github.com/injoyai/base v1.2.20 h1:S0y66Cl/VptBsX8SgpQk7o3rMK17rvqP7hI/LQCa9Sc=
+github.com/injoyai/base v1.2.20/go.mod h1:NfCQjml3z2pCvQ3J3YcOXtecqXD0xVPKjo4YTsMLhr8=
 github.com/injoyai/conv v1.2.5 h1:G4OCyF0NTZul5W1u9IgXDOhW4/zmIigdPKXFHQGmv1M=
 github.com/injoyai/conv v1.2.5/go.mod h1:s05l3fQJQ4mT4VX+KIdbvCWQB0YzZHprmUfUu2uxd1k=
 github.com/injoyai/goutil v1.2.19 h1:oYIUvIFbskqMwA7xJr47IzsnD8kY/dVniL7KNwRrerg=
