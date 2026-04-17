@@ -115,7 +115,7 @@ func handleSelect(w http.ResponseWriter, r *http.Request, p *extend.PullKline) {
 					}
 
 					klineDTOs = append(klineDTOs, KlineDTO{
-						Date:   k.Date,
+						Date:   k.Unix,
 						Open:   float64(k.Open),
 						High:   float64(k.High),
 						Low:    float64(k.Low),
