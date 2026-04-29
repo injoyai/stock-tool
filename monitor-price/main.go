@@ -172,14 +172,14 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 				continue
 			}
 
-			info := fmt.Sprintf("%s: %.2f", this.getName(code), lastPrice.Float64())
+			info := fmt.Sprintf("%s: %v", this.getName(code), lastPrice.Float64())
 			hint += "\n" + info
 			logs.Info(info, "  大于阈值:", lastPrice >= config.Price)
 			if config.Greater && lastPrice >= config.Price {
 				if config.limit <= 0 {
 					//向上突破阈值,发送通知
 					notice.DefaultWindows.Publish(&notice.Message{
-						Content: fmt.Sprintf("%s: 当前价格[%.3f元],大于阈值[%.3f元]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
+						Content: fmt.Sprintf("%s: 当前价格[%v元],大于阈值[%v元]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
 					})
 				}
 				config.limit = 1
@@ -188,7 +188,7 @@ func (this *monitor) Run(ctx context.Context, s *tray.Tray) error {
 				if config.limit >= 0 {
 					//向下突破阈值,发送通知
 					notice.DefaultWindows.Publish(&notice.Message{
-						Content: fmt.Sprintf("%s: 当前价格[%.3f元],小于阈值[%.3f元]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
+						Content: fmt.Sprintf("%s: 当前价格[%v元],小于阈值[%v元]", this.getName(code), lastPrice.Float64(), config.Price.Float64()),
 					})
 				}
 				config.limit = -1

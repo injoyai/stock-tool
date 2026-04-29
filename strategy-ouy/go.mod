@@ -4,7 +4,7 @@ go 1.25.4
 
 require (
 	github.com/injoyai/logs v1.0.12
-	github.com/injoyai/tdx v0.0.72
+	github.com/injoyai/tdx v0.0.73
 )
 
 require (
@@ -15,7 +15,7 @@ require (
 	github.com/goccy/go-json v0.8.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.5.0 // indirect
-	github.com/injoyai/base v1.2.17 // indirect
+	github.com/injoyai/base v1.2.20 // indirect
 	github.com/injoyai/conv v1.2.5 // indirect
 	github.com/injoyai/ios v1.2.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
