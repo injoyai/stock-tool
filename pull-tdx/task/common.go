@@ -142,7 +142,8 @@ func klineToCsv(code string, ks []*protocol.Kline, filename string, getName func
 
 func GetCodes(m *tdx.Manage, codes []string) []string {
 	if len(codes) == 0 {
-		return m.Codes.GetStockCodes()
+		codes = append(codes, m.Codes.GetStockCodes()...)
+		codes = append(codes, m.Codes.GetETFCodes()...)
 	}
 	return codes
 }

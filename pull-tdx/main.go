@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	Version = "v1.6"
-	Details = "修改指数标题数据位置对不上的问题"
+	Version = "v1.7"
+	Details = "增加ETF的前后复权数据"
 )
 
 var (

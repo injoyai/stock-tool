@@ -52,7 +52,7 @@ func (this *PullKline) Name() string {
 func (this *PullKline) Run(ctx context.Context, m *tdx.Manage) error {
 	r := &Range[string]{
 		Codes:   GetCodes(m, this.Codes),
-		Append:  m.Codes.GetETFCodes(),
+		Append:  nil,
 		Limit:   this.limit,
 		Retry:   tdx.DefaultRetry,
 		Handler: this,

@@ -35,7 +35,7 @@ func (this *ExportKline) Name() string {
 func (this *ExportKline) Run(ctx context.Context, m *tdx.Manage) error {
 	r := &Range[string]{
 		Codes:   GetCodes(m, this.Codes),
-		Append:  m.Codes.GetETFCodes(),
+		Append:  nil, //m.Codes.GetETFCodes(),
 		Limit:   this.Limit,
 		Retry:   tdx.DefaultRetry,
 		Handler: this,
