@@ -1,6 +1,6 @@
 module merge-csv
 
-go 1.20
+go 1.23
 
 require (
 	github.com/injoyai/bar v0.0.11

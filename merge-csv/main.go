@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/injoyai/bar"
 	"github.com/injoyai/goutil/g"
-	"github.com/injoyai/goutil/other/csv"
 	"github.com/injoyai/goutil/str/regexps"
 	"github.com/injoyai/logs"
 )
@@ -47,6 +47,15 @@ func main() {
 	logs.PrintErr(err)
 
 	err = do(dirs, outputDir, "5分钟")
+	logs.PrintErr(err)
+
+	err = do(dirs, outputDir, "15分钟")
+	logs.PrintErr(err)
+
+	err = do(dirs, outputDir, "30分钟")
+	logs.PrintErr(err)
+
+	err = do(dirs, outputDir, "60分钟")
 	logs.PrintErr(err)
 
 }
@@ -105,7 +114,7 @@ func do(dirs []string, outputDir, _type string) error {
 					continue
 				}
 				filename := filepath.Join(dir, _type, e.Name())
-				err = csv.ImportRange(filename, func(i int, line []string) bool {
+				err = CsvImportRange(filename, func(i int, line []string) bool {
 					if i == 0 {
 						i++
 						return true
@@ -127,4 +136,26 @@ func do(dirs []string, outputDir, _type string) error {
 	}
 
 	return nil
+}
+
+func CsvImportRange(filename string, fn func(i int, line []string) bool) error {
+	f, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	r := csv.NewReader(f)
+	r.FieldsPerRecord = -1
+	for i := 0; ; i++ {
+		line, err := r.Read()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		if !fn(i, line) {
+			return nil
+		}
+	}
 }
