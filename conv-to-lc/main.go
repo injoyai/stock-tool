@@ -18,27 +18,26 @@ import (
 
 const (
 	Coroutines = 10
+
+	Suffix1 = ".lc1"
+	Suffix5 = ".lc5"
 )
 
 var (
-	start = time.Date(2004, 1, 1, 0, 0, 0, 0, time.Local)
-	end   = time.Now()
+	defaultStart = time.Date(2004, 1, 1, 0, 0, 0, 0, time.Local)
+	defaultEnd   = time.Now()
 )
 
 func main() {
-	tool()
-}
-
-func tool() {
 
 	var err error
 
 	for {
-		startStr := g.Input("请输入开始日期(默认" + start.Format("20060102") + "):")
+		startStr := g.Input("请输入开始日期(默认" + defaultStart.Format("20060102") + "):")
 		if len(startStr) == 0 {
 			break
 		}
-		start, err = time.Parse("20060102", startStr)
+		defaultStart, err = time.Parse("20060102", startStr)
 		if err != nil {
 			logs.Err(err)
 			continue
@@ -47,11 +46,11 @@ func tool() {
 	}
 
 	for {
-		endStr := g.Input("请输入结束日期(默认" + end.Format("20060102") + "):")
+		endStr := g.Input("请输入结束日期(默认" + defaultEnd.Format("20060102") + "):")
 		if len(endStr) == 0 {
 			break
 		}
-		end, err = time.Parse("20060102150405", endStr+"235959")
+		defaultEnd, err = time.Parse("20060102150405", endStr+"235959")
 		if err != nil {
 			logs.Err(err)
 			continue
@@ -64,12 +63,11 @@ func tool() {
 
 	logs.Info("开始转换5分钟...")
 	err = _conv(
-		Minute5,
 		"./5分钟",
-		fmt.Sprintf("./lc5(%d-%d)/", start.Year(), end.Year()),
+		fmt.Sprintf("./vipdoc(%d-%d)/", defaultStart.Year(), defaultEnd.Year()),
 		Suffix5,
-		start,
-		end,
+		defaultStart,
+		defaultEnd,
 		goroutines,
 		after,
 	)
@@ -77,12 +75,11 @@ func tool() {
 
 	logs.Info("开始转换1分钟...")
 	err = _conv(
-		Minute1,
 		"./1分钟",
-		fmt.Sprintf("./lc1(%d-%d)/", start.Year(), end.Year()),
+		fmt.Sprintf("./vipdoc(%d-%d)/", defaultStart.Year(), defaultEnd.Year()),
 		Suffix1,
-		start,
-		end,
+		defaultStart,
+		defaultEnd,
 		goroutines,
 		after,
 	)
@@ -92,8 +89,15 @@ func tool() {
 
 }
 
-func _conv(_type string, inputDir, outputDir, suffix string, start, end time.Time, goroutines int, after string) error {
+func _conv(inputDir, outputDir, suffix string, start, end time.Time, goroutines int, after string) error {
 	os.MkdirAll(outputDir, 0666)
+
+	os.MkdirAll(filepath.Join(outputDir, "bj/fzline"), 0666)
+	os.MkdirAll(filepath.Join(outputDir, "bj/minline"), 0666)
+	os.MkdirAll(filepath.Join(outputDir, "sh/fzline"), 0666)
+	os.MkdirAll(filepath.Join(outputDir, "sh/minline"), 0666)
+	os.MkdirAll(filepath.Join(outputDir, "sz/fzline"), 0666)
+	os.MkdirAll(filepath.Join(outputDir, "sz/minline"), 0666)
 
 	ls, err := os.ReadDir(inputDir)
 	if err != nil {
@@ -119,7 +123,7 @@ func _conv(_type string, inputDir, outputDir, suffix string, start, end time.Tim
 				code := strings.Split(info.Name(), ".")[0]
 				b.SetPrefix("[" + code + "]")
 				b.Flush()
-				outputFilename := filepath.Join(outputDir, code+suffix)
+				outputFilename := filename(outputDir, code, suffix)
 				isIndex := isIndex(code)
 				err = convLc(info.FullName(), outputFilename, start, end, isIndex)
 				if err != nil {
@@ -134,6 +138,20 @@ func _conv(_type string, inputDir, outputDir, suffix string, start, end time.Tim
 	b.Wait()
 
 	return nil
+}
+
+func filename(outputDir, code, suffix string) string {
+	prefix := ""
+	if len(code) >= 2 {
+		prefix = code[:2]
+	}
+	switch suffix {
+	case Suffix1:
+		prefix += "/minline"
+	case Suffix5:
+		prefix += "/fzline"
+	}
+	return filepath.Join(outputDir, prefix, code+suffix)
 }
 
 /*
@@ -169,16 +187,23 @@ func convLc(inputFile, outputFile string, start, end time.Time, isIndex bool) er
 			continue
 		}
 
-		t, err := time.Parse("2006-01-0215:04", row[0]+row[1])
+		//尝试一列解析时间
+		next := row[1:]
+		t, err := time.Parse("2006-01-02 15:04:05", row[0])
 		if err != nil {
-			return err
+			//尝试2列解析时间
+			t, err = time.Parse("2006-01-02 15:04:05", row[0]+" "+row[1]+":00")
+			if err != nil {
+				return err
+			}
+			next = row[2:]
 		}
 
 		if t.Before(start) || t.After(end) {
 			continue
 		}
 
-		err = write(out, t, row[2:], isIndex)
+		err = write(out, t, next, isIndex)
 		if err != nil {
 			return err
 		}
@@ -237,14 +262,6 @@ func write(out io.Writer, t time.Time, row []string, isIndex bool) error {
 	return err
 }
 
-const (
-	Minute1 = "1分钟"
-	Minute5 = "5分钟"
-
-	Suffix1 = ".lc1"
-	Suffix5 = ".lc5"
-)
-
 func isIndex(code string) bool {
 	if len(code) != 8 {
 		return false
@@ -257,18 +274,4 @@ func isIndex(code string) bool {
 		return false
 	}
 	return true
-}
-
-func is1MinuteIndex(code string, _type string) bool {
-	if len(code) != 8 {
-		return false
-	}
-	switch {
-	case code[:5] == "sh000" || code == "sh999999":
-	case code[:5] == "sz399":
-	case code[:5] == "bj899":
-	default:
-		return false
-	}
-	return _type == Minute1
 }
