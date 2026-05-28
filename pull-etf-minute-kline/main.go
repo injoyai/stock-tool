@@ -36,8 +36,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v1.3")
-	logs.Info("详情:", "修复当年数据里面有上一年的数据的问题")
+	logs.Info("版本:", "v1.4")
+	logs.Info("详情:", "升级引用库版本,增加lof数据")
 	fmt.Println("=====================================================")
 	logs.Info("立即执行:", startup)
 	logs.Info("代码地址:", address)
