@@ -3,12 +3,12 @@ module pull-trade-to-kline
 go 1.23
 
 require (
-	github.com/injoyai/bar v0.0.8
-	github.com/injoyai/base v1.2.17
+	github.com/injoyai/bar v0.0.11
+	github.com/injoyai/base v1.2.20
 	github.com/injoyai/conv v1.2.5
 	github.com/injoyai/goutil v1.2.20
 	github.com/injoyai/logs v1.0.12
-	github.com/injoyai/tdx v0.0.54
+	github.com/injoyai/tdx v0.0.78
 	xorm.io/xorm v1.3.9
 )
 
