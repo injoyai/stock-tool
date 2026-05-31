@@ -622,6 +622,8 @@ var (
 	Start  = time.Date(2000, 1, 1, 0, 0, 0, 0, time.Local)
 	End    = time.Date(2027, 1, 1, 0, 0, 0, 0, time.Local)
 	CsvEnd = time.Date(2026, 1, 1, 0, 0, 0, 0, time.Local)
+
+	Delete930 = true
 )
 
 func main() {
@@ -705,6 +707,19 @@ func pullTrades(c *tdx.Client, w *tdx.Workday, code string) (ts protocol.Trades,
 }
 
 func save(ks protocol.Klines, code string) error {
+
+	//判断是否需要过滤9.30的数据,ETF和指数没有这个数据
+	if Delete930 {
+		ks2 := protocol.Klines{}
+		for _, v := range ks {
+			if v.Time.Hour() == 9 && v.Time.Minute() == 30 {
+				continue
+			}
+			ks2 = append(ks2, v)
+		}
+		ks = ks2
+	}
+
 	//按年分割
 	m := map[int]protocol.Klines{}
 	for i := range ks {
@@ -731,9 +746,9 @@ func save(ks protocol.Klines, code string) error {
 }
 
 func toModel(ks protocol.Klines) []any {
-	inserts := make([]any, len(ks))
-	for i, v := range ks {
-		inserts[i] = &KlineBase{
+	inserts := make([]any, 0, len(ks))
+	for _, v := range ks {
+		inserts = append(inserts, &KlineBase{
 			Date:   v.Time.Unix(),
 			Year:   v.Time.Year(),
 			Month:  int(v.Time.Month()),
@@ -746,7 +761,7 @@ func toModel(ks protocol.Klines) []any {
 			Close:  v.Close.Float64(),
 			Volume: int(v.Volume),
 			Amount: v.Amount.Float64(),
-		}
+		})
 	}
 	return inserts
 }
@@ -755,7 +770,7 @@ func insertDB(year int, code string, k1, k5, k15, k30, k60 []any) error {
 	if len(k1) == 0 {
 		return nil
 	}
-	filename := filepath.Join(DatabaseDir, conv.String(year), code+".db") // code, code+"-"+conv.String(year)+".db")
+	filename := filepath.Join(DatabaseDir, conv.String(year), code+".db")
 	db, err := sqlite.NewXorm(filename)
 	if err != nil {
 		return err
