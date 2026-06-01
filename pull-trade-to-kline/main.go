@@ -620,7 +620,7 @@ var (
 		"sh520750",
 	}
 	Start  = time.Date(2000, 1, 1, 0, 0, 0, 0, time.Local)
-	End    = time.Date(2027, 1, 1, 0, 0, 0, 0, time.Local)
+	End    = time.Date(2026, 3, 1, 0, 0, 0, 0, time.Local)
 	CsvEnd = time.Date(2026, 1, 1, 0, 0, 0, 0, time.Local)
 
 	Delete930 = true
