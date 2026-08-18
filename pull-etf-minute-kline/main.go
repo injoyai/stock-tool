@@ -36,8 +36,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v1.4")
-	logs.Info("详情:", "升级引用库版本,增加lof数据")
+	logs.Info("版本:", "v1.5")
+	logs.Info("详情:", "修复11:30变成13:00的bug")
 	fmt.Println("=====================================================")
 	logs.Info("立即执行:", startup)
 	logs.Info("代码地址:", address)
@@ -215,6 +215,11 @@ func export(year string, code string) error {
 		})
 	}
 
+	//修复盘内拉取时被误标为13:00的11:30分钟K线
+	//A股1分钟K线不存在真正的13:00(上午到11:30,下午从13:01开始),
+	//因此若某天出现13:00且缺少11:30,则该13:00实为11:30误标
+	ts = fixKlineTime(ts)
+
 	if err = save(ts, "1分钟", year, code); err != nil {
 		return err
 	}
@@ -236,6 +241,43 @@ func export(year string, code string) error {
 	}
 
 	return nil
+}
+
+// fixKlineTime 修复盘内拉取时被TDX服务器误标为13:00的11:30分钟K线
+// A股1分钟K线不存在真正的13:00(上午到11:30,下午从13:01开始),
+// 因此若某天出现13:00且该天缺少11:30,则该13:00实为11:30误标,改写为11:30
+func fixKlineTime(ks protocol.Klines) protocol.Klines {
+	//按日期分组
+	groups := map[string]protocol.Klines{}
+	var dates []string
+	for _, k := range ks {
+		d := k.Time.Format(time.DateOnly)
+		if _, ok := groups[d]; !ok {
+			dates = append(dates, d)
+		}
+		groups[d] = append(groups[d], k)
+	}
+
+	for _, d := range dates {
+		list := groups[d]
+		has1130 := false
+		for _, k := range list {
+			if k.Time.Hour() == 11 && k.Time.Minute() == 30 {
+				has1130 = true
+				break
+			}
+		}
+		if has1130 {
+			continue
+		}
+		//该天缺少11:30,将误标的13:00改写为11:30
+		for _, k := range list {
+			if k.Time.Hour() == 13 && k.Time.Minute() == 0 {
+				k.Time = time.Date(k.Time.Year(), k.Time.Month(), k.Time.Day(), 11, 30, 0, 0, k.Time.Location())
+			}
+		}
+	}
+	return ks
 }
 
 func save(list protocol.Klines, _type, year, code string) error {
