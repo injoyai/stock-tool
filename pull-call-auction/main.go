@@ -10,7 +10,7 @@ import (
 	"github.com/injoyai/conv/cfg"
 	"github.com/injoyai/goutil/g"
 	"github.com/injoyai/goutil/oss"
-	"github.com/injoyai/goutil/other/csv"
+	"github.com/injoyai/goutil/oss/csv"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
 	"github.com/injoyai/tdx/lib/xorms"
@@ -22,13 +22,18 @@ import (
 
 var (
 	Spec        = cfg.GetString("spec", "20 0 15 * * *")
-	Goroutines  = cfg.GetInt("goroutines", 20)
+	Goroutines  = cfg.GetInt("goroutines", 3)
 	Startup     = cfg.GetBool("startup")
 	Codes       = cfg.GetStrings("codes")
 	DatabaseDir = cfg.GetString("database", "./data/database/auction")
 	ExportDir   = cfg.GetString("export", "./data/output/export/")
 	UploadDir   = cfg.GetString("upload", "./data/output/upload/")
 )
+
+func init() {
+	logs.Info("版本:", "v1.0")
+	logs.Info("详情:", "修复量异常的问题")
+}
 
 func main() {
 
