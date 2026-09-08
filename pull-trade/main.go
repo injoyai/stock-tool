@@ -38,8 +38,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.2.10")
-	logs.Info("说明:", "修复非工作日执行的bug")
+	logs.Info("版本:", "v0.3.0")
+	logs.Info("说明:", "不压缩同步当年数据")
 	logs.Info("任务规则:", Spec)
 	logs.Info("立马执行:", Startup)
 	logs.Info("连接数量:", Clients)
@@ -74,8 +74,10 @@ func run(m *tdx.Manage, codes []string) {
 		codes = m.Codes.GetStocks()
 	}
 	logs.PrintErr(update(m, codes))
-	//logs.PrintErr(exportThisYear(m, codes))
+
 	logs.PrintErr(exportThisDay(codes))
+
+	logs.PrintErr(exportThisYear(m, codes))
 }
 
 func update(m *tdx.Manage, codes []string) error {
@@ -140,24 +142,24 @@ func exportThisYear(m *tdx.Manage, codes []string) error {
 
 	b.Wait()
 
-	//压缩
-	logs.Info("[导出] 本年数据压缩...")
-	zipFilename := filepath.Join(ExportDir, year+".zip")
-	err := zip.Encode(
-		filepath.Join(ExportDir, year),
-		zipFilename,
-	)
-	if err != nil {
-		return err
-	}
-
-	//重命名
-	logs.Info("[导出] 本年数据重命名...")
-	<-time.After(time.Second * 5)
-	err = os.Rename(zipFilename, filepath.Join(UploadDir, year, year+".zip"))
-	if err != nil {
-		return err
-	}
+	////压缩
+	//logs.Info("[导出] 本年数据压缩...")
+	//zipFilename := filepath.Join(ExportDir, year+".zip")
+	//err := zip.Encode(
+	//	filepath.Join(ExportDir, year),
+	//	zipFilename,
+	//)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	////重命名
+	//logs.Info("[导出] 本年数据重命名...")
+	//<-time.After(time.Second * 5)
+	//err = os.Rename(zipFilename, filepath.Join(UploadDir, year, year+".zip"))
+	//if err != nil {
+	//	return err
+	//}
 
 	logs.Info("[导出] 本年数据完成...")
 

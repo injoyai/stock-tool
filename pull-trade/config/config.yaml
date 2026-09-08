@@ -16,5 +16,5 @@ spec: '0 10 15 * * *'
 startup: true
 
 codes:
-  - sh600000
+  - sh688836
   - sz000001

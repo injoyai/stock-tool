@@ -3,6 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
 	"github.com/injoyai/base/chans"
 	"github.com/injoyai/conv"
 	"github.com/injoyai/goutil/database/sqlite"
@@ -11,10 +16,6 @@ import (
 	"github.com/injoyai/goutil/oss"
 	"github.com/injoyai/logs"
 	"github.com/injoyai/tdx"
-	"os"
-	"path/filepath"
-	"sync"
-	"time"
 )
 
 func NewSqlite(codes []string, _dir string, limit, tasks int) *Sqlite {
@@ -356,7 +357,7 @@ func (this dir) filename(code string, year int) string {
 // 遍历年份,返回未完成的年份和文件名称
 func (this dir) rangeYear(code string, fn func(year int, filename string, exist, hasNext bool) (bool, error)) error {
 	now := time.Now().Year()
-	start := 2000
+	start := 2025
 	for i := start; i <= now; i++ {
 		filename := this.filename(code, i)
 		if oss.Exists(filename + "-journal") {
