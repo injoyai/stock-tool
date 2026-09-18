@@ -38,8 +38,8 @@ var (
 
 func init() {
 	logs.SetFormatter(logs.TimeFormatter)
-	logs.Info("版本:", "v0.3.0")
-	logs.Info("说明:", "不压缩同步当年数据")
+	logs.Info("版本:", "v0.3.1")
+	logs.Info("说明:", "不导出当年数据")
 	logs.Info("任务规则:", Spec)
 	logs.Info("立马执行:", Startup)
 	logs.Info("连接数量:", Clients)
@@ -77,7 +77,7 @@ func run(m *tdx.Manage, codes []string) {
 
 	logs.PrintErr(exportThisDay(codes))
 
-	logs.PrintErr(exportThisYear(m, codes))
+	//logs.PrintErr(exportThisYear(m, codes))
 }
 
 func update(m *tdx.Manage, codes []string) error {
